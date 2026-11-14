@@ -11,6 +11,10 @@ import { recoverTypedDataAddress } from 'viem';
 import { generatePrivateKey } from 'viem/accounts';
 import { baseSepoliaUsdc, createBaseSettlement } from '../src/base-settlement.js';
 import type { Authorization, SettlementRail } from '../src/base-settlement.js';
+import { reconcilePayments } from '../src/reconciliation.js';
+import type { ReconciliationChain } from '../src/reconciliation.js';
+import { recordRefund } from '../src/refunds.js';
+import type { RefundChain } from '../src/refunds.js';
 import { processSettlement } from '../src/settlement-worker.js';
 import { buildApp } from '../src/app.js';
 import { migrate } from '../src/migrate.js';
@@ -244,5 +248,93 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     await Promise.all([processSettlement(pool, rail), processSettlement(pool, rail)]);
     assert.equal((await pool.query('SELECT count(*) FROM payment_journal')).rows[0]?.count, '1');
     assert.deepEqual(await state(), { status: 'SETTLED', transaction_hash: hash, reserved: '0', spent: '2000' });
+  });
+
+  await t.test('finalized reconciliation matches once and reports discrepancies on both sides', async () => {
+    const { rows: [posting] } = await pool.query(`
+      SELECT j.payer, j.transaction_hash AS hash, i.payee AS recipient, j.amount
+      FROM payment_journal j JOIN payment_intents i ON i.id = j.intent_id
+    `);
+    assert.ok(posting);
+    const blockHash = `0x${'12'.repeat(32)}` as const;
+    const extraHash = `0x${'cd'.repeat(32)}` as const;
+    const matched = { transactionHash: posting.hash, logIndex: 1, recipient: posting.recipient, amount: BigInt(posting.amount) };
+    const extra = { ...matched, transactionHash: extraHash, amount: 999n };
+    let outgoing = [matched, matched];
+    const chain: ReconciliationChain = {
+      finalized: async () => 200n,
+      blockHash: async () => blockHash,
+      outgoing: async () => outgoing,
+      transactionBlock: async () => 151n,
+    };
+    await assert.rejects(reconcilePayments(pool, chain, posting.payer, 150n, 201n), /finalized/);
+    const first = await reconcilePayments(pool, chain, posting.payer, 150n, 160n);
+    assert.equal(first.status, 'MATCHED');
+    assert.equal(first.matched.length, 1);
+
+    outgoing = [{ ...matched, amount: 2001n }, extra];
+    const second = await reconcilePayments(pool, chain, posting.payer, 150n, 160n);
+    assert.equal(second.status, 'DISCREPANCY');
+    assert.equal(second.matched.length, 0);
+    assert.deepEqual(second.discrepancies.map((item) => item.code).sort(), [
+      'CHAIN_TRANSFER_UNMATCHED', 'CHAIN_TRANSFER_UNMATCHED', 'JOURNAL_TRANSFER_UNMATCHED',
+    ]);
+    const { rows: [stored] } = await pool.query('SELECT report FROM reconciliation_runs');
+    assert.deepEqual(stored?.report, second);
+    assert.equal((await pool.query('SELECT count(*) FROM reconciliation_runs')).rows[0]?.count, '1');
+
+    outgoing = [];
+    const outside = await reconcilePayments(pool, chain, posting.payer, 152n, 160n);
+    assert.equal(outside.status, 'MATCHED');
+    assert.equal(outside.matched.length, 0);
+  });
+
+  await t.test('only one finalized full merchant refund is posted for a payment', async () => {
+    const { rows: [payment] } = await pool.query(`
+      SELECT j.intent_id, j.payer, j.transaction_hash, i.payee, j.amount
+      FROM payment_journal j JOIN payment_intents i ON i.id = j.intent_id
+    `);
+    assert.ok(payment);
+    const refundHash = `0x${'de'.repeat(32)}` as const;
+    const otherHash = `0x${'df'.repeat(32)}` as const;
+    const blockHash = `0x${'12'.repeat(32)}` as const;
+    let finalized = 110n;
+    let amount = 1999n;
+    let recipient = payment.payer;
+    const chain: RefundChain = {
+      finalized: async () => finalized,
+      blockHash: async () => blockHash,
+      receipt: async (hash) => ({
+        blockNumber: hash === payment.transaction_hash ? 100n : 110n, blockHash,
+        status: 'success', transactionIndex: 0,
+        logs: [{ address: baseSepoliaUsdc, from: payment.payee, to: recipient, amount, logIndex: 3 }],
+      }),
+    };
+    const submit = (hash = refundHash) => recordRefund(pool, chain, payment.intent_id, hash, 3, 'Delivery failed');
+    await assert.rejects(submit(), /INVALID_REFUND_EVIDENCE/);
+    amount = BigInt(payment.amount);
+    recipient = '0x0000000000000000000000000000000000000002';
+    await assert.rejects(submit(), /INVALID_REFUND_EVIDENCE/);
+    recipient = payment.payer;
+    finalized = 109n;
+    await assert.rejects(submit(), /REFUND_NOT_FINALIZED/);
+    finalized = 110n;
+
+    const competing = await Promise.allSettled([submit(), submit(otherHash)]);
+    const winner = competing.find((result) => result.status === 'fulfilled');
+    const loser = competing.find((result) => result.status === 'rejected');
+    assert.equal(winner?.status, 'fulfilled');
+    assert.match(String(loser?.reason), /REFUND_ALREADY_RECORDED/);
+    assert.deepEqual(await submit(winner.value.transactionHash === refundHash ? refundHash : otherHash), winner.value);
+    assert.equal((await pool.query('SELECT count(*) FROM payment_refunds')).rows[0]?.count, '1');
+
+    const outcome = await app.inject({ url: `/payment-intents/${payment.intent_id}/ledger`, headers });
+    assert.equal(outcome.statusCode, 200);
+    assert.equal(outcome.json().refund.transactionHash, winner.value.transactionHash);
+    assert.deepEqual(outcome.json().refund.lines, [
+      { account: 'USDC_WALLET_ASSET', side: 'DEBIT', amount: '2000' },
+      { account: 'DATA_PROCUREMENT_EXPENSE', side: 'CREDIT', amount: '2000' },
+    ]);
+    assert.equal((await pool.query('SELECT spent FROM research_tasks WHERE id = $1', [buyer.taskId])).rows[0]?.spent, '2000');
   });
 });

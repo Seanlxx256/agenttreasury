@@ -69,6 +69,32 @@ Run `npm run migrate` before restarting the API and workers. Migration 004 creat
 
 Use `GET /payment-intents/:id/ledger` with the agent's bearer token. The response includes the payment status and the journal, which is null until posting. A posted journal includes the payer, chain, token, transaction hash, and both lines. Tests force a journal write failure to verify rollback and replay a completed outbox event to verify that the journal and spent budget stay unchanged.
 
-The current journal covers settled outgoing payments. Independent chain reconciliation, funding entries, and refunds remain future work.
+## Reconciliation
+
+Run `npm run migrate` after building. With DATABASE_URL and BASE_SEPOLIA_RPC_URL set, pass the payer's public wallet address and an inclusive finalized block range of up to 2,000 blocks.
+
+```sh
+npm run reconcile -- "$PAYER_ADDRESS" "$FROM_BLOCK" "$TO_BLOCK"
+```
+
+The command independently reads outgoing USDC Transfer logs and matches them one-to-one against the payment journal by transaction hash, recipient, and amount. It deduplicates logs by transaction hash and log index. Journal entries with a receipt outside the requested range are excluded. A missing receipt is reported separately because its block cannot be determined.
+
+A discrepancy report includes the affected transaction hash and, when available, the intent ID or log index. Exit code 0 indicates a match, 2 indicates discrepancies, and an execution error returns 1. Repeating the same wallet and range refreshes the stored report in `reconciliation_runs`. Run it again if settlement or journal posting catches up after an earlier scan.
+
+This command covers outgoing transfers. Incoming refund reconciliation, funding entries, balance-level reconciliation, and scheduled scans are future work.
+
+## Record a merchant refund
+
+After the merchant sends a full USDC refund on Base Sepolia and the transaction is finalized, a finance operator with database access can record it. Build the project and apply migration 006 first. Use the same DATABASE_URL and BASE_SEPOLIA_RPC_URL as reconciliation.
+
+```sh
+npm run refund -- "$INTENT_ID" "$REFUND_TX_HASH" "$TRANSFER_LOG_INDEX" "Delivery failed"
+```
+
+Use the ERC-20 Transfer log index, which distinguishes multiple transfers in the same transaction. The CLI verifies finalized, canonical chain evidence and requires the original merchant, original payer, and full payment amount. It allows one full refund per intent and prevents reusing the same transfer for another purchase. An identical request returns the existing refund.
+
+The ledger endpoint exposes the original payment and a separate refund journal with a debit to the USDC wallet and a credit to procurement expense. Spending limits continue to use gross spend. The operator records an existing merchant transfer. Merchant refund initiation and delivery dispute workflow require a separate integration.
+
+[ERC-20 Transfer event](https://eips.ethereum.org/EIPS/eip-20) · [viem transaction receipts](https://viem.sh/docs/actions/public/getTransactionReceipt)
 
 [EIP-3009 transfer authorization](https://eips.ethereum.org/EIPS/eip-3009) · [Circle USDC contract addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses)

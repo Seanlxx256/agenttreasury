@@ -49,7 +49,7 @@ export function buildApp(pool: Pool, logger = false) {
   app.get('/health/live', async () => ({ status: 'ok' }));
   app.get('/health/ready', async (request, reply) => {
     try {
-      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 4');
+      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 6');
       if (rowCount === 1) return { status: 'ready' };
     } catch (error) {
       request.log.warn({ err: error }, 'Database readiness check failed');

@@ -14,7 +14,14 @@ export async function getPaymentLedger(pool: Pool, agentId: string, intentId: st
   const { rows } = await pool.query(`
     SELECT i.id AS "intentId", i.status, j.network, j.asset, j.payer,
       j.transaction_hash AS "transactionHash", j.settled_at AS "settledAt",
-      j.posted_at AS "postedAt", j.account, j.side, j.amount
+      j.posted_at AS "postedAt", j.account, j.side, j.amount,
+      (SELECT jsonb_build_object(
+        'transactionHash', r.transaction_hash, 'logIndex', r.log_index,
+        'blockNumber', r.block_number::text, 'postedAt', r.posted_at, 'reason', r.reason,
+        'lines', (SELECT jsonb_agg(jsonb_build_object('account', l.account, 'side', l.side,
+          'amount', l.amount::text) ORDER BY l.number)
+          FROM refund_journal_lines l WHERE l.intent_id = r.intent_id)
+      ) FROM payment_refunds r WHERE r.intent_id = i.id) AS refund
     FROM payment_intents i
     JOIN research_tasks t ON t.id = i.task_id
     LEFT JOIN payment_journal_lines j ON j.intent_id = i.id
@@ -27,6 +34,7 @@ export async function getPaymentLedger(pool: Pool, agentId: string, intentId: st
   return {
     intentId: entry.intentId,
     status: entry.status,
+    refund: entry.refund,
     journal: entry.transactionHash === null ? null : {
       network: entry.network,
       asset: entry.asset,
