@@ -61,6 +61,14 @@ Configure a real approved recipient and matching x402 endpoint before creating a
 
 The worker rechecks policy before signing and persists a short-lived authorization before its first broadcast. It relays directly to the Base Sepolia USDC contract. A timed-out RPC request leaves the intent UNKNOWN and keeps the reservation active. The worker follows the same authorization nonce, retries only that authorization when eligible, and converts reserved funds to spent after observing the matching finalized transfer. If the finalized chain proves the authorization expired unused, it releases the reservation.
 
-Integration tests exercise actual typed-data signing and the PostgreSQL state transitions with a simulated RPC outcome. Merchant-side payment proof redemption and delivery, a funded Base Sepolia demonstration, refunds, and the double-entry ledger are subsequent milestones.
+Integration tests exercise actual typed-data signing and PostgreSQL state transitions with simulated RPC outcomes. A funded Base Sepolia run and merchant-side proof redemption and delivery are subsequent milestones.
+
+## Payment ledger
+
+Run `npm run migrate` before restarting the API and workers. Migration 004 creates the journal and backfills previously settled payments. Settlement commits the intent status, budget change, and journal entry in a single database transaction. The journal stores one amount per intent, and its line view exposes the balanced debit to data procurement expense and credit to the USDC wallet. Amounts are strings in USDC base units.
+
+Use `GET /payment-intents/:id/ledger` with the agent's bearer token. The response includes the payment status and the journal, which is null until posting. A posted journal includes the payer, chain, token, transaction hash, and both lines. Tests force a journal write failure to verify rollback and replay a completed outbox event to verify that the journal and spent budget stay unchanged.
+
+The current journal covers settled outgoing payments. Independent chain reconciliation, funding entries, and refunds remain future work.
 
 [EIP-3009 transfer authorization](https://eips.ethereum.org/EIPS/eip-3009) · [Circle USDC contract addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses)

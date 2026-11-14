@@ -208,10 +208,41 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       signature,
     }), from);
     assert.deepEqual(await state(), { status: 'SUBMITTED', transaction_hash: hash, reserved: '2000', spent: '0' });
+    const ledgerUrl = `/payment-intents/${(await pool.query(
+      "SELECT intent_id FROM outbox WHERE event_type = 'payment.quoted'",
+    )).rows[0]?.intent_id}/ledger`;
+    const beforePosting = await app.inject({ url: ledgerUrl, headers });
+    assert.equal(beforePosting.statusCode, 200);
+    assert.equal(beforePosting.json().journal, null);
+    assert.equal((await app.inject({
+      url: ledgerUrl, headers: { authorization: `Bearer ${stranger.token}` },
+    })).statusCode, 404);
+
     finalized = true;
+    await pool.query('ALTER TABLE payment_journal ADD CONSTRAINT simulate_posting_failure CHECK (false)');
+    try {
+      await due();
+      await processSettlement(pool, rail);
+      assert.deepEqual(await state(), { status: 'UNKNOWN', transaction_hash: hash, reserved: '2000', spent: '0' });
+      assert.equal((await app.inject({ url: ledgerUrl, headers })).json().journal, null);
+    } finally {
+      await pool.query('ALTER TABLE payment_journal DROP CONSTRAINT simulate_posting_failure');
+    }
     await due();
     await processSettlement(pool, rail);
     assert.deepEqual(await state(), { status: 'SETTLED', transaction_hash: hash, reserved: '0', spent: '2000' });
+    const result = await app.inject({ url: ledgerUrl, headers });
+    assert.equal(result.statusCode, 200);
+    assert.equal(result.json().journal.transactionHash, hash);
+    assert.equal(result.json().journal.payer, from.toLowerCase());
+    assert.deepEqual(result.json().journal.lines, [
+      { account: 'DATA_PROCUREMENT_EXPENSE', side: 'DEBIT', amount: '2000' },
+      { account: 'USDC_WALLET_ASSET', side: 'CREDIT', amount: '2000' },
+    ]);
     assert.equal(await processSettlement(pool, rail), false);
+    await pool.query("UPDATE outbox SET processed_at = NULL, available_at = now() WHERE event_type = 'payment.quoted'");
+    await Promise.all([processSettlement(pool, rail), processSettlement(pool, rail)]);
+    assert.equal((await pool.query('SELECT count(*) FROM payment_journal')).rows[0]?.count, '1');
+    assert.deepEqual(await state(), { status: 'SETTLED', transaction_hash: hash, reserved: '0', spent: '2000' });
   });
 });

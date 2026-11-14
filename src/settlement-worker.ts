@@ -5,11 +5,13 @@ import { baseSepoliaUsdc } from './base-settlement.js';
 import type { Authorization, SettlementRail } from './base-settlement.js';
 import { resolveReservation } from './budget.js';
 import { transaction } from './db.js';
+import { postSettledPayment } from './ledger.js';
 
 interface Job {
   id: string;
   intent_id: string;
   authorization: Authorization | null;
+  status: string;
   attempts: number;
 }
 
@@ -25,9 +27,14 @@ export async function processSettlement(pool: Pool, rail: SettlementRail) {
         available_at = now() + interval '60 seconds'
       FROM next WHERE o.id = next.id RETURNING o.id, o.intent_id, o.attempts
     )
-    SELECT c.*, p.signed_authorization AS "authorization" FROM claimed c JOIN payment_intents p ON p.id = c.intent_id
+    SELECT c.*, p.status, p.signed_authorization AS "authorization" FROM claimed c JOIN payment_intents p ON p.id = c.intent_id
   `, [lease]);
   if (!job) return false;
+  if (job.status === 'SETTLED' || job.status === 'FAILED') {
+    await pool.query('UPDATE outbox SET processed_at = now(), lease_token = NULL WHERE id = $1 AND lease_token = $2',
+      [job.id, lease]);
+    return true;
+  }
 
   let authorization = job.authorization;
   if (!authorization) {
@@ -74,9 +81,11 @@ export async function processSettlement(pool: Pool, rail: SettlementRail) {
   }
   if (!authorization) return true;
 
+  let chainOutcomeKnown = false;
   try {
     const observation = await rail.observe(authorization);
     if (observation.status === 'settled' || observation.status === 'expired') {
+      chainOutcomeKnown = true;
       const hash = observation.status === 'settled' ? observation.hash : null;
       await transaction(pool, async (client) => {
         const ownsJob = await client.query(
@@ -90,8 +99,15 @@ export async function processSettlement(pool: Pool, rail: SettlementRail) {
           WHERE id = $1 AND status IN ('AUTHORIZED', 'SUBMITTED', 'UNKNOWN')
           RETURNING task_id, budget_day::text, amount
         `, [job.intent_id, hash ? 'SETTLED' : 'FAILED', hash ? null : 'AUTHORIZATION_EXPIRED', hash]);
-        if (!intent) throw new Error('Missing active authorization');
-        await resolveReservation(client, intent.task_id, intent.budget_day, intent.amount, Boolean(hash));
+        if (!intent) {
+          const terminal = await client.query(
+            "SELECT 1 FROM payment_intents WHERE id = $1 AND status IN ('SETTLED', 'FAILED')", [job.intent_id],
+          );
+          if (!terminal.rowCount) throw new Error('Missing active authorization');
+        } else {
+          await resolveReservation(client, intent.task_id, intent.budget_day, intent.amount, Boolean(hash));
+          if (hash) await postSettledPayment(client, job.intent_id);
+        }
         await client.query('UPDATE outbox SET processed_at = now(), lease_token = NULL WHERE id = $1', [job.id]);
       });
       return true;
@@ -101,15 +117,19 @@ export async function processSettlement(pool: Pool, rail: SettlementRail) {
       await pool.query(`
         UPDATE payment_intents p SET status = 'SUBMITTED', transaction_hash = $3
         FROM outbox o WHERE o.id = $1 AND o.lease_token = $2 AND o.intent_id = p.id
+          AND p.status IN ('AUTHORIZED', 'SUBMITTED', 'UNKNOWN')
       `, [job.id, lease, hash]);
     }
   } catch (error) {
-    // An RPC failure cannot prove that no debit occurred.
+    // Keep the reservation if either the chain result or the local commit failed.
     await pool.query(`
       UPDATE payment_intents p SET status = 'UNKNOWN'
       FROM outbox o WHERE o.id = $1 AND o.lease_token = $2 AND o.intent_id = p.id
+          AND p.status IN ('AUTHORIZED', 'SUBMITTED', 'UNKNOWN')
     `, [job.id, lease]);
-    console.warn('Settlement result unknown', { intentId: job.intent_id, errorType: error instanceof Error ? error.name : 'unknown' });
+    console.warn(chainOutcomeKnown ? 'Failed to record settlement outcome' : 'Settlement result unknown', {
+      intentId: job.intent_id, errorType: error instanceof Error ? error.name : 'unknown',
+    });
   }
 
   await pool.query(`
