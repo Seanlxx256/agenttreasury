@@ -1,3 +1,4 @@
+import { processFinanceRefund } from '../src/finance-refunds.js';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -556,6 +557,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     assert.ok(template);
     const finance = randomBytes(32).toString('base64url');
     const api = buildApp(pool, false, undefined, finance);
+    const localApi = buildApp(pool, false, undefined, finance, true);
     const config = { endpoint: template.endpoint, recipient: template.payee, secret: 'a'.repeat(32) };
     const block = `0x${'fe'.repeat(32)}` as const;
     let releaseReceipt: () => void = () => {};
@@ -609,6 +611,30 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       assert.equal((await approvalWins.request(headers, 'Different reason')).statusCode, 409);
       assert.equal((await approvalWins.decide(headers.authorization)).statusCode, 401);
 
+      const financeHeaders = { authorization: `Bearer ${finance}` };
+      const consolePage = await api.inject('/finance');
+      assert.equal(consolePage.statusCode, 200);
+      assert.match(consolePage.body, /Finance Console/);
+      assert.equal((await api.inject('/finance/console.js')).statusCode, 200);
+      const listUrl = '/finance/payment-intents';
+      assert.equal((await api.inject({ url: listUrl, headers })).statusCode, 401);
+      const listed = await api.inject({ url: listUrl, headers: financeHeaders });
+      assert.equal(listed.statusCode, 200);
+      assert.equal(listed.json().find((order: { id: string }) => order.id === approvalWins.id)?.refundStatus, 'PENDING');
+      const detailUrl = listUrl + '/' + approvalWins.id;
+      assert.equal((await api.inject({ url: detailUrl, headers })).statusCode, 401);
+      const details = await api.inject({ url: detailUrl, headers: financeHeaders });
+      assert.equal(details.statusCode, 200);
+      assert.equal(details.json().ledger.journal.lines.length, 2);
+      assert.equal(details.json().order.refundReason, 'Data unavailable');
+      const refundedId = (await pool.query('SELECT intent_id FROM payment_refunds LIMIT 1')).rows[0]?.intent_id;
+      assert.ok(refundedId);
+      const refunded = await api.inject({ url: listUrl + '/' + refundedId, headers: financeHeaders });
+      assert.equal(refunded.statusCode, 200);
+      assert.equal(refunded.json().ledger.refund.lines.length, 2);
+      assert.ok(refunded.json().reconciliation.some((report: { refund: boolean; status: string }) =>
+        report.refund && report.status === 'MATCHED'));
+
       awaitReceipt = new Promise<void>((resolve) => { releaseReceipt = resolve; });
       const receiptStarted = new Promise<void>((resolve) => { receiptReached = resolve; });
       const delivery = approvalWins.deliver();
@@ -631,9 +657,67 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       const { rows } = await pool.query('SELECT intent_id FROM merchant_deliveries WHERE intent_id IN ($1, $2)',
         [approvalWins.id, deliveryWins.id]);
       assert.deepEqual(rows, [{ intent_id: deliveryWins.id }]);
+
+      const queueUrl = detailUrl + '/testnet-refund';
+      assert.equal((await api.inject({ method: 'POST', url: queueUrl, headers })).statusCode, 401);
+      assert.equal((await api.inject({
+        method: 'POST', url: listUrl + '/' + deliveryWins.id + '/testnet-refund', headers: financeHeaders,
+      })).statusCode, 409);
+      const enqueue = () => api.inject({ method: 'POST', url: queueUrl, headers: financeHeaders });
+      const enqueued = await Promise.all([enqueue(), enqueue()]);
+      assert.deepEqual(enqueued.map((response) => response.statusCode), [202, 202]);
+      assert.equal((await pool.query('SELECT count(*) FROM finance_refund_jobs')).rows[0]?.count, '1');
+
+      let calls = 0;
+      const failOnce = async (id: string, reason: string) => {
+        calls++;
+        assert.equal(id, approvalWins.id);
+        assert.equal(reason, 'Data unavailable');
+        throw new Error('Simulated worker interruption');
+      };
+      await Promise.all([processFinanceRefund(pool, failOnce), processFinanceRefund(pool, failOnce)]);
+      assert.equal(calls, 1);
+      const retry = await api.inject({ url: detailUrl, headers: financeHeaders });
+      assert.equal(retry.json().order.refundExecutionError, 'REFUND_EXECUTION_INCOMPLETE');
+      assert.equal((await enqueue()).statusCode, 202);
+      assert.equal(await processFinanceRefund(pool, async (id, reason) => {
+        calls++;
+        assert.equal(id, approvalWins.id);
+        assert.equal(reason, 'Data unavailable');
+      }), true);
+      assert.equal(calls, 2);
+      assert.equal(await processFinanceRefund(pool, failOnce), false);
+
+      const demoAction = (id: string, action: string, auth = financeHeaders, server = localApi) =>
+        server.inject({ method: 'POST', url: listUrl + '/' + id + '/demo-' + action, headers: auth });
+      assert.equal((await demoAction(approvalWins.id, 'refund')).statusCode, 404);
+      assert.equal((await demoAction(approvalWins.id, 'refund', financeHeaders, api)).statusCode, 404);
+
+      // Isolate the simulated actions from Base Sepolia orders.
+      await pool.query("UPDATE payment_intents SET network = 'demo:local' WHERE id = ANY($1::uuid[])",
+        [[approvalWins.id, deliveryWins.id]]);
+      await pool.query("UPDATE payment_journal SET network = 'demo:local' WHERE intent_id = ANY($1::uuid[])",
+        [[approvalWins.id, deliveryWins.id]]);
+      await pool.query('DELETE FROM merchant_deliveries WHERE intent_id = $1', [deliveryWins.id]);
+      assert.equal((await demoAction(approvalWins.id, 'refund', headers)).statusCode, 401);
+      assert.equal((await demoAction(approvalWins.id, 'deliver')).statusCode, 409);
+      assert.equal((await demoAction(deliveryWins.id, 'refund')).statusCode, 409);
+      const executions = await Promise.all([
+        demoAction(approvalWins.id, 'refund'), demoAction(approvalWins.id, 'refund'),
+        demoAction(deliveryWins.id, 'deliver'), demoAction(deliveryWins.id, 'deliver'),
+      ]);
+      assert.deepEqual(executions.map((response) => response.statusCode), [200, 200, 200, 200]);
+      assert.deepEqual(executions.map((response) => response.json().status),
+        ['REFUNDED', 'REFUNDED', 'DELIVERED', 'DELIVERED']);
+      const refund = await localApi.inject({ url: detailUrl, headers: financeHeaders });
+      assert.equal(refund.json().ledger.refund.lines.length, 2);
+      assert.equal(refund.json().reconciliation.length, 0);
+      const delivered = await localApi.inject({ url: listUrl + '/' + deliveryWins.id, headers: financeHeaders });
+      assert.ok(delivered.json().order.deliveredAt);
+      assert.equal(delivered.json().ledger.refund, null);
     } finally {
       releaseReceipt();
-      await Promise.all([api.close(), merchant.close()]);
+      await Promise.all([api.close(), localApi.close(), merchant.close()]);
     }
   });
 });

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finance Console | AgentTreasury</title>
+  <link rel="stylesheet" href="/finance/console.css">
+  <script src="/finance/console.js" defer></script>
+</head>
+<body>
+  <header class="top"><div class="brand"><span class="mark" aria-hidden="true">A</span> AgentTreasury</div><span class="network">Base Sepolia</span></header>
+  <main>
+    <div class="heading"><div><h1>Finance Console</h1><p>Review agent payments, refund requests, and settlement evidence.</p></div><button id="refresh" hidden>Refresh</button></div>
+    <form id="login" class="card login">
+      <label for="token">Finance approval token</label>
+      <div class="form-actions"><input id="token" type="password" required autocomplete="off"><button class="primary">Open console</button></div>
+    </form>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <div id="workspace" class="workspace" hidden>
+      <section class="card orders">
+        <div class="section-title"><h2>Payment intents</h2><button id="logout">Sign out</button></div>
+        <ul id="orders"></ul>
+      </section>
+      <section class="card detail" id="detail" aria-label="Payment details"><p>Select a payment to view details.</p></section>
+    </div>
+  </main>
+</body>
+</html>

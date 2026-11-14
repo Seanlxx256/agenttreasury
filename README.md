@@ -83,6 +83,24 @@ A discrepancy report includes the affected transaction hash and, when available,
 
 The command also reconciles incoming USDC against recorded refunds. A refund matches by transaction hash, log index, sender, amount, block number, and block hash. Successful matches appear in `matchedRefunds`. Missing or mismatched transfers appear in `refundDiscrepancies`. Other incoming transfers, including faucet funding, are reported as unclassified until they are accounted for. Funding entries, balance-level reconciliation, and scheduled scans are future work.
 
+## Finance console
+
+For local development without Docker, run `npm run finance:local`. It starts a loopback-only PostgreSQL server, applies migrations, and prints the console URL. On macOS it copies the finance token to the clipboard. Paste it into the console. The launcher stores its database and credentials in the Git-ignored `.finance-local/` directory, so orders persist across restarts. This new database begins empty. Use Ctrl+C to stop the server and database.
+
+While the local console is running, run `npm run finance:demo` in another terminal and refresh the page. It reuses a pending local demo refund or creates a new settled mock order when the previous demo has been decided. Use the demo order to try approval or denial. After approval, select **Simulate refund** to post the refund journal. After denial, select **Simulate delivery** to record sample delivery. Both actions are available only in the local launcher and work only on local demo orders. They use no blockchain transaction.
+
+With an existing database, configure DATABASE_URL and FINANCE_APPROVAL_TOKEN and start the API normally. Open `http://127.0.0.1:3000/finance` to review the latest 100 payment intents, decide pending refunds, and see journals and reconciliation reports. The page keeps the finance token in memory until sign-out or reload.
+
+### Send a testnet refund from the console
+
+Build, apply migration 010 and restart the API. Start the refund worker against the same database with DATABASE_URL, BASE_SEPOLIA_RPC_URL, MERCHANT_TEST_KEY and PAYMENT_RELAYER_KEY configured. The API and browser do not need wallet keys for this action.
+
+```sh
+npm run worker:refund
+```
+
+Approve a settled, undelivered Base Sepolia order and select **Send testnet refund**. The console queues the refund and polls for its transaction hash, completed journal and reconciliation. The worker reuses the existing refund CLI and its saved authorization. Repeated requests reuse the same job. A restarted worker resumes unfinished jobs. Use a separate relayer or stop the payment settlement worker while using the same relayer for refunds. The manual refund command remains available.
+
 ## Request and approve a refund
 
 Set FINANCE_APPROVAL_TOKEN to a separate locally generated secret and restart the API. Keep it out of the agent environment. The agent may request a refund for its own settled intent. Finance may approve or deny that request.

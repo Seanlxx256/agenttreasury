@@ -21,7 +21,10 @@
     "preflight": "node dist/src/preflight.js",
     "verify:purchase": "node dist/src/verify-purchase.js",
     "wallets:init": "node scripts/init-wallets.mjs",
-    "refund:send": "node dist/src/refund-send.js"
+    "refund:send": "node dist/src/refund-send.js",
+    "finance:local": "npm run build && node --env-file-if-exists=.env scripts/finance-local.mjs",
+    "finance:demo": "npm run build && node scripts/finance-demo.mjs",
+    "worker:refund": "node dist/src/finance-refund-worker.js"
   },
   "dependencies": {
     "fastify": "^5.12.8",

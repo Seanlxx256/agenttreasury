@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import Fastify from 'fastify';
 import type { FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
+import { registerFinanceConsole } from './finance-console.js';
 import { deliverPayment } from './delivery.js';
 import type { MerchantConfig } from './merchant.js';
 import { decideRefund, requestRefund } from './refund-requests.js';
@@ -18,7 +19,7 @@ export function tokenDigest(token: string) {
   return createHash('sha256').update(token).digest();
 }
 
-export function buildApp(pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch }, financeToken?: string) {
+export function buildApp(pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch }, financeToken?: string, localDemo = false) {
   const app = Fastify({
     logger,
     bodyLimit: 8192,
@@ -52,7 +53,7 @@ export function buildApp(pool: Pool, logger = false, delivery?: { merchant: Merc
   app.get('/health/live', async () => ({ status: 'ok' }));
   app.get('/health/ready', async (request, reply) => {
     try {
-      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 9');
+      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 10');
       if (rowCount === 1) return { status: 'ready' };
     } catch (error) {
       request.log.warn({ err: error }, 'Database readiness check failed');
@@ -117,6 +118,16 @@ export function buildApp(pool: Pool, logger = false, delivery?: { merchant: Merc
     },
   }, async (request) => requestRefund(pool, request.params.id, await authenticate(request), request.body.reason));
 
+  function authenticateFinance(request: FastifyRequest) {
+    if (!financeToken) throw new PaymentError(503, 'FINANCE_NOT_CONFIGURED');
+    const token = /^Bearer (\S+)$/i.exec(request.headers.authorization ?? '')?.[1];
+    if (!token || !timingSafeEqual(tokenDigest(token), tokenDigest(financeToken))) {
+      throw new PaymentError(401, 'UNAUTHORIZED');
+    }
+  }
+
+  registerFinanceConsole(app, pool, authenticateFinance, localDemo);
+
   app.post<{ Params: { id: string }; Body: { decision: 'APPROVED' | 'DENIED' } }>(
     '/finance/payment-intents/:id/refund-decision', {
       schema: {
@@ -124,14 +135,8 @@ export function buildApp(pool: Pool, logger = false, delivery?: { merchant: Merc
         body: { type: 'object', required: ['decision'], additionalProperties: false,
           properties: { decision: { enum: ['APPROVED', 'DENIED'] } } },
       },
-    }, async (request) => {
-      if (!financeToken) throw new PaymentError(503, 'FINANCE_NOT_CONFIGURED');
-      const token = /^Bearer (\S+)$/i.exec(request.headers.authorization ?? '')?.[1];
-      if (!token || !timingSafeEqual(tokenDigest(token), tokenDigest(financeToken))) {
-        throw new PaymentError(401, 'UNAUTHORIZED');
-      }
-      return decideRefund(pool, request.params.id, request.body.decision);
-    },
+      preHandler: async (request) => authenticateFinance(request),
+    }, async (request) => decideRefund(pool, request.params.id, request.body.decision),
   );
 
   return app;

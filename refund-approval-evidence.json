@@ -1,0 +1,100 @@
+{
+  "status": "PASSED",
+  "purchaseId": "5e74c474-b698-4443-b0eb-abbf6ab6af4a",
+  "intentId": "77ec9752-19a6-45d9-91e9-00e879d84585",
+  "approval": {
+    "intentId": "77ec9752-19a6-45d9-91e9-00e879d84585",
+    "reason": "Testnet refund approval verification",
+    "status": "APPROVED",
+    "requestedBy": "c7da96bf-e79d-41b7-b7dd-dd511fd20f69",
+    "requestedAt": "2026-11-14T16:10:01.565Z",
+    "decidedBy": "finance-operator",
+    "decidedAt": "2026-11-14T16:10:01.579Z"
+  },
+  "blockedDelivery": {
+    "statusCode": 409,
+    "code": "REFUND_APPROVED"
+  },
+  "paymentReconciliation": {
+    "network": "eip155:84532",
+    "asset": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+    "payer": "0x7a2174b933dbc8b98782eefaea07df1f76a170ac",
+    "fromBlock": "58747677",
+    "toBlock": "58747677",
+    "toBlockHash": "0xaec07beb27a725a8dd78bb42958b15fbe52b45850b3a56aaa6fbb675a4abd42d",
+    "status": "MATCHED",
+    "matched": [
+      {
+        "intentId": "77ec9752-19a6-45d9-91e9-00e879d84585",
+        "transactionHash": "0xc87cf81dc8abba0d9eaf0ea1c407172c74303bd5c5ee464fcaef23bd4a5255e2",
+        "logIndex": 3
+      }
+    ],
+    "discrepancies": [],
+    "matchedRefunds": [],
+    "refundDiscrepancies": []
+  },
+  "refundTransactionUrl": "https://sepolia.basescan.org/tx/0x78056fb7c909f0ecddaa294235cd861a80763fcdb5388b036ef36c4e0c09cd98",
+  "ledger": {
+    "intentId": "77ec9752-19a6-45d9-91e9-00e879d84585",
+    "status": "SETTLED",
+    "refund": {
+      "lines": [
+        {
+          "side": "DEBIT",
+          "amount": "2000",
+          "account": "USDC_WALLET_ASSET"
+        },
+        {
+          "side": "CREDIT",
+          "amount": "2000",
+          "account": "DATA_PROCUREMENT_EXPENSE"
+        }
+      ],
+      "reason": "Testnet refund approval verification",
+      "logIndex": 1,
+      "postedAt": "2026-11-15T00:29:09.687782+08:00",
+      "blockNumber": "58753696",
+      "transactionHash": "0x78056fb7c909f0ecddaa294235cd861a80763fcdb5388b036ef36c4e0c09cd98"
+    },
+    "journal": {
+      "network": "eip155:84532",
+      "asset": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+      "payer": "0x7a2174b933dbc8b98782eefaea07df1f76a170ac",
+      "transactionHash": "0xc87cf81dc8abba0d9eaf0ea1c407172c74303bd5c5ee464fcaef23bd4a5255e2",
+      "settledAt": "2026-11-14T16:09:59.526Z",
+      "postedAt": "2026-11-14T16:09:59.526Z",
+      "lines": [
+        {
+          "account": "DATA_PROCUREMENT_EXPENSE",
+          "side": "DEBIT",
+          "amount": "2000"
+        },
+        {
+          "account": "USDC_WALLET_ASSET",
+          "side": "CREDIT",
+          "amount": "2000"
+        }
+      ]
+    }
+  },
+  "reconciliation": {
+    "network": "eip155:84532",
+    "asset": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+    "payer": "0x7a2174b933dbc8b98782eefaea07df1f76a170ac",
+    "fromBlock": "58753696",
+    "toBlock": "58753696",
+    "toBlockHash": "0xf75c31c864a01c24ae78904a63d29278e0a3a305ada270afaef8f3b2898dabab",
+    "status": "MATCHED",
+    "matched": [],
+    "discrepancies": [],
+    "matchedRefunds": [
+      {
+        "intentId": "77ec9752-19a6-45d9-91e9-00e879d84585",
+        "transactionHash": "0x78056fb7c909f0ecddaa294235cd861a80763fcdb5388b036ef36c4e0c09cd98",
+        "logIndex": 1
+      }
+    ],
+    "refundDiscrepancies": []
+  }
+}
