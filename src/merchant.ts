@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import Fastify from 'fastify';
+import { transaction } from './db.js';
+import { checkDelivery } from './refund-requests.js';
 import type { Pool } from 'pg';
 import type { Hash } from 'viem';
 import { baseSepoliaUsdc } from './base-settlement.js';
@@ -109,14 +111,19 @@ export function buildMerchant(pool: Pool, config: MerchantConfig, chain: RefundC
 
     const result = { market: 'DE', category: 'camping lanterns', currency: 'EUR',
       sample: true, observations: [{ segment: 'entry level', medianPrice: 19.99 }, { segment: 'outdoor', medianPrice: 39.99 }] };
-    const inserted = await pool.query(`
-      INSERT INTO merchant_deliveries (intent_id, transaction_hash, result)
-      VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
-    `, [proof.intentId, proof.transactionHash, result]);
-    if (inserted.rowCount === 1) return reply.send(result);
+    const outcome = await transaction(pool, async (client) => {
+      const blocked = await checkDelivery(client, proof.intentId, proof.transactionHash, proof.payer);
+      if (blocked) return blocked;
+      const { rowCount } = await client.query(`
+        INSERT INTO merchant_deliveries (intent_id, transaction_hash, result)
+        VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+      `, [proof.intentId, proof.transactionHash, result]);
+      return rowCount === 1 ? 'DELIVERED' : 'DELIVERY_CONFLICT';
+    });
+    if (outcome === 'DELIVERED') return reply.send(result);
     const winner = await existingDelivery();
     if (winner) return sendStored(winner);
-    return reply.code(409).send({ code: 'DELIVERY_CONFLICT' });
+    return reply.code(409).send({ code: outcome });
   });
   return app;
 }

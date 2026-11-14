@@ -20,7 +20,8 @@
     "research": "node dist/src/research.js",
     "preflight": "node dist/src/preflight.js",
     "verify:purchase": "node dist/src/verify-purchase.js",
-    "wallets:init": "node scripts/init-wallets.mjs"
+    "wallets:init": "node scripts/init-wallets.mjs",
+    "refund:send": "node dist/src/refund-send.js"
   },
   "dependencies": {
     "fastify": "^5.12.8",

@@ -1,9 +1,10 @@
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import Fastify from 'fastify';
 import type { FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 import { deliverPayment } from './delivery.js';
 import type { MerchantConfig } from './merchant.js';
+import { decideRefund, requestRefund } from './refund-requests.js';
 import { getPaymentLedger } from './ledger.js';
 import { createIntent, getIntent, PaymentError } from './payments.js';
 import type { Purchase } from './payments.js';
@@ -17,7 +18,7 @@ export function tokenDigest(token: string) {
   return createHash('sha256').update(token).digest();
 }
 
-export function buildApp(pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch }) {
+export function buildApp(pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch }, financeToken?: string) {
   const app = Fastify({
     logger,
     bodyLimit: 8192,
@@ -51,7 +52,7 @@ export function buildApp(pool: Pool, logger = false, delivery?: { merchant: Merc
   app.get('/health/live', async () => ({ status: 'ok' }));
   app.get('/health/ready', async (request, reply) => {
     try {
-      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 7');
+      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 9');
       if (rowCount === 1) return { status: 'ready' };
     } catch (error) {
       request.log.warn({ err: error }, 'Database readiness check failed');
@@ -105,6 +106,31 @@ export function buildApp(pool: Pool, logger = false, delivery?: { merchant: Merc
       const agentId = await authenticate(request);
       if (!delivery) throw new PaymentError(503, 'DELIVERY_NOT_CONFIGURED');
       return deliverPayment(pool, delivery.merchant, agentId, request.params.id, delivery.fetcher);
+    },
+  );
+
+  app.post<{ Params: { id: string }; Body: { reason: string } }>('/payment-intents/:id/refund-request', {
+    schema: {
+      params: { type: 'object', required: ['id'], properties: { id: uuid } },
+      body: { type: 'object', required: ['reason'], additionalProperties: false,
+        properties: { reason: { type: 'string', minLength: 1, maxLength: 500 } } },
+    },
+  }, async (request) => requestRefund(pool, request.params.id, await authenticate(request), request.body.reason));
+
+  app.post<{ Params: { id: string }; Body: { decision: 'APPROVED' | 'DENIED' } }>(
+    '/finance/payment-intents/:id/refund-decision', {
+      schema: {
+        params: { type: 'object', required: ['id'], properties: { id: uuid } },
+        body: { type: 'object', required: ['decision'], additionalProperties: false,
+          properties: { decision: { enum: ['APPROVED', 'DENIED'] } } },
+      },
+    }, async (request) => {
+      if (!financeToken) throw new PaymentError(503, 'FINANCE_NOT_CONFIGURED');
+      const token = /^Bearer (\S+)$/i.exec(request.headers.authorization ?? '')?.[1];
+      if (!token || !timingSafeEqual(tokenDigest(token), tokenDigest(financeToken))) {
+        throw new PaymentError(401, 'UNAUTHORIZED');
+      }
+      return decideRefund(pool, request.params.id, request.body.decision);
     },
   );
 

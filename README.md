@@ -83,6 +83,34 @@ A discrepancy report includes the affected transaction hash and, when available,
 
 The command also reconciles incoming USDC against recorded refunds. A refund matches by transaction hash, log index, sender, amount, block number, and block hash. Successful matches appear in `matchedRefunds`. Missing or mismatched transfers appear in `refundDiscrepancies`. Other incoming transfers, including faucet funding, are reported as unclassified until they are accounted for. Funding entries, balance-level reconciliation, and scheduled scans are future work.
 
+## Request and approve a refund
+
+Set FINANCE_APPROVAL_TOKEN to a separate locally generated secret and restart the API. Keep it out of the agent environment. The agent may request a refund for its own settled intent. Finance may approve or deny that request.
+
+```sh
+curl --fail-with-body -sS -X POST "http://127.0.0.1:3000/payment-intents/$INTENT_ID/refund-request" \
+  -H "Authorization: Bearer $AGENT_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"reason":"Testnet refund verification"}'
+
+curl --fail-with-body -sS -X POST "http://127.0.0.1:3000/finance/payment-intents/$INTENT_ID/refund-decision" \
+  -H "Authorization: Bearer $FINANCE_APPROVAL_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"decision":"APPROVED"}'
+```
+
+Merchant delivery and finance approval use the same PostgreSQL row lock. When delivery commits first, approval is rejected with PAYMENT_ALREADY_DELIVERED. When approval commits first, delivery is rejected with REFUND_APPROVED. A pending request or denied request leaves delivery available. Approval records the decision time and shared finance operator role. This demo uses one finance credential.
+
+## Send a demo merchant refund
+
+Build the project and apply migrations through 009 with `npm run migrate`. Configure DATABASE_URL, BASE_SEPOLIA_RPC_URL, the original merchant's MERCHANT_TEST_KEY, and PAYMENT_RELAYER_KEY. The merchant must hold the original payment amount in Base Sepolia USDC and the relayer must have Base Sepolia ETH for gas. Use a settled payment's intent ID from the ledger.
+
+```sh
+node --env-file=.env dist/src/refund-send.js "$INTENT_ID" "Testnet refund verification"
+```
+
+If the variables are already exported, use `npm run refund:send -- "$INTENT_ID" "Testnet refund verification"`. For a new refund, the command requires an approved request with the same reason before creating a signed authorization. It can broadcast a full testnet refund to the original payer. It saves the signed authorization in PostgreSQL before broadcasting. If interrupted, rerun with the same intent ID and reason to resume the saved authorization. If a matching refund is already recorded, it reports the existing refund. An authorization that expires unused requires operator review.
+
+The command waits for finality, records the refund, and prints the refund ledger and reconciliation report. Use the same database as the original purchase. Run one transaction-producing process per relayer account during the demo to avoid gas nonce contention. A finance operator runs this command after approval.
+
 ## Record a merchant refund
 
 After the merchant sends a full USDC refund on Base Sepolia and the transaction is finalized, a finance operator with database access can record it. Build the project and apply migration 006 first. Use the same DATABASE_URL and BASE_SEPOLIA_RPC_URL as reconciliation.
@@ -93,7 +121,7 @@ npm run refund -- "$INTENT_ID" "$REFUND_TX_HASH" "$TRANSFER_LOG_INDEX" "Delivery
 
 Use the ERC-20 Transfer log index, which distinguishes multiple transfers in the same transaction. The CLI verifies finalized, canonical chain evidence and requires the original merchant, original payer, and full payment amount. It allows one full refund per intent and prevents reusing the same transfer for another purchase. An identical request returns the existing refund.
 
-The ledger endpoint exposes the original payment and a separate refund journal with a debit to the USDC wallet and a credit to procurement expense. Spending limits continue to use gross spend. The operator records an existing merchant transfer. Merchant refund initiation and delivery dispute workflow require a separate integration.
+The ledger endpoint exposes the original payment and a separate refund journal with a debit to the USDC wallet and a credit to procurement expense. Spending limits continue to use gross spend. This command records existing merchant transfers, including externally issued refunds after delivery. Use the approval workflow for new refunds initiated by the demo.
 
 [ERC-20 Transfer event](https://eips.ethereum.org/EIPS/eip-20) · [viem transaction receipts](https://viem.sh/docs/actions/public/getTransactionReceipt)
 
@@ -129,7 +157,7 @@ PURCHASE_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
 npm run research -- "$PURCHASE_ID"
 ```
 
-Save the purchase UUID to resume an interrupted run. Reusing it resumes the same intent. Once settlement is finalized, the client retrieves the sample data and the balanced payment journal. The merchant stores the delivery in PostgreSQL, returns the same result on retry, and rejects reuse of the receipt for another intent. This demo uses a shared database and a dedicated merchant per deployment. Refund initiation and delivery dispute coordination are separate integrations.
+Save the purchase UUID to resume an interrupted run. Reusing it resumes the same intent. Once settlement is finalized, the client retrieves the sample data and the balanced payment journal. The merchant stores the delivery in PostgreSQL, returns the same result on retry, and rejects reuse of the receipt for another intent. This demo uses a shared database and a dedicated merchant per deployment. Use the finance workflow to approve refunds for settled orders that have yet to be delivered.
 
 
 ### Verify a funded testnet purchase

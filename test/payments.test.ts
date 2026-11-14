@@ -547,4 +547,93 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       }
     }
   });
+
+  await t.test('finance approval and merchant delivery cannot both win a settled order', async () => {
+    const { rows: [template] } = await pool.query(`
+      SELECT i.*, j.payer, t.agent_id FROM payment_intents i JOIN payment_journal j ON j.intent_id = i.id
+      JOIN research_tasks t ON t.id = i.task_id WHERE i.task_id = $1
+    `, [buyer.taskId]);
+    assert.ok(template);
+    const finance = randomBytes(32).toString('base64url');
+    const api = buildApp(pool, false, undefined, finance);
+    const config = { endpoint: template.endpoint, recipient: template.payee, secret: 'a'.repeat(32) };
+    const block = `0x${'fe'.repeat(32)}` as const;
+    let releaseReceipt: () => void = () => {};
+    let awaitReceipt: Promise<void> = Promise.resolve();
+    let receiptReached: () => void = () => {};
+    const merchant = buildMerchant(pool, config, {
+      finalized: async () => 200n,
+      blockHash: async () => block,
+      receipt: async () => {
+        receiptReached();
+        await awaitReceipt;
+        return { blockNumber: 200n, blockHash: block, transactionIndex: 0, status: 'success',
+          logs: [{ address: baseSepoliaUsdc, from: template.payer, to: template.payee, amount: 2000n, logIndex: 0 }] };
+      },
+    });
+
+    async function fixture(suffix: string) {
+      const id = randomUUID();
+      const hash = `0x${suffix.repeat(32)}` as const;
+      await pool.query(`
+        INSERT INTO payment_intents (id, task_id, service_id, request_id, idempotency_key, status,
+          policy_version, endpoint, network, asset, payee, amount, budget_day, quote, signed_authorization,
+          transaction_hash, settled_at)
+        SELECT $1, task_id, service_id, $1, $1::uuid::text, status,
+          policy_version, endpoint, network, asset, payee, amount, budget_day, quote,
+          jsonb_set(signed_authorization, '{nonce}', to_jsonb($2::text)), $2, settled_at
+        FROM payment_intents WHERE id = $3
+      `, [id, hash, template.id]);
+      await pool.query(`
+        INSERT INTO payment_journal (intent_id, network, asset, payer, transaction_hash, amount, settled_at)
+        SELECT $1, network, asset, payer, $2, amount, settled_at FROM payment_journal WHERE intent_id = $3
+      `, [id, hash, template.id]);
+      const proof = { intentId: id, payer: template.payer, transactionHash: hash };
+      return {
+        id,
+        request: (auth = headers, reason = 'Data unavailable') => api.inject({ method: 'POST',
+          url: `/payment-intents/${id}/refund-request`, headers: auth, payload: { reason } }),
+        decide: (auth = `Bearer ${finance}`, decision = 'APPROVED') => api.inject({ method: 'POST',
+          url: `/finance/payment-intents/${id}/refund-decision`,
+          headers: { authorization: auth }, payload: { decision } }),
+        deliver: () => merchant.inject({ method: 'POST', url: '/market-data',
+          headers: { 'delivery-signature': deliverySignature(config, proof) }, payload: proof }),
+      };
+    }
+
+    try {
+      const approvalWins = await fixture('a7');
+      assert.equal((await approvalWins.request({ authorization: `Bearer ${stranger.token}` })).statusCode, 404);
+      assert.equal((await approvalWins.request()).json().status, 'PENDING');
+      assert.equal((await approvalWins.request()).json().status, 'PENDING');
+      assert.equal((await approvalWins.request(headers, 'Different reason')).statusCode, 409);
+      assert.equal((await approvalWins.decide(headers.authorization)).statusCode, 401);
+
+      awaitReceipt = new Promise<void>((resolve) => { releaseReceipt = resolve; });
+      const receiptStarted = new Promise<void>((resolve) => { receiptReached = resolve; });
+      const delivery = approvalWins.deliver();
+      await receiptStarted;
+      try {
+        const decision = await approvalWins.decide();
+        assert.equal(decision.json().status, 'APPROVED');
+        assert.deepEqual((await approvalWins.decide()).json(), decision.json());
+      } finally {
+        releaseReceipt();
+      }
+      assert.equal((await delivery).json().code, 'REFUND_APPROVED');
+
+      const deliveryWins = await fixture('a8');
+      assert.equal((await deliveryWins.request()).json().status, 'PENDING');
+      assert.equal((await deliveryWins.deliver()).statusCode, 200);
+      assert.equal((await deliveryWins.decide()).json().code, 'PAYMENT_ALREADY_DELIVERED');
+      assert.equal((await deliveryWins.decide(undefined, 'DENIED')).json().status, 'DENIED');
+      assert.equal((await deliveryWins.deliver()).statusCode, 200);
+      const { rows } = await pool.query('SELECT intent_id FROM merchant_deliveries WHERE intent_id IN ($1, $2)',
+        [approvalWins.id, deliveryWins.id]);
+      assert.deepEqual(rows, [{ intent_id: deliveryWins.id }]);
+    } finally {
+      releaseReceipt();
+      await Promise.all([api.close(), merchant.close()]);
+    }
+  });
 });

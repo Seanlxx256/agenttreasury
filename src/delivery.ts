@@ -26,15 +26,24 @@ export async function deliverPayment(
   }
   const { payer, transactionHash } = intent;
   const proof = { intentId, payer, transactionHash };
+  let response: Response;
   try {
-    const response = await fetcher(config.endpoint, {
+    response = await fetcher(config.endpoint, {
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(8000),
       body: JSON.stringify(proof),
       headers: { 'content-type': 'application/json', 'delivery-signature': deliverySignature(config, proof) },
     });
     if (response.ok) return await response.json();
-    await response.body?.cancel();
-  } catch {
+    if (response.status === 409) {
+      const conflict = await response.json();
+      if (conflict?.code === 'REFUND_APPROVED' || conflict?.code === 'PAYMENT_REFUNDED') {
+        throw new PaymentError(409, conflict.code);
+      }
+    } else {
+      await response.body?.cancel();
+    }
+  } catch (error) {
+    if (error instanceof PaymentError) throw error;
     throw new PaymentError(502, 'MERCHANT_DELIVERY_UNAVAILABLE');
   }
   throw new PaymentError(502, 'MERCHANT_DELIVERY_REJECTED');
