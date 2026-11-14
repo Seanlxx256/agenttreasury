@@ -15,7 +15,9 @@
     "worker": "node dist/src/worker.js",
     "settle": "node dist/src/settle.js",
     "reconcile": "node dist/src/reconcile.js",
-    "refund": "node dist/src/refund.js"
+    "refund": "node dist/src/refund.js",
+    "merchant": "node dist/src/merchant-server.js",
+    "research": "node dist/src/research.js"
   },
   "dependencies": {
     "fastify": "^5.12.8",

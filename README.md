@@ -57,11 +57,11 @@ Run the quote worker and the settlement worker as separate processes. Set these 
 | PAYMENT_PAYER_KEY | Private key of an account funded with Base Sepolia USDC |
 | PAYMENT_RELAYER_KEY | Private key of a separate account funded with Base Sepolia ETH for gas |
 
-Configure a real approved recipient and matching x402 endpoint before creating an intent. Start the worker with `npm run settle`. For this milestone run one settlement worker per gas-paying account to avoid contention on the relayer's transaction nonces. The seed uses a placeholder service and recipient.
+Configure a real approved recipient and matching x402 endpoint before creating an intent. Start the worker with `npm run settle`. For this milestone run one settlement worker per gas-paying account to avoid contention on the relayer's transaction nonces. Without merchant configuration the seed uses a placeholder service and recipient.
 
 The worker rechecks policy before signing and persists a short-lived authorization before its first broadcast. It relays directly to the Base Sepolia USDC contract. A timed-out RPC request leaves the intent UNKNOWN and keeps the reservation active. The worker follows the same authorization nonce, retries only that authorization when eligible, and converts reserved funds to spent after observing the matching finalized transfer. If the finalized chain proves the authorization expired unused, it releases the reservation.
 
-Integration tests exercise actual typed-data signing and PostgreSQL state transitions with simulated RPC outcomes. A funded Base Sepolia run and merchant-side proof redemption and delivery are subsequent milestones.
+Integration tests exercise actual typed-data signing and PostgreSQL state transitions with simulated RPC outcomes. The funded Base Sepolia run still requires dedicated testnet wallets.
 
 ## Payment ledger
 
@@ -98,3 +98,27 @@ The ledger endpoint exposes the original payment and a separate refund journal w
 [ERC-20 Transfer event](https://eips.ethereum.org/EIPS/eip-20) · [viem transaction receipts](https://viem.sh/docs/actions/public/getTransactionReceipt)
 
 [EIP-3009 transfer authorization](https://eips.ethereum.org/EIPS/eip-3009) · [Circle USDC contract addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses)
+
+
+## Research purchase demo
+
+The demo merchant serves an x402 v2 quote for 0.002 USDC and delivers a fixed sample dataset after independently verifying the finalized transfer. The backend and merchant use a shared HMAC secret to bind a receipt to an intent. The delivery POST is specific to this demo. It redeems an already-settled transfer after the backend has relayed the EIP-3009 authorization.
+
+Build the project and run `npm run migrate` to apply migration 007. Configure the API, merchant and seed command with the following environment values. Use the payment and relayer configuration from Testnet settlement for the settlement worker.
+
+| Variable | Purpose |
+| --- | --- |
+| DATABASE_URL | Development PostgreSQL connection string |
+| BASE_SEPOLIA_RPC_URL | RPC used by the merchant and the settlement worker |
+| MERCHANT_ENDPOINT | Use `http://127.0.0.1:3001/market-data` for the loopback demo |
+| MERCHANT_RECIPIENT | Public address of the testnet merchant |
+| MERCHANT_DELIVERY_SECRET | Random secret shared only between the API and merchant, at least 32 characters |
+
+Start `npm run merchant`, `npm start`, `npm run worker`, and `npm run settle` in separate terminals. Run `npm run seed` with the same merchant configuration and copy the returned token and IDs into AGENT_TOKEN, TASK_ID, and SERVICE_ID. The research client needs only those values and the optional API_URL.
+
+```sh
+PURCHASE_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+npm run research -- "$PURCHASE_ID"
+```
+
+Save the purchase UUID to resume an interrupted run. Reusing it resumes the same intent. Once settlement is finalized, the client retrieves the sample data and the balanced payment journal. The merchant stores the delivery in PostgreSQL, returns the same result on retry, and rejects reuse of the receipt for another intent. This demo uses a shared database and a dedicated merchant per deployment. Refund initiation and delivery dispute coordination are separate integrations.

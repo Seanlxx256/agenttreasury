@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import Fastify from 'fastify';
 import type { FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
+import { deliverPayment } from './delivery.js';
+import type { MerchantConfig } from './merchant.js';
 import { getPaymentLedger } from './ledger.js';
 import { createIntent, getIntent, PaymentError } from './payments.js';
 import type { Purchase } from './payments.js';
@@ -15,7 +17,7 @@ export function tokenDigest(token: string) {
   return createHash('sha256').update(token).digest();
 }
 
-export function buildApp(pool: Pool, logger = false) {
+export function buildApp(pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch }) {
   const app = Fastify({
     logger,
     bodyLimit: 8192,
@@ -49,7 +51,7 @@ export function buildApp(pool: Pool, logger = false) {
   app.get('/health/live', async () => ({ status: 'ok' }));
   app.get('/health/ready', async (request, reply) => {
     try {
-      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 6');
+      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 7');
       if (rowCount === 1) return { status: 'ready' };
     } catch (error) {
       request.log.warn({ err: error }, 'Database readiness check failed');
@@ -94,6 +96,16 @@ export function buildApp(pool: Pool, logger = false) {
     '/payment-intents/:id/ledger',
     { schema: { params: { type: 'object', required: ['id'], properties: { id: uuid } } } },
     async (request) => getPaymentLedger(pool, await authenticate(request), request.params.id),
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/payment-intents/:id/delivery',
+    { schema: { params: { type: 'object', required: ['id'], properties: { id: uuid } } } },
+    async (request) => {
+      const agentId = await authenticate(request);
+      if (!delivery) throw new PaymentError(503, 'DELIVERY_NOT_CONFIGURED');
+      return deliverPayment(pool, delivery.merchant, agentId, request.params.id, delivery.fetcher);
+    },
   );
 
   return app;

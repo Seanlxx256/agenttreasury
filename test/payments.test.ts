@@ -13,6 +13,7 @@ import { baseSepoliaUsdc, createBaseSettlement } from '../src/base-settlement.js
 import type { Authorization, SettlementRail } from '../src/base-settlement.js';
 import { reconcilePayments } from '../src/reconciliation.js';
 import type { ReconciliationChain } from '../src/reconciliation.js';
+import { buildMerchant, deliverySignature } from '../src/merchant.js';
 import { recordRefund } from '../src/refunds.js';
 import type { RefundChain } from '../src/refunds.js';
 import { processSettlement } from '../src/settlement-worker.js';
@@ -287,6 +288,62 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     const outside = await reconcilePayments(pool, chain, posting.payer, 152n, 160n);
     assert.equal(outside.status, 'MATCHED');
     assert.equal(outside.matched.length, 0);
+  });
+
+  await t.test('the agent retrieves settled data through a merchant with independent proof verification', async () => {
+    const { rows: [payment] } = await pool.query(`
+      SELECT j.intent_id, j.payer, j.transaction_hash, i.payee, i.endpoint
+      FROM payment_journal j JOIN payment_intents i ON i.id = j.intent_id
+    `);
+    assert.ok(payment);
+    const config = { endpoint: payment.endpoint, recipient: payment.payee, secret: 'a'.repeat(32) };
+    const blockHash = `0x${'12'.repeat(32)}` as const;
+    let finalized = 99n;
+    let amount = 2000n;
+    let receiptReads = 0;
+    const merchant = buildMerchant(pool, config, {
+      finalized: async () => finalized,
+      blockHash: async () => blockHash,
+      receipt: async () => {
+        receiptReads++;
+        return { blockNumber: 100n, blockHash, transactionIndex: 0, status: 'success',
+          logs: [{ address: baseSepoliaUsdc, from: payment.payer, to: payment.payee, amount, logIndex: 0 }] };
+      },
+    });
+    const api = buildApp(pool, false, { merchant: config, fetcher: async (_, init) => {
+      const response = await merchant.inject({
+        method: 'POST', url: '/market-data',
+        headers: Object.fromEntries(new Headers(init?.headers)), payload: String(init?.body),
+      });
+      return new Response(response.body, { status: response.statusCode });
+    } });
+    const url = `/payment-intents/${payment.intent_id}/delivery`;
+    try {
+      assert.ok((await merchant.inject('/market-data')).headers['payment-required']);
+      const body = { intentId: payment.intent_id, payer: payment.payer, transactionHash: payment.transaction_hash };
+      assert.equal((await merchant.inject({ method: 'POST', url: '/market-data', payload: body })).statusCode, 401);
+      assert.equal((await api.inject({ method: 'POST', url, headers: { authorization: `Bearer ${stranger.token}` } })).statusCode, 404);
+      assert.equal((await api.inject({ method: 'POST', url, headers })).statusCode, 502);
+      finalized = 100n;
+      amount = 1999n;
+      assert.equal((await api.inject({ method: 'POST', url, headers })).statusCode, 502);
+      amount = 2000n;
+      const results = await Promise.all([api.inject({ method: 'POST', url, headers }), api.inject({ method: 'POST', url, headers })]);
+      assert.equal(results[0]?.statusCode, 200);
+      assert.deepEqual(results[0]?.json(), results[1]?.json());
+      assert.equal(results[0]?.json().market, 'DE');
+      const afterDelivery = receiptReads;
+      assert.equal((await api.inject({ method: 'POST', url, headers })).statusCode, 200);
+      assert.equal(receiptReads, afterDelivery);
+      const reused = { ...body, intentId: randomUUID() };
+      assert.equal((await merchant.inject({
+        method: 'POST', url: '/market-data', payload: reused,
+        headers: { 'delivery-signature': deliverySignature(config, reused) },
+      })).statusCode, 409);
+      assert.equal((await pool.query('SELECT count(*) FROM merchant_deliveries')).rows[0]?.count, '1');
+    } finally {
+      await Promise.all([merchant.close(), api.close()]);
+    }
   });
 
   await t.test('only one finalized full merchant refund is posted for a payment', async () => {

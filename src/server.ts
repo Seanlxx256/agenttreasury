@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { merchantConfig } from './merchant.js';
 import { buildApp } from './app.js';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
@@ -8,7 +9,7 @@ const pool = new Pool({
   statement_timeout: 5000,
   idle_in_transaction_session_timeout: 5000,
 });
-const app = buildApp(pool, true);
+const app = buildApp(pool, true, process.env.MERCHANT_ENDPOINT ? { merchant: merchantConfig() } : undefined);
 
 pool.on('error', (error) => app.log.error({ err: error }, 'Idle database connection failed'));
 app.addHook('onClose', async () => pool.end());
