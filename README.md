@@ -61,7 +61,7 @@ Configure a real approved recipient and matching x402 endpoint before creating a
 
 The worker rechecks policy before signing and persists a short-lived authorization before its first broadcast. It relays directly to the Base Sepolia USDC contract. A timed-out RPC request leaves the intent UNKNOWN and keeps the reservation active. The worker follows the same authorization nonce, retries only that authorization when eligible, and converts reserved funds to spent after observing the matching finalized transfer. If the finalized chain proves the authorization expired unused, it releases the reservation.
 
-Integration tests exercise actual typed-data signing and PostgreSQL state transitions with simulated RPC outcomes. The funded Base Sepolia run still requires dedicated testnet wallets.
+Integration tests exercise actual typed-data signing and PostgreSQL state transitions with simulated RPC outcomes. The integration suite also runs the research client, API, and merchant over HTTP with a simulated blockchain. It drops the settlement response after the simulated debit and verifies one submission, idempotent delivery, one journal entry, and a matched reconciliation report.
 
 ## Payment ledger
 
@@ -81,7 +81,7 @@ The command independently reads outgoing USDC Transfer logs and matches them one
 
 A discrepancy report includes the affected transaction hash and, when available, the intent ID or log index. Exit code 0 indicates a match, 2 indicates discrepancies, and an execution error returns 1. Repeating the same wallet and range refreshes the stored report in `reconciliation_runs`. Run it again if settlement or journal posting catches up after an earlier scan.
 
-This command covers outgoing transfers. Incoming refund reconciliation, funding entries, balance-level reconciliation, and scheduled scans are future work.
+The command also reconciles incoming USDC against recorded refunds. A refund matches by transaction hash, log index, sender, amount, block number, and block hash. Successful matches appear in `matchedRefunds`. Missing or mismatched transfers appear in `refundDiscrepancies`. Other incoming transfers, including faucet funding, are reported as unclassified until they are accounted for. Funding entries, balance-level reconciliation, and scheduled scans are future work.
 
 ## Record a merchant refund
 
@@ -100,6 +100,12 @@ The ledger endpoint exposes the original payment and a separate refund journal w
 [EIP-3009 transfer authorization](https://eips.ethereum.org/EIPS/eip-3009) · [Circle USDC contract addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses)
 
 
+## Initialize test wallets
+
+After installing dependencies, run `npm run wallets:init` from the project directory. It generates three local EVM test accounts and prints their public addresses. It saves the keys and missing demo defaults in the ignored `.env` file. Rerunning with all three wallets configured prints the same addresses. A partial wallet configuration requires manual review.
+
+Use the public payer address to request [Base Sepolia USDC](https://faucet.circle.com/) and the public relayer address to request [Base Sepolia ETH](https://www.alchemy.com/faucets/base-sepolia). The merchant needs only its receiving address for the first purchase. The initializer creates accounts locally and makes no network requests.
+
 ## Research purchase demo
 
 The demo merchant serves an x402 v2 quote for 0.002 USDC and delivers a fixed sample dataset after independently verifying the finalized transfer. The backend and merchant use a shared HMAC secret to bind a receipt to an intent. The delivery POST is specific to this demo. It redeems an already-settled transfer after the backend has relayed the EIP-3009 authorization.
@@ -114,6 +120,8 @@ Build the project and run `npm run migrate` to apply migration 007. Configure th
 | MERCHANT_RECIPIENT | Public address of the testnet merchant |
 | MERCHANT_DELIVERY_SECRET | Random secret shared only between the API and merchant, at least 32 characters |
 
+Run `npm run preflight` with the settlement and merchant account settings first. It checks the RPC chain ID, finalized block access, separate accounts, the payer USDC balance, and a nonzero relayer ETH balance. It prints public addresses and balances without sending a transaction. Nonzero ETH does not guarantee enough gas for a particular transaction.
+
 Start `npm run merchant`, `npm start`, `npm run worker`, and `npm run settle` in separate terminals. Run `npm run seed` with the same merchant configuration and copy the returned token and IDs into AGENT_TOKEN, TASK_ID, and SERVICE_ID. The research client needs only those values and the optional API_URL.
 
 ```sh
@@ -122,3 +130,14 @@ npm run research -- "$PURCHASE_ID"
 ```
 
 Save the purchase UUID to resume an interrupted run. Reusing it resumes the same intent. Once settlement is finalized, the client retrieves the sample data and the balanced payment journal. The merchant stores the delivery in PostgreSQL, returns the same result on retry, and rejects reuse of the receipt for another intent. This demo uses a shared database and a dedicated merchant per deployment. Refund initiation and delivery dispute coordination are separate integrations.
+
+
+### Verify a funded testnet purchase
+
+With the demo services running, set DATABASE_URL, BASE_SEPOLIA_RPC_URL, AGENT_TOKEN, TASK_ID, and SERVICE_ID. Use a new purchase UUID to start a purchase or the original UUID to resume one. This command **can initiate a 0.002 testnet USDC payment**. The verifier uses the existing settlement worker, so it requires no wallet keys in its own environment.
+
+```sh
+npm --silent run verify:purchase -- "$PURCHASE_ID" > purchase-evidence.json
+```
+
+The command buys or resumes the purchase, repeats the same request, checks that the delivery and ledger are identical, and reconciles the payer's finalized settlement block against the journal. The report includes the explorer URL, delivery, original journal, and reconciliation details. It returns exit code 0 when the purchase has exactly one matched transfer and the block report is clean, 2 for reconciliation discrepancies, and 1 for an execution error. Unrelated unmatched wallet activity in the same block also prevents a clean result. Use the same UUID after a timeout.

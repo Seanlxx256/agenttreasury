@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
-import type { Address } from 'viem';
+import type { Address, Hash } from 'viem';
 import { baseSepoliaUsdc } from './base-settlement.js';
 import type { Authorization, SettlementRail } from './base-settlement.js';
 import { resolveReservation } from './budget.js';
@@ -12,6 +12,7 @@ interface Job {
   intent_id: string;
   authorization: Authorization | null;
   status: string;
+  transaction_hash: Hash | null;
   attempts: number;
 }
 
@@ -27,7 +28,7 @@ export async function processSettlement(pool: Pool, rail: SettlementRail) {
         available_at = now() + interval '60 seconds'
       FROM next WHERE o.id = next.id RETURNING o.id, o.intent_id, o.attempts
     )
-    SELECT c.*, p.status, p.signed_authorization AS "authorization" FROM claimed c JOIN payment_intents p ON p.id = c.intent_id
+    SELECT c.*, p.status, p.transaction_hash, p.signed_authorization AS "authorization" FROM claimed c JOIN payment_intents p ON p.id = c.intent_id
   `, [lease]);
   if (!job) return false;
   if (job.status === 'SETTLED' || job.status === 'FAILED') {
@@ -83,7 +84,7 @@ export async function processSettlement(pool: Pool, rail: SettlementRail) {
 
   let chainOutcomeKnown = false;
   try {
-    const observation = await rail.observe(authorization);
+    const observation = await rail.observe(authorization, job.transaction_hash ?? undefined);
     if (observation.status === 'settled' || observation.status === 'expired') {
       chainOutcomeKnown = true;
       const hash = observation.status === 'settled' ? observation.hash : null;

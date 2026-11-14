@@ -11,10 +11,20 @@ interface Transfer {
   amount: bigint;
 }
 
+interface IncomingTransfer {
+  transactionHash: Hash;
+  logIndex: number;
+  blockNumber: bigint;
+  blockHash: Hash;
+  sender: string;
+  amount: bigint;
+}
+
 export interface ReconciliationChain {
   finalized(): Promise<bigint>;
   blockHash(block: bigint): Promise<Hash>;
   outgoing(payer: Address, fromBlock: bigint, toBlock: bigint): Promise<Transfer[]>;
+  incoming(payer: Address, fromBlock: bigint, toBlock: bigint): Promise<IncomingTransfer[]>;
   transactionBlock(hash: Hash): Promise<bigint | null>;
 }
 
@@ -39,6 +49,16 @@ export async function baseReconciliationChain(rpc: string): Promise<Reconciliati
       return logs.map((log) => ({
         transactionHash: log.transactionHash, logIndex: log.logIndex,
         recipient: log.args.to.toLowerCase(), amount: log.args.value,
+      }));
+    },
+    async incoming(payer, fromBlock, toBlock) {
+      const logs = await client.getLogs({
+        address: baseSepoliaUsdc, event: transfer, args: { to: payer }, fromBlock, toBlock, strict: true,
+      });
+      return logs.map((log) => ({
+        transactionHash: log.transactionHash, logIndex: log.logIndex,
+        blockNumber: log.blockNumber, blockHash: log.blockHash,
+        sender: log.args.from.toLowerCase(), amount: log.args.value,
       }));
     },
     async transactionBlock(hash) {
@@ -75,8 +95,24 @@ export async function reconcilePayments(
     WHERE j.network = $1 AND j.asset = $2 AND j.payer = $3 ORDER BY j.intent_id
   `, [network, baseSepoliaUsdc, wallet]);
 
+  const { rows: refunds } = await pool.query<{
+    intent_id: string; transaction_hash: Hash; log_index: number;
+    block_number: string; block_hash: Hash; sender: string; amount: string;
+  }>(`
+    SELECT r.intent_id, r.transaction_hash, r.log_index, r.block_number, r.block_hash,
+      lower(i.payee) AS sender, j.amount
+    FROM payment_refunds r
+    JOIN payment_journal j ON j.intent_id = r.intent_id
+    JOIN payment_intents i ON i.id = r.intent_id
+    WHERE r.network = $1 AND j.asset = $2 AND j.payer = $3 AND r.block_number BETWEEN $4 AND $5
+    ORDER BY r.block_number, r.log_index, r.intent_id
+  `, [network, baseSepoliaUsdc, wallet, String(fromBlock), String(toBlock)]);
+
+  const [outgoing, incoming] = await Promise.all([
+    chain.outgoing(wallet, fromBlock, toBlock), chain.incoming(wallet, fromBlock, toBlock),
+  ]);
   const transfersByHash = new Map<Hash, Map<number, Transfer>>();
-  for (const transfer of await chain.outgoing(wallet, fromBlock, toBlock)) {
+  for (const transfer of outgoing) {
     // Transaction hash plus log index identifies a transfer within this chain.
     const hash = transfer.transactionHash.toLowerCase() as Hash;
     let logs = transfersByHash.get(hash);
@@ -136,10 +172,44 @@ export async function reconcilePayments(
     }
   }
 
+  const incomingByEvidence = new Map(incoming.map((log) => [
+    `${log.transactionHash.toLowerCase()}:${log.logIndex}`, log,
+  ]));
+  const matchedRefunds: typeof matched = [];
+  const refundDiscrepancies: {
+    code: 'REFUND_TRANSFER_UNMATCHED' | 'UNCLASSIFIED_INCOMING_TRANSFER';
+    transactionHash: Hash; logIndex: number; sender: string; amount: string; intentId?: string;
+  }[] = [];
+  for (const refund of refunds) {
+    const key = `${refund.transaction_hash}:${refund.log_index}`;
+    const log = incomingByEvidence.get(key);
+    if (log && log.sender === refund.sender && log.amount === BigInt(refund.amount) &&
+        log.blockNumber === BigInt(refund.block_number) && log.blockHash === refund.block_hash) {
+      matchedRefunds.push({
+        intentId: refund.intent_id, transactionHash: refund.transaction_hash, logIndex: refund.log_index,
+      });
+      incomingByEvidence.delete(key);
+    } else {
+      refundDiscrepancies.push({
+        code: 'REFUND_TRANSFER_UNMATCHED', intentId: refund.intent_id,
+        transactionHash: refund.transaction_hash, logIndex: refund.log_index,
+        sender: refund.sender, amount: refund.amount,
+      });
+    }
+  }
+  for (const log of incomingByEvidence.values()) {
+    refundDiscrepancies.push({
+      code: 'UNCLASSIFIED_INCOMING_TRANSFER', transactionHash: log.transactionHash,
+      logIndex: log.logIndex, sender: log.sender, amount: String(log.amount),
+    });
+  }
+
   if (await chain.blockHash(toBlock) !== endHash) throw new Error('Finalized block hash changed during reconciliation');
   const report = {
     network, asset: baseSepoliaUsdc, payer: wallet, fromBlock: String(fromBlock), toBlock: String(toBlock),
-    toBlockHash: endHash, status: discrepancies.length === 0 ? 'MATCHED' : 'DISCREPANCY', matched, discrepancies,
+    toBlockHash: endHash,
+    status: discrepancies.length + refundDiscrepancies.length === 0 ? 'MATCHED' : 'DISCREPANCY',
+    matched, discrepancies, matchedRefunds, refundDiscrepancies,
   };
   await pool.query(`
     INSERT INTO reconciliation_runs (network, asset, payer, from_block, to_block, to_block_hash, report)

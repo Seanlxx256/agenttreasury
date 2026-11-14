@@ -1,0 +1,65 @@
+{
+  "status": "PASSED",
+  "purchaseId": "3952a580-d0a2-4f60-bc82-b6250e72ef1a",
+  "transactionUrl": "https://sepolia.basescan.org/tx/0x9bd62856ce66b1986f7a5ab217585b957269ddf71af323733b1de6f35fa26f1e",
+  "delivery": {
+    "market": "DE",
+    "category": "camping lanterns",
+    "currency": "EUR",
+    "sample": true,
+    "observations": [
+      {
+        "segment": "entry level",
+        "medianPrice": 19.99
+      },
+      {
+        "segment": "outdoor",
+        "medianPrice": 39.99
+      }
+    ]
+  },
+  "ledger": {
+    "intentId": "2eff961e-0af0-4f11-8a8e-04ecf9dcd8ba",
+    "status": "SETTLED",
+    "refund": null,
+    "journal": {
+      "network": "eip155:84532",
+      "asset": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+      "payer": "0x7a2174b933dbc8b98782eefaea07df1f76a170ac",
+      "transactionHash": "0x9bd62856ce66b1986f7a5ab217585b957269ddf71af323733b1de6f35fa26f1e",
+      "settledAt": "2026-11-14T15:02:55.032Z",
+      "postedAt": "2026-11-14T15:02:55.032Z",
+      "lines": [
+        {
+          "account": "DATA_PROCUREMENT_EXPENSE",
+          "side": "DEBIT",
+          "amount": "2000"
+        },
+        {
+          "account": "USDC_WALLET_ASSET",
+          "side": "CREDIT",
+          "amount": "2000"
+        }
+      ]
+    }
+  },
+  "reconciliation": {
+    "network": "eip155:84532",
+    "asset": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+    "payer": "0x7a2174b933dbc8b98782eefaea07df1f76a170ac",
+    "fromBlock": "58725969",
+    "toBlock": "58725969",
+    "toBlockHash": "0xe78aee71badc8aea7d21803a46ee68cc9610e060beb4363a674e5286dc4ff1a1",
+    "status": "MATCHED",
+    "matched": [
+      {
+        "intentId": "2eff961e-0af0-4f11-8a8e-04ecf9dcd8ba",
+        "transactionHash": "0x9bd62856ce66b1986f7a5ab217585b957269ddf71af323733b1de6f35fa26f1e",
+        "logIndex": 1
+      }
+    ],
+    "discrepancies": [],
+    "matchedRefunds": [],
+    "refundDiscrepancies": []
+  }
+}

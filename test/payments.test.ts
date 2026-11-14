@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -16,6 +16,7 @@ import type { ReconciliationChain } from '../src/reconciliation.js';
 import { buildMerchant, deliverySignature } from '../src/merchant.js';
 import { recordRefund } from '../src/refunds.js';
 import type { RefundChain } from '../src/refunds.js';
+import { collectPurchaseEvidence } from '../src/purchase-evidence.js';
 import { processSettlement } from '../src/settlement-worker.js';
 import { buildApp } from '../src/app.js';
 import { migrate } from '../src/migrate.js';
@@ -266,6 +267,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       finalized: async () => 200n,
       blockHash: async () => blockHash,
       outgoing: async () => outgoing,
+      incoming: async () => [],
       transactionBlock: async () => 151n,
     };
     await assert.rejects(reconcilePayments(pool, chain, posting.payer, 150n, 201n), /finalized/);
@@ -393,5 +395,156 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       { account: 'DATA_PROCUREMENT_EXPENSE', side: 'CREDIT', amount: '2000' },
     ]);
     assert.equal((await pool.query('SELECT spent FROM research_tasks WHERE id = $1', [buyer.taskId])).rows[0]?.spent, '2000');
+  });
+
+  await t.test('incoming refund reconciliation consumes only the exact recorded transfer', async () => {
+    const { rows: [refund] } = await pool.query(`
+      SELECT r.*, j.payer, j.amount, i.payee AS sender
+      FROM payment_refunds r JOIN payment_journal j ON j.intent_id = r.intent_id
+      JOIN payment_intents i ON i.id = r.intent_id
+    `);
+    assert.ok(refund);
+    const transfer = {
+      transactionHash: refund.transaction_hash, logIndex: refund.log_index, blockHash: refund.block_hash,
+      blockNumber: BigInt(refund.block_number), sender: refund.sender, amount: BigInt(refund.amount),
+    };
+    let incoming = [transfer, transfer];
+    const chain: ReconciliationChain = {
+      finalized: async () => 120n,
+      blockHash: async () => refund.block_hash,
+      outgoing: async () => [],
+      incoming: async () => incoming,
+      transactionBlock: async () => 100n,
+    };
+    const reconcile = () => reconcilePayments(pool, chain, refund.payer, 110n, 110n);
+    const matched = await reconcile();
+    assert.equal(matched.status, 'MATCHED');
+    assert.equal(matched.matchedRefunds.length, 1);
+    assert.deepEqual(matched.refundDiscrepancies, []);
+
+    incoming = [{ ...transfer, logIndex: transfer.logIndex + 1 }];
+    const mismatch = await reconcile();
+    assert.equal(mismatch.status, 'DISCREPANCY');
+    assert.equal(mismatch.matchedRefunds.length, 0);
+    assert.deepEqual(mismatch.refundDiscrepancies.map(({ code }) => code), [
+      'REFUND_TRANSFER_UNMATCHED', 'UNCLASSIFIED_INCOMING_TRANSFER',
+    ]);
+
+    incoming = [{ ...transfer, amount: transfer.amount - 1n }];
+    assert.equal((await reconcile()).status, 'DISCREPANCY');
+    incoming = [transfer];
+    const restored = await reconcile();
+    assert.deepEqual(restored, matched);
+    const { rows } = await pool.query('SELECT report FROM reconciliation_runs WHERE from_block = 110 AND to_block = 110');
+    assert.equal(rows.length, 1);
+    assert.deepEqual(rows[0]?.report, restored);
+  });
+
+  await t.test('research purchase survives a lost settlement response across real HTTP services', async () => {
+    const merchantPort = await availablePort();
+    const config = {
+      endpoint: `http://127.0.0.1:${merchantPort}/market-data`,
+      recipient: '0x0000000000000000000000000000000000000003',
+      secret: randomBytes(32).toString('hex'),
+    };
+    const demo = await seed(pool, 3000, 3000, config);
+    const { rail: signer } = createBaseSettlement('http://127.0.0.1:1', generatePrivateKey(), generatePrivateKey());
+    const hash = `0x${'56'.repeat(32)}` as const;
+    const blockHash = `0x${'78'.repeat(32)}` as const;
+    let recorded: Authorization | undefined;
+    let submissions = 0;
+    let receiptReads = 0;
+    let steps = 0;
+    let active = true;
+    const merchant = buildMerchant(pool, config, {
+      finalized: async () => 101n,
+      blockHash: async () => blockHash,
+      receipt: async (tx) => {
+        receiptReads++;
+        assert.equal(tx, hash);
+        assert.ok(recorded);
+        return { blockNumber: 101n, blockHash, transactionIndex: 0, status: 'success',
+          logs: [{ address: baseSepoliaUsdc, from: recorded.from, to: recorded.to,
+            amount: BigInt(recorded.value), logIndex: 0 }] };
+      },
+    });
+    const api = buildApp(pool, false, { merchant: config });
+    const rail: SettlementRail = {
+      head: async () => ({ block: 100n, timestamp: 1000n }),
+      sign: signer.sign,
+      observe: async (authorization) => recorded?.nonce === authorization.nonce
+        ? { status: 'settled', hash } : { status: 'ready' },
+      async submit(authorization) {
+        submissions++;
+        recorded = authorization;
+        throw new Error('Simulated RPC response loss after debit');
+      },
+    };
+    const previousJobs = await pool.query(`
+      SELECT count(*) FROM outbox WHERE processed_at IS NULL AND event_type IN ('payment.reserved', 'payment.quoted')
+    `);
+    assert.equal(previousJobs.rows[0]?.count, '0');
+    const loop = async () => {
+      while (active && steps++ < 200) {
+        await processQuote(pool);
+        await processSettlement(pool, rail);
+        // Advance the test retry clock without waiting for the production backoff.
+        await pool.query(`
+          UPDATE outbox o SET available_at = now()
+          FROM payment_intents i WHERE i.id = o.intent_id AND i.task_id = $1 AND o.processed_at IS NULL
+        `, [demo.taskId]);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+    };
+    let workers: Promise<void> | undefined;
+    try {
+      await merchant.listen({ host: '127.0.0.1', port: merchantPort });
+      const apiUrl = await api.listen({ host: '127.0.0.1', port: 0 });
+      const input = { ...demo, apiUrl, requestId: randomUUID() };
+      workers = loop();
+      const chain: ReconciliationChain = {
+        finalized: async () => 101n,
+        blockHash: async () => blockHash,
+        transactionBlock: async () => 101n,
+        incoming: async () => [],
+        outgoing: async () => {
+          assert.ok(recorded);
+          return [{ transactionHash: hash, logIndex: 0, recipient: recorded.to, amount: BigInt(recorded.value) }];
+        },
+      };
+      const evidence = await Promise.race([
+        collectPurchaseEvidence(pool, chain, input, { maxPolls: 100, pollIntervalMs: 10 }),
+        workers.then(() => { throw new Error('Demo workers stopped before purchase completed'); }),
+      ]);
+      assert.equal(evidence.status, 'PASSED');
+      assert.equal(evidence.purchaseId, input.requestId);
+      assert.equal(evidence.delivery.sample, true);
+      assert.equal(evidence.ledger.journal.transactionHash, hash);
+      assert.ok(evidence.transactionUrl.endsWith(`/tx/${hash}`));
+      assert.equal(evidence.reconciliation.status, 'MATCHED');
+      assert.equal(evidence.reconciliation.matched.length, 1);
+      const duplicate = await collectPurchaseEvidence(pool, {
+        ...chain,
+        async outgoing(...args) {
+          const logs = await chain.outgoing(...args);
+          return [...logs, { ...logs[0]!, logIndex: 1 }];
+        },
+      }, input);
+      assert.equal(duplicate.status, 'FAILED');
+      assert.equal(duplicate.reconciliation.discrepancies[0]?.code, 'CHAIN_TRANSFER_UNMATCHED');
+      assert.equal(submissions, 1);
+      assert.equal(receiptReads, 1);
+      assert.equal((await pool.query(
+        'SELECT count(*) FROM payment_journal j JOIN payment_intents i ON i.id = j.intent_id WHERE i.task_id = $1',
+        [demo.taskId],
+      )).rows[0]?.count, '1');
+    } finally {
+      active = false;
+      try {
+        await workers;
+      } finally {
+        await Promise.all([merchant.close(), api.close()]);
+      }
+    }
   });
 });
