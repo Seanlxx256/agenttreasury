@@ -109,3 +109,25 @@ test('closing a delivered purchase requires its posted journal citation when ava
   const withoutJournal = prepareGatewayTriage({ ...purchase, buyerHasDelivery: true, journal: null }, [charged]);
   assert.deepEqual(withoutJournal.rules.citations, suggestion.citations);
 });
+
+test('triage evaluation separates forced actions and counts unnecessary escalation after fallback', async () => {
+  const model: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    const { allowed } = JSON.parse(body.messages[1].content);
+    if (allowed.some(({ action }: { action: string }) => action === 'contact-merchant')) {
+      return Response.json({ message: { content: JSON.stringify({ action: 'escalate',
+        citations: ['observation-2', 'buyer-delivery', 'seller-delivery'] }) } });
+    }
+    return new Response(null, { status: 503 });
+  };
+  const result = await evaluateGatewayTriage('test-model', model, 'gateway-incidents-v1');
+  const { multipleActions, singleAction } = result.byActionChoice;
+  assert.equal(multipleActions.rules.cases, 3);
+  assert.equal(singleAction.rules.cases, 3);
+  assert.equal(singleAction.rules.unnecessaryEscalationRate, null);
+  assert.equal(multipleActions.rules.unnecessaryEscalationRate, 0);
+  assert.equal(multipleActions.agent?.recommendations, 1);
+  assert.equal(multipleActions.agentWithRuleFallback?.correctActions, 2);
+  assert.equal(multipleActions.agentWithRuleFallback?.unnecessaryEscalationRate, 1 / 3);
+  assert.equal(singleAction.agentWithRuleFallback?.correctActions, 3);
+});

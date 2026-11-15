@@ -80,3 +80,17 @@ npm run --silent eval:gateway -- --dataset gateway-incidents-v1 --model qwen2.5:
 When automatic checks are paused and the latest lookup is unavailable, an unresolved purchase now calls for operator review. The recommendation requires both the polling flag and the failed lookup. If the latest lookup is pending, the rules request a manual check of the original authorization and cite the pause and pending result. A recorded charge with a retrievable trace still calls for recovery.
 
 On `gateway-incidents-v1`, the rules improved from 5/6 to 6/6 for both actions and citation completeness. Local Qwen remained at 5/6 for actions and improved from 5/6 to 6/6 for citation completeness. The policy required escalation for the paused outage, so the citation gain reflects the changed requirement and the model's compliance. The model still escalated the case where the operator should contact the merchant about a missing trace.
+
+### Cases with a choice of action
+
+The evaluation now reports cases with one permitted action and cases with several possible actions. An unnecessary escalation is a recommendation to escalate or review a conflict when the expected action requires neither. Its rate uses all cases in the group whose labels require neither action. Recommendation coverage is reported alongside that rate. The fallback comparison assumes the operator uses an accepted model recommendation and uses the rule recommendation when the model is unavailable or its response is rejected.
+
+On 2026-11-15, local Qwen2.5 0.5B produced the following results for cases with a choice. Each count uses all cases in its row as the denominator.
+
+| Dataset | Correct rule actions | Correct model actions | Correct actions with fallback | Unnecessary rule escalations | Unnecessary escalations with fallback |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gateway-triage-v1` | 9/9 | 4/9 | 5/9 | 0/9 | 4/9 |
+| `arc-recovery-v1` | 3/3 | 1/3 | 2/3 | 0/3 | 1/3 |
+| `gateway-incidents-v1` | 3/3 | 2/3 | 2/3 | 0/3 | 1/3 |
+
+The model also returned the expected action in all six cases where policy allowed only one action. The six unnecessary escalations in the table all passed validation, so falling back on missing or rejected responses did not prevent them. Examples include checking an unresolved payment by its original authorization, retrieving a trace from the seller, and asking the merchant to investigate a missing trace. These counts cover the evaluation fixtures, including multiple stages of the same Arc purchase. They do not measure production escalation rates or operator time.

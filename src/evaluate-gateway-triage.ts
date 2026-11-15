@@ -2,8 +2,12 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { gatewayTriageDatasets, type GatewayTriageCase } from './gateway-triage-cases.js';
 import {
-  prepareGatewayTriage, reviewGatewayTriage, type TriageRecommendation,
+  prepareGatewayTriage, reviewGatewayTriage, type TriageAction, type TriageRecommendation,
 } from './gateway-triage.js';
+
+function needsHumanReview(action: TriageAction | null) {
+  return action === 'escalate' || action === 'review-conflict';
+}
 
 function score(recommendation: TriageRecommendation | undefined, sample: GatewayTriageCase, elapsedMs: number) {
   const citations = recommendation?.citations ?? [];
@@ -14,6 +18,7 @@ function score(recommendation: TriageRecommendation | undefined, sample: Gateway
     rationale: recommendation?.rationale ?? null,
     citations,
     actionCorrect: recommendation?.action === sample.expectedAction,
+    humanReviewExpected: needsHumanReview(sample.expectedAction),
     citationsCorrect: supported === citations.length && sample.requiredCitations.every((id) => citations.includes(id)),
     supportedCitations: supported,
     elapsedMs,
@@ -25,16 +30,21 @@ function summarize(results: ReturnType<typeof score>[]) {
   const recommendations = results.filter(({ action }) => action !== null).length;
   const correctActions = results.filter(({ actionCorrect }) => actionCorrect).length;
   const correctCitationSets = results.filter(({ citationsCorrect }) => citationsCorrect).length;
-  const escalations = results.filter(({ action }) => action === 'escalate' || action === 'review-conflict').length;
+  const escalations = results.filter(({ action }) => needsHumanReview(action)).length;
+  const casesWithoutExpectedHumanReview = results.filter(({ humanReviewExpected }) => !humanReviewExpected).length;
+  const unnecessaryEscalations = results.filter(({ action, humanReviewExpected }) =>
+    !humanReviewExpected && needsHumanReview(action)).length;
   const citations = results.reduce((count, row) => count + row.citations.length, 0);
   const supported = results.reduce((count, row) => count + row.supportedCitations, 0);
   return {
     cases, recommendations, correctActions, correctCitationSets, escalations,
-    actionAccuracy: correctActions / cases,
-    recommendationCoverage: recommendations / cases,
+    casesWithoutExpectedHumanReview, unnecessaryEscalations,
+    unnecessaryEscalationRate: casesWithoutExpectedHumanReview ? unnecessaryEscalations / casesWithoutExpectedHumanReview : null,
+    actionAccuracy: cases ? correctActions / cases : null,
+    recommendationCoverage: cases ? recommendations / cases : null,
     citationPrecision: citations ? supported / citations : null,
     escalationRecommendationRate: recommendations ? escalations / recommendations : null,
-    meanGenerationMs: results.reduce((total, { elapsedMs }) => total + elapsedMs, 0) / cases,
+    meanGenerationMs: cases ? results.reduce((total, { elapsedMs }) => total + elapsedMs, 0) / cases : null,
   };
 }
 
@@ -55,6 +65,7 @@ export async function evaluateGatewayTriage(
       name: sample.name,
       expectedAction: sample.expectedAction,
       requiredCitations: sample.requiredCitations,
+      allowedActions: input.allowed.map(({ action }) => action),
       expectedActionAllowed: input.allowed.some(({ action }) => action === sample.expectedAction),
       rules,
       agent: model ? {
@@ -65,6 +76,17 @@ export async function evaluateGatewayTriage(
   }
 
   const agentResults = cases.flatMap(({ agent }) => agent ? [agent] : []);
+  const withChoice = cases.filter(({ allowedActions }) => allowedActions.length > 1);
+  const withoutChoice = cases.filter(({ allowedActions }) => allowedActions.length === 1);
+  const summarizeGroup = (group: typeof withChoice) => ({
+    rules: summarize(group.map(({ rules }) => rules)),
+    agent: model ? summarize(group.flatMap(({ agent }) => agent ? [agent] : [])) : null,
+    agentWithRuleFallback: model ? summarize(group.map(({ rules, agent }) => {
+      if (!agent) return rules;
+      const displayed = agent.status === 'ready' ? agent : rules;
+      return { ...displayed, elapsedMs: agent.elapsedMs + rules.elapsedMs };
+    })) : null,
+  });
   return {
     dataset,
     model: model ?? null,
@@ -74,6 +96,10 @@ export async function evaluateGatewayTriage(
       rejected: agentResults.filter(({ status }) => status === 'rejected').length,
       unavailable: agentResults.filter(({ status }) => status === 'unavailable').length,
     } : null,
+    byActionChoice: {
+      multipleActions: summarizeGroup(withChoice),
+      singleAction: summarizeGroup(withoutChoice),
+    },
     cases,
   };
 }
