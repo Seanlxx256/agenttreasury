@@ -90,10 +90,9 @@ export async function reviewGatewayTriage(
   const { facts, rules, allowed } = input;
   if (!model) return { facts, rules, agent: { status: 'disabled' as const } };
   const schema = {
-    type: 'object', required: ['action', 'rationale', 'citations'], additionalProperties: false,
+    type: 'object', required: ['action', 'citations'], additionalProperties: false,
     properties: {
       action: { type: 'string', enum: allowed.map(({ action }) => action) },
-      rationale: { type: 'string', minLength: 1, maxLength: 400 },
       citations: { type: 'array', minItems: 1, uniqueItems: true, maxItems: 8,
         items: { type: 'string', enum: facts.map(({ id }) => id) } },
     },
@@ -106,7 +105,7 @@ export async function reviewGatewayTriage(
       body: JSON.stringify({
         model, stream: false, format: schema, options: { temperature: 0, num_predict: 512 },
         messages: [
-          { role: 'system', content: 'Recommend one listed action for an operator. Cite every required fact for that action. Base your explanation only on the supplied facts. Never propose another payment, refund, or accounting adjustment.' },
+          { role: 'system', content: 'Select the best action from allowed using the facts. Return JSON with action and citations. Copy requiredCitations from the selected action into citations exactly.' },
           { role: 'user', content: JSON.stringify({
             facts, allowed: allowed.map(({ action, citations }) => ({ action, requiredCitations: citations })),
           }) },
@@ -126,15 +125,14 @@ export async function reviewGatewayTriage(
     return { facts, rules, agent: { status: 'unavailable' as const } };
   }
 
-  if (result && typeof result === 'object' && 'action' in result && 'citations' in result && 'rationale' in result) {
-    const { action, citations, rationale } = result;
+  if (result && typeof result === 'object' && 'action' in result && 'citations' in result) {
+    const { action, citations } = result;
     const option = allowed.find((candidate) => candidate.action === action);
-    if (option && typeof rationale === 'string' && rationale.trim() && rationale.length <= 400 &&
-        Array.isArray(citations) && citations.length <= 8 && new Set(citations).size === citations.length &&
+    if (option && Array.isArray(citations) && citations.length <= 8 && new Set(citations).size === citations.length &&
         citations.every((id) => facts.some((fact) => fact.id === id)) &&
         option.citations.every((id) => citations.includes(id))) {
       return { facts, rules, agent: { status: 'ready' as const, model,
-        recommendation: { action: option.action, rationale: rationale.trim(), citations } } };
+        recommendation: { ...option, citations } } };
     }
   }
   return { facts, rules, agent: { status: 'rejected' as const } };

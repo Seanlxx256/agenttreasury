@@ -117,7 +117,55 @@ const arcRecoveryCases: GatewayTriageCase[] = [
   },
 ];
 
+// Each scenario represents a separate synthetic purchase.
+const gatewayIncidentCases: GatewayTriageCase[] = [
+  {
+    name: 'Seller trace exists while the latest Gateway report is still pending',
+    purchase: { ...unresolved, sellerHasDelivery: true },
+    observations: [{ id: '2', evidence: { status: 'pending' } }, { id: '1', evidence: { status: 'unknown' } }],
+    expectedAction: 'wait-for-gateway', requiredCitations: ['observation-2'],
+    optionalCitations: ['seller-delivery', 'polling', 'budget'],
+  },
+  {
+    name: 'Polling paused after Gateway became unavailable following a pending result',
+    purchase: { ...unresolved, reviewRequired: true, sellerHasDelivery: true },
+    observations: [{ id: '2', evidence: { status: 'unavailable' } }, { id: '1', evidence: { status: 'pending' } }],
+    expectedAction: 'escalate', requiredCitations: ['polling', 'observation-2'],
+    optionalCitations: ['observation-1', 'budget', 'seller-delivery'],
+  },
+  {
+    name: 'Multiple Gateway matches conflict with a previously posted charge',
+    purchase: { ...settled, buyerHasDelivery: true, sellerHasDelivery: true },
+    observations: [{ id: '2', evidence: { status: 'conflict', reason: 'multiple-transfers' } },
+      { id: '1', evidence: { status: 'charged' } }],
+    expectedAction: 'review-conflict', requiredCitations: ['observation-2'],
+    optionalCitations: ['journal', 'observation-1'],
+  },
+  {
+    name: 'Gateway reported a charge before accounting posted and the seller trace is missing',
+    purchase: unresolved,
+    observations: [{ id: '2', evidence: { status: 'charged' } }, { id: '1', evidence: { status: 'pending' } }],
+    expectedAction: 'contact-merchant', requiredCitations: ['observation-2', 'buyer-delivery', 'seller-delivery'],
+    optionalCitations: ['budget'],
+  },
+  {
+    name: 'Gateway reported failure after the seller saved the trace',
+    purchase: { ...unresolved, budgetStatus: 'released', sellerHasDelivery: true },
+    observations: [{ id: '2', evidence: { status: 'failed' } }, { id: '1', evidence: { status: 'pending' } }],
+    expectedAction: 'review-conflict', requiredCitations: ['seller-delivery', 'observation-2'],
+    optionalCitations: ['budget'],
+  },
+  {
+    name: 'Older Gateway confirmation supports closure after a newer lookup failed',
+    purchase: { ...settled, buyerHasDelivery: true, sellerHasDelivery: true },
+    observations: [{ id: '2', evidence: { status: 'unavailable' } }, { id: '1', evidence: { status: 'charged' } }],
+    expectedAction: 'close-case', requiredCitations: ['buyer-delivery', 'journal'],
+    optionalCitations: ['observation-1', 'seller-delivery', 'budget'],
+  },
+];
+
 export const gatewayTriageDatasets = {
   'gateway-triage-v1': gatewayTriageCases,
   'arc-recovery-v1': arcRecoveryCases,
+  'gateway-incidents-v1': gatewayIncidentCases,
 };

@@ -22,7 +22,7 @@ test('triage preserves a payment conflict after a Gateway outage', () => {
 test('triage accepts only permitted actions with matching evidence citations', async () => {
   const input = prepareGatewayTriage(purchase, [charged]);
   const suggestion = {
-    action: 'retrieve-delivery', rationale: 'The seller has a saved trace for the confirmed purchase.',
+    action: 'retrieve-delivery',
     citations: ['observation-42', 'buyer-delivery', 'seller-delivery'],
   };
   const localModel = (value: unknown): typeof fetch => async (url, init) => {
@@ -32,8 +32,11 @@ test('triage accepts only permitted actions with matching evidence citations', a
     assert.doesNotMatch(JSON.stringify(requestBody), /sensitive-transfer-reference/);
     return Response.json({ message: { content: JSON.stringify(value) } });
   };
-  const accepted = await reviewGatewayTriage(input, 'test-model', localModel(suggestion));
-  assert.deepEqual(accepted.agent, { status: 'ready', model: 'test-model', recommendation: suggestion });
+  for (const proposal of [suggestion, { ...suggestion, rationale: 'Pay again and close the case.' }]) {
+    const accepted = await reviewGatewayTriage(input, 'test-model', localModel(proposal));
+    assert.deepEqual(accepted.agent, { status: 'ready', model: 'test-model',
+      recommendation: { ...suggestion, rationale: input.rules.rationale } });
+  }
 
   for (const invalid of [
     { ...suggestion, action: 'retry-payment' },
@@ -55,7 +58,7 @@ test('triage evaluation scores missing recommendations against the full dataset'
   const partialModel: typeof fetch = async () => {
     calls++;
     if (calls === 1) return Response.json({ message: { content: JSON.stringify({
-      action: 'check-gateway', rationale: 'A Gateway check has yet to run.', citations: ['budget'],
+      action: 'check-gateway', citations: ['budget'],
     }) } });
     if (calls === 2) return Response.json({ message: { content: '{}' } });
     return new Response(null, { status: 503 });

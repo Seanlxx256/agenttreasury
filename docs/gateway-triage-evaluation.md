@@ -56,3 +56,21 @@ Use `--rules-only` in place of `--model qwen2.5:0.5b` to run without Ollama. The
 The triage policy now requires a journal citation for a delivered purchase when the journal is present. Using the same replay and local model, the rule action score stayed at 3/3 and citation completeness rose from 2/3 to 3/3. Qwen's action score stayed at 1/3 and citation completeness rose from 1/3 to 2/3. The validator still rejected one response.
 
 Manual review found issues with both displayed model explanations. For retrieval, it again treated the polling flag as proof of a charge and recommended escalation. For closure, it selected `close-case` and cited the journal, then said in its explanation that no action could be recommended. The rule explanation for closure cites the posted journal and saved buyer trace. Citation completeness measures the referenced facts, and a human review is still needed to assess free-form explanations.
+
+### Server explanations and separate incident replay
+
+The model now proposes an action and citations. After validation, the server supplies the explanation tied to that action and its required evidence. The [finance console](../README.md) displays the validated recommendation. The regression test returns a contradictory instruction from a stub model and verifies that the displayed explanation comes from the server.
+
+On 2026-11-15, the same local Qwen2.5 0.5B configuration scored as follows. `gateway-incidents-v1` contains six separately authored synthetic purchases. It includes a paused worker during a Gateway outage, multiple transfers for one nonce, and a failed payment with a seller trace on file.
+
+| Dataset | Rule actions | Model actions | Complete rule citations | Complete model citations | Model responses displayed |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Arc recovery stages | 3/3 | 1/3 | 3/3 | 2/3 | 2/3 |
+| Separate synthetic incidents | 5/6 | 5/6 | 5/6 | 5/6 | 6/6 |
+
+In the new dataset, the model correctly escalated the paused outage while the rules recommended another Gateway check. When Gateway showed a charge and the seller had no trace, the rules correctly recommended contacting the merchant while the model escalated. The model's escalation in the outage cited Gateway unavailability and omitted the paused worker. The results describe these fixtures and do not measure operator time or escalation rates in production.
+
+```sh
+npm run build
+npm run --silent eval:gateway -- --dataset gateway-incidents-v1 --model qwen2.5:0.5b
+```

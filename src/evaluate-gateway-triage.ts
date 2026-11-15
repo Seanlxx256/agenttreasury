@@ -86,7 +86,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { dataset } = values;
   if (!Object.hasOwn(gatewayTriageDatasets, dataset) || values.model === '' ||
       (values['rules-only'] && values.model !== undefined)) {
-    throw new Error('Usage: npm run eval:gateway -- [--dataset gateway-triage-v1|arc-recovery-v1] [--rules-only | --model MODEL]');
+    const datasets = Object.keys(gatewayTriageDatasets).join('|');
+    throw new Error(`Usage: npm run eval:gateway -- [--dataset ${datasets}] [--rules-only | --model MODEL]`);
   }
   const model = values['rules-only'] ? undefined : (values.model ?? process.env.GATEWAY_TRIAGE_MODEL) || undefined;
   const result = await evaluateGatewayTriage(model, fetch, dataset as Dataset);
