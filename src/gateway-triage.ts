@@ -9,9 +9,9 @@ type TriagePurchase = {
 };
 
 type Fact = { id: string; description: string };
-type Action = 'review-conflict' | 'retrieve-delivery' | 'contact-merchant' |
+export type TriageAction = 'review-conflict' | 'retrieve-delivery' | 'contact-merchant' |
   'check-gateway' | 'wait-for-gateway' | 'close-case' | 'escalate';
-type Recommendation = { action: Action; rationale: string; citations: string[] };
+export type TriageRecommendation = { action: TriageAction; rationale: string; citations: string[] };
 
 const decisive = new Set(['charged', 'failed', 'conflict']);
 const gatewayStatuses = new Set([
@@ -39,7 +39,7 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
     : latest?.evidence.status === 'submission-expired' ? latest : undefined;
   const paymentRef = purchase.journal && decision?.evidence.status !== 'charged' ? 'journal'
     : decision ? 'observation-' + decision.id : 'journal';
-  let rules: Recommendation;
+  let rules: TriageRecommendation;
   if (decision?.evidence.status === 'conflict') {
     rules = { action: 'review-conflict', rationale: 'Review the conflicting payment evidence and its accounting impact.',
       citations: ['observation-' + decision.id] };
@@ -85,7 +85,7 @@ export async function reviewGatewayTriage(
   input: ReturnType<typeof prepareGatewayTriage>, model?: string, request: typeof fetch = fetch,
 ) {
   const { facts, rules, allowed } = input;
-  if (!model) return { facts, rules, agent: { status: 'disabled' } };
+  if (!model) return { facts, rules, agent: { status: 'disabled' as const } };
   const schema = {
     type: 'object', required: ['action', 'rationale', 'citations'], additionalProperties: false,
     properties: {
@@ -112,7 +112,7 @@ export async function reviewGatewayTriage(
     });
     if (!response.ok) {
       await response.body?.cancel();
-      return { facts, rules, agent: { status: 'unavailable' } };
+      return { facts, rules, agent: { status: 'unavailable' as const } };
     }
     const envelope = await response.json();
     const content = envelope?.message?.content;
@@ -120,7 +120,7 @@ export async function reviewGatewayTriage(
       try { result = JSON.parse(content); } catch { /* The output is rejected below. */ }
     }
   } catch {
-    return { facts, rules, agent: { status: 'unavailable' } };
+    return { facts, rules, agent: { status: 'unavailable' as const } };
   }
 
   if (result && typeof result === 'object' && 'action' in result && 'citations' in result && 'rationale' in result) {
@@ -130,9 +130,9 @@ export async function reviewGatewayTriage(
         Array.isArray(citations) && citations.length <= 8 && new Set(citations).size === citations.length &&
         citations.every((id) => facts.some((fact) => fact.id === id)) &&
         option.citations.every((id) => citations.includes(id))) {
-      return { facts, rules, agent: { status: 'ready', model,
+      return { facts, rules, agent: { status: 'ready' as const, model,
         recommendation: { action: option.action, rationale: rationale.trim(), citations } } };
     }
   }
-  return { facts, rules, agent: { status: 'rejected' } };
+  return { facts, rules, agent: { status: 'rejected' as const } };
 }

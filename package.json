@@ -16,6 +16,7 @@
     "settle": "node dist/src/settle.js",
     "reconcile": "node dist/src/reconcile.js",
     "reconcile:gateway": "node dist/src/reconcile-gateway.js",
+    "eval:gateway": "node dist/src/evaluate-gateway-triage.js",
     "worker:gateway": "node dist/src/settle-gateway.js",
     "merchant:gateway": "node dist/src/gateway-merchant-server.js",
     "buy:gateway": "node dist/src/buy-gateway-trace.js",

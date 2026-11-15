@@ -177,6 +177,18 @@ The review queue puts conflicting payment evidence first, confirmed charges with
 
 Open a purchase and select **Triage purchase** to review its saved evidence. The console displays a rule recommendation and cites the facts behind it. To add an agent recommendation, run a model locally in Ollama and set `GATEWAY_TRIAGE_MODEL` to its installed name before starting the API. The model receives only the status facts and permitted actions. The server checks the proposed action and required citations before displaying it. Recommendations are advisory and the triage endpoint reads saved records without making a Gateway request. [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
 
+### Evaluate Gateway triage
+
+Run the same twelve hand-labeled scenarios through the rules and the configured local model. The report includes each recommended action, evidence citations, rejection or unavailability, and generation time.
+
+```sh
+npm run build
+npm run eval:gateway -- --rules-only
+npm run eval:gateway -- --model your-installed-model
+```
+
+Action accuracy counts unavailable or rejected model responses as misses. Citation precision measures how many submitted references support the labeled action. A correct citation set also includes all required references. Escalation rate reports recommended escalation or conflict review among available recommendations. Generation time measures the time to produce the result. Human review time requires a separate operator study. The scenarios exercise synthetic incidents and can be run without a wallet or database.
+
 ### Send a testnet refund from the console
 
 Build, apply migration 010 and restart the API. Start the refund worker against the same database with DATABASE_URL, BASE_SEPOLIA_RPC_URL, MERCHANT_TEST_KEY and PAYMENT_RELAYER_KEY configured. The API and browser do not need wallet keys for this action.

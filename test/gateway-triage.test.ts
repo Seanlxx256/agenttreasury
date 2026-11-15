@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { evaluateGatewayTriage } from '../src/evaluate-gateway-triage.js';
 import { prepareGatewayTriage, reviewGatewayTriage } from '../src/gateway-triage.js';
 
 const purchase = {
@@ -43,4 +44,29 @@ test('triage accepts only permitted actions with matching evidence citations', a
     assert.deepEqual(result.agent, { status: 'rejected' });
     assert.equal(result.rules.action, 'retrieve-delivery');
   }
+});
+
+test('triage evaluation scores missing recommendations against the full dataset', async () => {
+  const baseline = await evaluateGatewayTriage();
+  assert.equal(baseline.rules.cases, 12);
+  assert.equal(baseline.agent, null);
+
+  let calls = 0;
+  const partialModel: typeof fetch = async () => {
+    calls++;
+    if (calls === 1) return Response.json({ message: { content: JSON.stringify({
+      action: 'check-gateway', rationale: 'A Gateway check has yet to run.', citations: ['budget'],
+    }) } });
+    if (calls === 2) return Response.json({ message: { content: '{}' } });
+    return new Response(null, { status: 503 });
+  };
+  const result = await evaluateGatewayTriage('test-model', partialModel);
+  assert.equal(result.rules.correctActions, baseline.rules.correctActions);
+  assert.equal(calls, 12);
+  assert.equal(result.agent?.recommendations, 1);
+  assert.equal(result.agent?.actionAccuracy, 1 / 12);
+  assert.equal(result.agent?.correctCitationSets, 1);
+  assert.equal(result.agent?.rejected, 1);
+  assert.equal(result.agent?.unavailable, 10);
+  assert.ok(result.cases.every(({ expectedActionAllowed }) => expectedActionAllowed));
 });
