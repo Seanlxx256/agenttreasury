@@ -70,6 +70,16 @@ Once the trace has been delivered, use `npm run gateway:local -- reconcile <requ
 
 The local database, task credentials, and purchase history persist in the ignored `.gateway-local/` directory. `npm run gateway:local -- prepare` runs database setup without a wallet. The default PostgreSQL and merchant ports are 55433 and 3002. Set `GATEWAY_DB_PORT` or `GATEWAY_MERCHANT_PORT` if those ports are occupied, and keep the same merchant port when resuming a purchase.
 
+### Offline replay (no network)
+
+To see the same lost-response drill without Arc testnet access, a wallet, or Circle credentials:
+
+```sh
+npm run demo:offline
+```
+
+It runs the production merchant, buyer, and verification code against embedded PostgreSQL and replaces only the network boundary: Gateway settle and transfer lookup are answered by a deterministic mock, the batch receipt is confirmed, and the paid response is dropped once. The run prints `submission-unknown`, then `delivered`, then `PASSED` with the balanced journal, all self-contained under the ignored `.gateway-offline/` directory.
+
 ### Run with a separate development database
 
 Set `DATABASE_URL` to a development PostgreSQL database, then run:

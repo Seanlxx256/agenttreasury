@@ -4,3 +4,4 @@ dist/
 .wallet-init.lock/
 .finance-local/
 .gateway-local/
+.gateway-offline/
