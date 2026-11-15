@@ -6,6 +6,8 @@ const workspace = byId('workspace');
 const notice = byId('notice');
 const detail = byId('detail');
 const list = byId('orders');
+const gatewayLookup = byId('gateway-lookup');
+const gatewayDetail = byId('gateway-detail');
 let token = '';
 let selected = '';
 let generation = 0;
@@ -26,7 +28,11 @@ function element(tag, text, className) {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch('/finance/payment-intents' + path, {
+  return financeApi('/payment-intents' + path, options);
+}
+
+async function financeApi(path, options = {}) {
+  const response = await fetch('/finance' + path, {
     ...options,
     headers: { Authorization: 'Bearer ' + token, ...(options.headers ?? {}) },
   });
@@ -62,6 +68,64 @@ function metadata(pairs) {
   }
   return dl;
 }
+
+function showGatewayPurchase(purchase, path, session) {
+  const check = element('button', 'Check Gateway');
+  check.type = 'button';
+  check.addEventListener('click', () => showErrors(async () => {
+    check.disabled = true;
+    try {
+      await financeApi(path + '/check', { method: 'POST' });
+      if (session !== generation || !check.isConnected) return;
+      const updated = await financeApi(path);
+      if (session === generation && check.isConnected) showGatewayPurchase(updated, path, session);
+    } finally {
+      check.disabled = false;
+    }
+  }));
+  gatewayDetail.replaceChildren(metadata([
+    ['Request ID', purchase.id], ['Authorization nonce', purchase.nonce],
+    ['Payer', purchase.payer], ['Recipient', purchase.recipient],
+    ['Amount', amount(purchase.amountUnits)], ['Authorization saved', timestamp(purchase.issuedAt)],
+    ['Seller delivery', purchase.sellerHasDelivery ? 'Saved' : 'Missing'],
+    ['Buyer delivery', purchase.buyerHasDelivery ? 'Saved' : 'Missing'],
+  ]), check, element('h3', 'Gateway observations'));
+  if (!purchase.observations.length) {
+    gatewayDetail.append(element('p', 'No Gateway check recorded.', 'muted'));
+    return;
+  }
+  const history = element('ul', undefined, 'reports');
+  for (const { checkedAt, source, evidence } of purchase.observations) {
+    const row = element('li');
+    row.append(element('strong', evidence.status.replaceAll('-', ' ')),
+      element('span', ' · ' + source + ' · ' + timestamp(checkedAt)));
+    if (evidence.reason) row.append(element('div', evidence.reason.replaceAll('-', ' ')));
+    if (evidence.id) row.append(element('div', 'Transfer ID ' + evidence.id));
+    if (evidence.txHash) row.append(element('div', 'Batch hash ' + evidence.txHash));
+    history.append(row);
+  }
+  gatewayDetail.append(history);
+}
+
+gatewayLookup.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const session = generation;
+  const path = '/gateway-purchases/' + encodeURIComponent(byId('gateway-id').value);
+  const button = gatewayLookup.querySelector('button');
+  button.disabled = true;
+  gatewayDetail.replaceChildren(element('p', 'Loading purchase…'));
+  void showErrors(async () => {
+    try {
+      const purchase = await financeApi(path);
+      if (session === generation) showGatewayPurchase(purchase, path, session);
+    } catch (error) {
+      if (session === generation) gatewayDetail.replaceChildren();
+      throw error;
+    } finally {
+      button.disabled = false;
+    }
+  });
+});
 
 function journal(title, entry, demo) {
   const section = element('section');
@@ -269,6 +333,8 @@ byId('logout').addEventListener('click', () => {
   selected = '';
   list.replaceChildren();
   detail.replaceChildren();
+  gatewayLookup.reset();
+  gatewayDetail.replaceChildren();
   workspace.hidden = true;
   login.hidden = false;
   byId('refresh').hidden = true;

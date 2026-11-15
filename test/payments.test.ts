@@ -77,6 +77,9 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     const payer = privateKeyToAccount(generatePrivateKey());
     const recipient = privateKeyToAccount(generatePrivateKey()).address;
     const origin = 'http://127.0.0.1:3002';
+    const financeToken = randomUUID();
+    const finance = buildApp(pool, false, undefined, financeToken);
+    const headers = { authorization: `Bearer ${financeToken}` };
     let submissions = 0;
     let signatures = 0;
     const merchant = buildGatewayMerchant(pool, origin, recipient, async (url, init) => {
@@ -161,11 +164,36 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
         return new Response(null, { status: 404 });
       }, gateway);
       assert.equal(missingDelivery.status, 'charged-delivery-missing');
+      const financeUrl = `/finance/gateway-purchases/${interrupted.requestId}`;
+      assert.equal((await finance.inject({ url: financeUrl })).statusCode, 401);
+      assert.equal((await finance.inject({ method: 'POST', url: financeUrl + '/check' })).statusCode, 401);
+      const audit = (await finance.inject({ url: financeUrl, headers })).json();
+      assert.equal(audit.buyerHasDelivery, false);
+      assert.equal(audit.sellerHasDelivery, true);
+      assert.equal(audit.nonce, lost.nonce);
+      assert.deepEqual(audit.observations.map(({ evidence }: { evidence: { status: string } }) => evidence.status),
+        ['charged', 'unknown', 'unavailable']);
+      assert.equal(audit.retrieval_token, undefined);
+      assert.equal(audit.delivery, undefined);
+
+      const fetchMock = t.mock.method(globalThis, 'fetch', gateway);
+      try {
+        const checked = await finance.inject({ method: 'POST', url: financeUrl + '/check', headers });
+        assert.equal(checked.statusCode, 200);
+        assert.equal(checked.json().status, 'charged');
+        assert.equal(fetchMock.mock.callCount(), 1);
+      } finally {
+        fetchMock.mock.restore();
+      }
+      const history = (await finance.inject({ url: financeUrl, headers })).json();
+      assert.equal(history.observations[0].source, 'finance');
+
       const recovered = await purchaseGatewayTrace(pool, interrupted, sign, send, gateway);
       assert.equal(recovered.status, 'delivered');
       assert.equal(recovered.payment?.status, 'charged');
       assert.equal(recovered.nonce, lost.nonce);
       assert.deepEqual((await purchaseGatewayTrace(pool, interrupted, sign, send)).delivery, recovered.delivery);
+      assert.equal((await finance.inject({ url: financeUrl, headers })).json().buyerHasDelivery, true);
       assert.equal(submissions, 2);
       assert.equal(signatures, 2);
 
@@ -179,7 +207,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       }), /quote differs/);
       assert.equal(signatures, 2);
     } finally {
-      await merchant.close();
+      await Promise.all([merchant.close(), finance.close()]);
     }
   });
 

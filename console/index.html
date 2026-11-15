@@ -8,7 +8,7 @@
   <script src="/finance/console.js" defer></script>
 </head>
 <body>
-  <header class="top"><div class="brand"><span class="mark" aria-hidden="true">A</span> AgentTreasury</div><span class="network">Base Sepolia</span></header>
+  <header class="top"><div class="brand"><span class="mark" aria-hidden="true">A</span> AgentTreasury</div><span class="network">Testnet</span></header>
   <main>
     <div class="heading"><div><h1>Finance Console</h1><p>Review agent payments, refund requests, and settlement evidence.</p></div><button id="refresh" hidden>Refresh</button></div>
     <form id="login" class="card login">
@@ -22,6 +22,18 @@
         <ul id="orders"></ul>
       </section>
       <section class="card detail" id="detail" aria-label="Payment details"><p>Select a payment to view details.</p></section>
+      <section class="card detail gateway" aria-labelledby="gateway-heading">
+        <h2 id="gateway-heading">Arc Gateway purchase</h2>
+        <form id="gateway-lookup">
+          <label for="gateway-id">Request ID</label>
+          <div class="form-actions">
+            <input id="gateway-id" required autocomplete="off" spellcheck="false"
+              pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}">
+            <button>Look up</button>
+          </div>
+        </form>
+        <div id="gateway-detail" aria-live="polite"></div>
+      </section>
     </div>
   </main>
 </body>

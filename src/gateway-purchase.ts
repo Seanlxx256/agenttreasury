@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { Pool } from 'pg';
 import type { Address, Hex } from 'viem';
-import { observeGatewayPayment, type GatewayObservation } from './gateway-reconciliation.js';
+import { checkGatewayPayment } from './gateway-payment-evidence.js';
 import {
   decodePaymentHeader, encodePaymentHeader, gatewayAuthorizationTypes,
   gatewayDomain, gatewayTracePrice, gatewayValidity, recoverGatewayPayer, traceOffer, type GatewayAuthorization,
@@ -62,14 +62,9 @@ export async function purchaseGatewayTrace(
   if (existing) {
     const { nonce, delivery } = existing;
     if (delivery !== null) return { status: 'delivered', nonce, delivery };
-    let payment: GatewayObservation;
-    try {
-      payment = await observeGatewayPayment({
-        nonce, payer: existing.payer, recipient: existing.recipient, amountUnits: existing.amount_units,
-      }, gatewayRequest);
-    } catch {
-      return { status: 'submission-unknown', nonce, delivery: null, payment: { status: 'unavailable' } };
-    }
+    const payment = await checkGatewayPayment(pool, requestId, {
+      nonce, payer: existing.payer, recipient: existing.recipient, amountUnits: existing.amount_units,
+    }, 'buyer', gatewayRequest);
     if (payment.status === 'charged' && existing.retrieval_token) {
       let recovered: unknown;
       try {
@@ -86,6 +81,7 @@ export async function purchaseGatewayTrace(
     }
     const status = {
       unknown: 'submission-unknown',
+      unavailable: 'submission-unknown',
       pending: 'payment-pending',
       charged: 'charged-delivery-missing',
       failed: 'payment-failed',

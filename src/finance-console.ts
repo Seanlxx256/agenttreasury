@@ -4,6 +4,8 @@ import type { Pool } from 'pg';
 import { enqueueFinanceRefund } from './finance-refunds.js';
 import { executeDemoDecision } from './finance-demo.js';
 import { getPaymentLedger } from './ledger.js';
+import { checkGatewayPayment } from './gateway-payment-evidence.js';
+import type { ExpectedGatewayPayment } from './gateway-reconciliation.js';
 import { PaymentError } from './payments.js';
 
 const orderFields = `i.id, i.task_id AS "taskId", i.amount::text, i.status, i.payee,
@@ -29,6 +31,42 @@ const paymentParams = { type: 'object', required: ['id'],
 export function registerFinanceConsole(
   app: FastifyInstance, pool: Pool, authenticate: (request: FastifyRequest) => void, localDemo: boolean,
 ) {
+  async function gatewayPurchase(id: string) {
+    const { rows: [purchase] } = await pool.query<ExpectedGatewayPayment & {
+      issuedAt: Date; buyerHasDelivery: boolean; sellerHasDelivery: boolean;
+    }>(`
+      SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
+             p.authorized_at AS "issuedAt", (p.delivery IS NOT NULL) AS "buyerHasDelivery",
+             (d.delivery IS NOT NULL) AS "sellerHasDelivery"
+      FROM gateway_demo_purchases p
+      LEFT JOIN gateway_demo_deliveries d ON d.request_id = p.request_id AND d.nonce = p.nonce
+      WHERE p.request_id = $1
+    `, [id]);
+    if (!purchase) throw new PaymentError(404, 'GATEWAY_PURCHASE_NOT_FOUND');
+    return purchase;
+  }
+
+  app.get<{ Params: { id: string } }>('/finance/gateway-purchases/:id', {
+    preHandler: async (request) => authenticate(request), schema: { params: paymentParams },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    const { id } = request.params;
+    const purchase = await gatewayPurchase(id);
+    const { rows: observations } = await pool.query(`
+      SELECT checked_at AS "checkedAt", source, evidence
+      FROM gateway_payment_observations WHERE request_id = $1 ORDER BY id DESC LIMIT 10
+    `, [id]);
+    return { id, ...purchase, observations };
+  });
+
+  app.post<{ Params: { id: string } }>('/finance/gateway-purchases/:id/check', {
+    preHandler: async (request) => authenticate(request), schema: { params: paymentParams },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    const { id } = request.params;
+    return checkGatewayPayment(pool, id, await gatewayPurchase(id), 'finance');
+  });
+
   for (const [path, file, type] of [
     ['/finance', 'index.html', 'text/html'],
     ['/finance/console.css', 'console.css', 'text/css'],

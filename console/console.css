@@ -33,6 +33,9 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid #2376
 small,.muted{color:var(--muted)}
 .empty{padding:16px;color:var(--muted)}
 .detail{padding:20px;overflow-wrap:anywhere}
+.gateway{grid-column:1/-1}
+.gateway form{max-width:600px;margin-top:12px}
+.gateway li+li{margin-top:8px}
 .meta{display:grid;grid-template-columns:max-content 1fr;gap:5px 13px;margin:10px 0}
 dt{color:var(--muted)}
 dd{margin:0}

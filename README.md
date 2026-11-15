@@ -56,7 +56,7 @@ REQUEST_ID=$(node -p 'crypto.randomUUID()')
 npm run buy:gateway -- "$REQUEST_ID"
 ```
 
-The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer stores the request and nonce before sending the signed request. Apply migration `012` before restarting the buyer and merchant.
+The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer stores the request and nonce before sending the signed request. Run `npm run migrate` to apply migrations `012` and `013` before restarting the buyer, merchant, and finance API.
 
 If the paid response is lost, rerun `npm run buy:gateway -- "$REQUEST_ID"`. The buyer queries Gateway using the stored nonce. When Gateway confirms a matching charge, the buyer uses a separate retrieval token to fetch the original trace and save it locally. The merchant serves the stored result through a read-only endpoint. The same purchase ID and nonce can be submitted to the seller only once.
 
@@ -163,6 +163,8 @@ For local development without Docker, run `npm run finance:local`. It starts a l
 While the local console is running, run `npm run finance:demo` in another terminal and refresh the page. It reuses a pending local demo refund or creates a new settled mock order when the previous demo has been decided. Use the demo order to try approval or denial. After approval, select **Simulate refund** to post the refund journal. After denial, select **Simulate delivery** to record sample delivery. Both actions are available only in the local launcher and work only on local demo orders. They use no blockchain transaction.
 
 With an existing database, configure DATABASE_URL and FINANCE_APPROVAL_TOKEN and start the API normally. Open `http://127.0.0.1:3000/finance` to review the latest 100 payment intents, decide pending refunds, and see journals and reconciliation reports. The page keeps the finance token in memory until sign-out or reload.
+
+Use **Arc Gateway purchase** to look up a purchase by its request ID. The buyer, seller, and finance API must use the same demo database. The console shows buyer and seller delivery separately and displays the ten latest Gateway checks. **Check Gateway** queries the saved nonce and records the result for review. Buyer retries also record their observations here.
 
 ### Send a testnet refund from the console
 
