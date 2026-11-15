@@ -73,13 +73,13 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
   await Promise.all([migrate(pool), migrate(pool)]);
   assert.equal((await app.inject({ url: '/health/ready' })).statusCode, 200);
 
-  await t.test('Arc buyer persists the authorization before payment and never resubmits on replay', async () => {
+  await t.test('Arc buyer recovers lost delivery by nonce without resubmitting payment', async () => {
     const payer = privateKeyToAccount(generatePrivateKey());
     const recipient = privateKeyToAccount(generatePrivateKey()).address;
     const origin = 'http://127.0.0.1:3002';
     let submissions = 0;
     let signatures = 0;
-    const merchant = buildGatewayMerchant(origin, recipient, async (url, init) => {
+    const merchant = buildGatewayMerchant(pool, origin, recipient, async (url, init) => {
       ++submissions;
       assert.equal(String(url), 'https://gateway-api-testnet.circle.com/v1/x402/settle');
       const { paymentPayload, paymentRequirements } = JSON.parse(String(init?.body));
@@ -107,7 +107,8 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     const send: typeof fetch = async (url, init) => {
       const headers = new Headers(init?.headers);
       const response = await merchant.inject({
-        method: 'POST', url: String(url), headers: Object.fromEntries(headers),
+        method: init?.method === 'GET' ? 'GET' : 'POST',
+        url: String(url), headers: Object.fromEntries(headers),
       });
       return new Response(response.body, {
         status: response.statusCode,
@@ -135,7 +136,36 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
         return response;
       });
       assert.equal(lost.status, 'submission-unknown');
-      assert.deepEqual(await purchaseGatewayTrace(pool, interrupted, sign, send), lost);
+      const gateway: typeof fetch = async (url) => {
+        assert.equal(new URL(String(url)).searchParams.get('nonce'), lost.nonce);
+        return Response.json({ transfers: [{
+          id: randomUUID(), txHash: `0x${'b'.repeat(64)}`, status: 'confirmed',
+          nonce: lost.nonce, fromAddress: payer.address, toAddress: recipient,
+          token: 'USDC', sendingNetwork: arcGatewayNetwork, recipientNetwork: arcGatewayNetwork, amount: '1000',
+        }] });
+      };
+      const unavailable = await purchaseGatewayTrace(pool, interrupted, sign, send, async () => {
+        throw new Error('Gateway unavailable');
+      });
+      assert.equal(unavailable.status, 'submission-unknown');
+      assert.deepEqual(unavailable.payment, { status: 'unavailable' });
+      const notFound = await purchaseGatewayTrace(pool, interrupted, sign, send, async () =>
+        Response.json({ transfers: [] }));
+      assert.deepEqual(notFound.payment, { status: 'unknown' });
+      const wrongToken = await send(interrupted.endpoint, {
+        method: 'GET', headers: { 'trace-retrieval-token': 'a'.repeat(64) },
+      });
+      assert.equal(wrongToken.status, 404);
+      const missingDelivery = await purchaseGatewayTrace(pool, interrupted, sign, async (_url, init) => {
+        assert.equal(init?.method, 'GET');
+        return new Response(null, { status: 404 });
+      }, gateway);
+      assert.equal(missingDelivery.status, 'charged-delivery-missing');
+      const recovered = await purchaseGatewayTrace(pool, interrupted, sign, send, gateway);
+      assert.equal(recovered.status, 'delivered');
+      assert.equal(recovered.payment?.status, 'charged');
+      assert.equal(recovered.nonce, lost.nonce);
+      assert.deepEqual((await purchaseGatewayTrace(pool, interrupted, sign, send)).delivery, recovered.delivery);
       assert.equal(submissions, 2);
       assert.equal(signatures, 2);
 

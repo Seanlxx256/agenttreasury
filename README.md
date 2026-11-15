@@ -56,7 +56,11 @@ REQUEST_ID=$(node -p 'crypto.randomUUID()')
 npm run buy:gateway -- "$REQUEST_ID"
 ```
 
-The loopback merchant charges 0.001 test USDC and returns a labeled sample trace after Gateway accepts the payment for batch settlement. The buyer stores the request and nonce in PostgreSQL before sending the signed request. Reuse the same ID to read the saved result or the `submission-unknown` status. Use the nonce from that output to look up Gateway evidence if the merchant delivery is missing. This demo is a standalone payment client with a fixed quote. Task budget and journal integration are part of the recovery milestone.
+The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer stores the request and nonce before sending the signed request. Apply migration `012` before restarting the buyer and merchant.
+
+If the paid response is lost, rerun `npm run buy:gateway -- "$REQUEST_ID"`. The buyer queries Gateway using the stored nonce. When Gateway confirms a matching charge, the buyer uses a separate retrieval token to fetch the original trace and save it locally. The merchant serves the stored result through a read-only endpoint. The same purchase ID and nonce can be submitted to the seller only once.
+
+The command reports pending, failed, or conflicting payments separately. A confirmed charge with no retrievable artifact returns `charged-delivery-missing` for operator review. Purchases created before migration `012` can still query Gateway by nonce. Retrieving their missing artifacts requires a retrieval token created at submission. Task budget and journal integration are part of the recovery milestone.
 
 ### Inspect Circle Gateway payment evidence
 

@@ -1,4 +1,4 @@
-import { isAddress } from 'viem';
+import { isAddress, recoverTypedDataAddress, type Address, type Hex } from 'viem';
 import { arcTestnet } from 'viem/chains';
 
 export const arcGatewayNetwork = `eip155:${arcTestnet.id}`;
@@ -20,6 +20,21 @@ export const gatewayAuthorizationTypes = {
     { name: 'nonce', type: 'bytes32' },
   ],
 } as const;
+
+export type GatewayAuthorization = {
+  from: Address; to: Address; value: string; validAfter: string; validBefore: string; nonce: Hex;
+};
+
+export function recoverGatewayPayer(authorization: GatewayAuthorization, signature: Hex) {
+  return recoverTypedDataAddress({
+    domain: gatewayDomain, types: gatewayAuthorizationTypes, primaryType: 'TransferWithAuthorization',
+    message: {
+      ...authorization, value: BigInt(authorization.value),
+      validAfter: BigInt(authorization.validAfter), validBefore: BigInt(authorization.validBefore),
+    },
+    signature,
+  });
+}
 
 // The testnet facilitator advertises a seven-day minimum.
 export const gatewayValidity = 7 * 24 * 60 * 60 + 100;

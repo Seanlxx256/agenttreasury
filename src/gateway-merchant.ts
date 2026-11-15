@@ -1,12 +1,31 @@
+import { createHash } from 'node:crypto';
 import Fastify from 'fastify';
+import type { Pool } from 'pg';
 import { isAddress } from 'viem';
 import {
   arcGatewayNetwork, decodePaymentHeader, encodePaymentHeader, gatewayTestnetApi,
-  requestIdPattern, traceOffer,
+  recoverGatewayPayer, requestIdPattern, traceOffer,
 } from './gateway-x402.js';
 
-export function buildGatewayMerchant(origin: string, recipient: string, request: typeof fetch = fetch) {
+const tokenPattern = /^[0-9a-f]{64}$/;
+const digestToken = (token: string) => createHash('sha256').update(token).digest('hex');
+
+export function buildGatewayMerchant(pool: Pool, origin: string, recipient: string, request: typeof fetch = fetch) {
   const app = Fastify();
+  app.get<{ Params: { requestId: string } }>('/trace/:requestId', async (incoming, reply) => {
+    const { requestId } = incoming.params;
+    const token = incoming.headers['trace-retrieval-token'];
+    if (!requestIdPattern.test(requestId) || typeof token !== 'string' || !tokenPattern.test(token)) {
+      return reply.code(404).send({ code: 'DELIVERY_NOT_FOUND' });
+    }
+    const { rows: [row] } = await pool.query<{ delivery: unknown }>(
+      'SELECT delivery FROM gateway_demo_deliveries WHERE request_id = $1 AND token_digest = $2',
+      [requestId, digestToken(token)],
+    );
+    if (row?.delivery == null) return reply.code(404).send({ code: 'DELIVERY_NOT_FOUND' });
+    return reply.header('cache-control', 'no-store').send(row.delivery);
+  });
+
   app.post<{ Params: { requestId: string } }>('/trace/:requestId', async (incoming, reply) => {
     const { requestId } = incoming.params;
     if (!requestIdPattern.test(requestId)) return reply.code(400).send({ code: 'INVALID_REQUEST_ID' });
@@ -19,6 +38,10 @@ export function buildGatewayMerchant(origin: string, recipient: string, request:
         .send({ code: 'PAYMENT_REQUIRED' });
     }
 
+    const token = incoming.headers['trace-retrieval-token'];
+    if (typeof token !== 'string' || !tokenPattern.test(token)) {
+      return reply.code(400).send({ code: 'RETRIEVAL_TOKEN_REQUIRED' });
+    }
     let payment;
     try {
       payment = decodePaymentHeader(typeof header === 'string' ? header : null);
@@ -29,10 +52,23 @@ export function buildGatewayMerchant(origin: string, recipient: string, request:
     if (payment?.x402Version !== 2 || payment.resource?.url !== offer.resource.url ||
         typeof auth?.from !== 'string' || !isAddress(auth.from) ||
         typeof auth.to !== 'string' || auth.to.toLowerCase() !== requirements.payTo ||
-        auth.value !== requirements.amount || !/^0x[0-9a-f]{64}$/i.test(auth.nonce) ||
-        !/^0x[0-9a-f]{130}$/i.test(payment.payload.signature)) {
+        auth.value !== requirements.amount ||
+        typeof auth.nonce !== 'string' || !/^0x[0-9a-f]{64}$/i.test(auth.nonce) ||
+        typeof auth.validAfter !== 'string' || !/^\d{1,78}$/.test(auth.validAfter) ||
+        typeof auth.validBefore !== 'string' || !/^\d{1,78}$/.test(auth.validBefore) ||
+        typeof payment.payload.signature !== 'string' || !/^0x[0-9a-f]{130}$/i.test(payment.payload.signature)) {
       return reply.code(400).send({ code: 'INVALID_AUTHORIZATION' });
     }
+    const recovered = await recoverGatewayPayer(auth, payment.payload.signature).catch(() => null);
+    if (recovered?.toLowerCase() !== auth.from.toLowerCase()) {
+      return reply.code(400).send({ code: 'INVALID_AUTHORIZATION' });
+    }
+
+    const claim = await pool.query(
+      'INSERT INTO gateway_demo_deliveries (request_id, nonce, token_digest) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+      [requestId, auth.nonce.toLowerCase(), digestToken(token)],
+    );
+    if (claim.rowCount === 0) return reply.code(409).send({ code: 'PAYMENT_ALREADY_SUBMITTED' });
 
     let settlement;
     try {
@@ -65,11 +101,15 @@ export function buildGatewayMerchant(origin: string, recipient: string, request:
       return reply.code(502).send({ code: 'INVALID_GATEWAY_RECEIPT' });
     }
 
-    return reply.header('payment-response', encodePaymentHeader(settlement)).send({
+    const delivery = {
       requestId,
+      nonce: auth.nonce.toLowerCase(),
       gatewayReference: settlement.transaction,
       trace: { source: 'fixture', calls: [{ type: 'CALL', error: 'execution reverted' }] },
-    });
+    };
+    await pool.query('UPDATE gateway_demo_deliveries SET delivery = $2 WHERE request_id = $1',
+      [requestId, JSON.stringify(delivery)]);
+    return reply.header('payment-response', encodePaymentHeader(settlement)).send(delivery);
   });
   return app;
 }
