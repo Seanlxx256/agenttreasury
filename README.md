@@ -6,7 +6,7 @@ AgentTreasury is a portfolio project for Circle Agent Wallets and payments engin
 
 An on-call engineer delegates a transaction investigation and sets a USDC budget for it. The investigation uses an approved pay-per-call trace API when free evidence is insufficient. Payment acceptance, delivery, and onchain settlement can arrive at different times. If the API times out, the buyer needs to establish whether it paid, recover the trace when possible, and avoid a second charge.
 
-- Start with an Arc testnet externally owned account (EOA) and one project-operated x402 trace endpoint backed by Circle Gateway Nanopayments. Gateway batch settlement requires EOA signatures. The testnet demo exercises application-side task controls and keeps wallet credentials in the payment executor, outside the agent runtime.
+- Start with an Arc testnet externally owned account (EOA) and one project-operated x402 trace endpoint backed by Circle Gateway Nanopayments. Gateway Nanopayments and x402 batch settlement require EOA signatures and [do not support ERC-1271](https://developers.circle.com/gateway-nanopayments). The testnet demo exercises application-side task controls and keeps wallet credentials in the payment executor, outside the agent runtime.
 - Reuse Postgres budget reservations and idempotency. Check the task grant and price before handing a payment to the executor, and persist that handoff before the external call. A revocation blocks new handoffs. A payment already handed off may still complete and must remain visible for reconciliation. Verify that the integration can enforce the approved payment terms before allowing unattended spend.
 - Persist the logical request ID and authorization nonce before submission. Allow one authorization per logical request in the first release. Duplicate requests return the stored result or current status. Link each state change to the task, request, and operation, with the nonce once an authorization exists.
 
@@ -28,16 +28,35 @@ For mainnet deployment, pair application task budgets and service restrictions w
 
 ### Run the Arc testnet purchase demo
 
-Use two distinct public addresses for the payer and recipient. The payer must be an EOA because [Gateway Nanopayments batch settlement requires EOA signatures](https://developers.circle.com/gateway-nanopayments). The Arc testnet smart contract account provisioned by Circle Agent Wallet login can fund the test EOA with a regular transfer. A deposit owned by that smart contract account does not make it eligible to sign batch payments.
+Two wallets are involved and they are not interchangeable. The payer must be an EOA because [Gateway Nanopayments and x402 batch settlement require EOA signatures and do not support ERC-1271](https://developers.circle.com/gateway-nanopayments). A Circle Agent Wallet holds funds through a backing EOA, but its signing key stays with the wallet API, so a deposit it owns does not make it eligible to sign batch payments.
+
+Start with the diagnostic, which reads the Circle CLI session, the Agent Wallet, its Gateway balance and backing EOA, and the local payer key:
 
 ```sh
-npm run gateway:wallet -- init
+npm run gateway:wallet -- status
+```
+
+Output from the validated testnet run:
+
+```text
+Local Gateway payer
+  self-managed EOA: 0x998f3d76BFf494Ae8BdBBde4B778fd42a1B2be54
+Circle CLI testnet session: VALID (expires in 27d 20h 26m)
+  agent wallet: 0xeaea4cdcb085f2c45a110e10434654a3b42f54dd
+  Gateway balance: 0.5 USDC
+  backing EOA: 0x819a53d2fbaf8eb1df64b2bb150ef635745290da
+```
+
+The Agent Wallet and the local payer are separate accounts funded through different EOAs. Fund the payer rather than replacing it, then create a second address for the recipient:
+
+```sh
+npm run gateway:wallet -- init          # reuses the existing key, prints only the public address
 export GATEWAY_PAYER_ADDRESS=0xYourPrintedArcTestnetEOA
 export GATEWAY_MERCHANT_RECIPIENT=0xYourSeparateRecipientAddress
 export GATEWAY_TESTNET_SIGNER_FILE=.gateway-local/payer-key
 ```
 
-Fund the printed address with Arc test USDC, leaving enough for gas, then run `npm run gateway:wallet -- deposit 0.5`. Wait for Gateway to credit the deposit before buying. The initializer reuses the existing test key and prints only the public address and key file location. If you already use Circle CLI with an imported EOA, you can leave `GATEWAY_TESTNET_SIGNER_FILE` unset and let the buyer use the CLI signer.
+Fund the printed address with Arc test USDC, leaving enough for gas, then run `npm run gateway:wallet -- deposit 0.5`. Wait for Gateway to credit the deposit before buying. If you already use Circle CLI with an imported EOA, you can leave `GATEWAY_TESTNET_SIGNER_FILE` unset and let the buyer use the CLI signer.
 
 For a local run with embedded PostgreSQL, keep the payer and recipient variables set and run:
 
