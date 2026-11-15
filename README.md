@@ -175,6 +175,8 @@ Apply migration `016` and set `GATEWAY_OPERATIONS_TOKEN` to a secret distinct fr
 
 The review queue puts conflicting payment evidence first, confirmed charges without buyer delivery next, and paused automatic checks last. A Gateway outage does not clear an earlier conflict. A recovered delivery leaves the queue once the payment evidence agrees.
 
+Open a purchase and select **Triage purchase** to review its saved evidence. The console displays a rule recommendation and cites the facts behind it. To add an agent recommendation, run a model locally in Ollama and set `GATEWAY_TRIAGE_MODEL` to its installed name before starting the API. The model receives only the status facts and permitted actions. The server checks the proposed action and required citations before displaying it. Recommendations are advisory and the triage endpoint reads saved records without making a Gateway request. [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
+
 ### Send a testnet refund from the console
 
 Build, apply migration 010 and restart the API. Start the refund worker against the same database with DATABASE_URL, BASE_SEPOLIA_RPC_URL, MERCHANT_TEST_KEY and PAYMENT_RELAYER_KEY configured. The API and browser do not need wallet keys for this action.

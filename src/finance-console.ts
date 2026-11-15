@@ -6,6 +6,7 @@ import { executeDemoDecision } from './finance-demo.js';
 import { getPaymentLedger } from './ledger.js';
 import { checkGatewayPayment } from './gateway-payment-evidence.js';
 import type { ExpectedGatewayPayment } from './gateway-reconciliation.js';
+import { prepareGatewayTriage, reviewGatewayTriage, type TriageObservation } from './gateway-triage.js';
 import { PaymentError } from './payments.js';
 
 const orderFields = `i.id, i.task_id AS "taskId", i.amount::text, i.status, i.payee,
@@ -110,6 +111,27 @@ export function registerFinanceConsole(
     reply.header('Cache-Control', 'no-store');
     const { id } = request.params;
     return checkGatewayPayment(pool, id, await gatewayPurchase(id), role);
+  });
+
+  app.post<{ Params: { id: string } }>('/finance/gateway-purchases/:id/triage', {
+    schema: { params: paymentParams },
+  }, async (request, reply) => {
+    authenticateConsole(request);
+    reply.header('Cache-Control', 'no-store');
+    const { id } = request.params;
+    const purchase = await gatewayPurchase(id);
+    const { rows } = await pool.query<TriageObservation>(`
+      SELECT id::text, evidence
+      FROM (
+        (SELECT id, evidence FROM gateway_payment_observations
+         WHERE request_id = $1 ORDER BY id DESC LIMIT 10)
+        UNION
+        (SELECT id, evidence FROM gateway_payment_observations WHERE request_id = $1
+         AND evidence->>'status' IN ('charged', 'failed', 'conflict') ORDER BY id DESC LIMIT 1)
+      ) observations
+      ORDER BY observations.id DESC
+    `, [id]);
+    return reviewGatewayTriage(prepareGatewayTriage(purchase, rows), process.env.GATEWAY_TRIAGE_MODEL);
   });
 
   for (const [path, file, type] of [

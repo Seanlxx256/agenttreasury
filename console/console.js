@@ -86,6 +86,25 @@ function showGatewayPurchase(purchase, path, session) {
       check.disabled = false;
     }
   }));
+  const review = element('button', 'Triage purchase');
+  const triage = element('section');
+  triage.setAttribute('aria-live', 'polite');
+  review.type = 'button';
+  review.addEventListener('click', () => showErrors(async () => {
+    review.disabled = true;
+    triage.replaceChildren(element('p', 'Reviewing saved evidence…'));
+    try {
+      const result = await financeApi(path + '/triage', { method: 'POST' });
+      if (session === generation && review.isConnected) showTriage(triage, result);
+    } catch (error) {
+      if (session === generation && review.isConnected) triage.replaceChildren();
+      throw error;
+    } finally {
+      review.disabled = false;
+    }
+  }));
+  const actions = element('div', undefined, 'actions');
+  actions.append(check, review);
   gatewayDetail.replaceChildren(metadata([
     ['Request ID', purchase.id], ['Authorization nonce', purchase.nonce],
     ['Payer', purchase.payer], ['Recipient', purchase.recipient],
@@ -93,9 +112,9 @@ function showGatewayPurchase(purchase, path, session) {
     ['Task', purchase.taskId], ['Task budget', purchase.budgetStatus ?? 'Untracked'],
     ['Seller delivery', purchase.sellerHasDelivery ? 'Saved' : 'Missing'],
     ['Buyer delivery', purchase.buyerHasDelivery ? 'Saved' : 'Missing'],
-  ]), check, element('h3', 'Gateway observations'));
+  ]), actions, element('h3', 'Gateway observations'));
   if (purchase.reviewRequired) {
-    check.after(element('p', 'Automatic checks paused. Review the Gateway observations.', 'muted'));
+    actions.after(element('p', 'Automatic checks paused. Review the Gateway observations.', 'muted'));
   }
   if (purchase.journal) {
     const { transferId, batchHash, postedAt, lines } = purchase.journal;
@@ -103,10 +122,11 @@ function showGatewayPurchase(purchase, path, session) {
     for (const line of lines) {
       entries.append(element('li', [line.side, line.account.replaceAll('_', ' ').toLowerCase(), amount(line.amount)].join(' · ')));
     }
-    check.after(element('h3', 'Gateway journal'), metadata([
+    actions.after(element('h3', 'Gateway journal'), metadata([
       ['Transfer ID', transferId], ['Batch hash', batchHash], ['Posted', timestamp(postedAt)],
     ]), entries);
   }
+  actions.after(triage);
   if (!purchase.observations.length) {
     gatewayDetail.append(element('p', 'No Gateway check recorded.', 'muted'));
     return;
@@ -122,6 +142,26 @@ function showGatewayPurchase(purchase, path, session) {
     history.append(row);
   }
   gatewayDetail.append(history);
+}
+
+function showTriage(container, { facts, rules, agent }) {
+  const byRef = new Map(facts.map(({ id, description }) => [id, description]));
+  const recommendation = (label, { action, rationale, citations }) => {
+    const evidence = element('ul', undefined, 'reports');
+    for (const id of citations) evidence.append(element('li', id + ' · ' + byRef.get(id)));
+    return [element('h3', label), element('strong', action.replaceAll('-', ' ')), element('p', rationale), evidence];
+  };
+  container.replaceChildren(...recommendation('Rule recommendation', rules));
+  if (agent.status === 'ready') {
+    container.append(...recommendation('Agent recommendation', agent.recommendation));
+  } else {
+    const messages = {
+      disabled: 'Configure a local model to add an agent recommendation.',
+      unavailable: 'The local model is unavailable.',
+      rejected: 'The model response did not match the allowed actions and evidence.',
+    };
+    container.append(element('p', messages[agent.status], 'muted'));
+  }
 }
 
 async function lookupGatewayPurchase(id) {

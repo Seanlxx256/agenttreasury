@@ -287,6 +287,17 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
         ['charged', 'charged', 'unknown', 'unavailable']);
       assert.equal(audit.retrieval_token, undefined);
       assert.equal(audit.delivery, undefined);
+      assert.equal((await finance.inject({ method: 'POST', url: financeUrl + '/triage' })).statusCode, 401);
+      const triageMock = t.mock.method(globalThis, 'fetch', async () => new Response(null, { status: 503 }));
+      try {
+        const triaged = await finance.inject({ method: 'POST', url: financeUrl + '/triage', headers: operations });
+        assert.equal(triaged.statusCode, 200);
+        assert.equal(triaged.json().rules.action, 'retrieve-delivery');
+      } finally {
+        triageMock.mock.restore();
+      }
+      assert.deepEqual((await finance.inject({ url: financeUrl, headers: operations })).json().observations,
+        audit.observations);
 
       const fetchMock = t.mock.method(globalThis, 'fetch', gateway);
       try {
