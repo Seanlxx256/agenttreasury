@@ -1,6 +1,6 @@
 # AgentTreasury
 
-AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The Circle wallet and Gateway integration below is planned. The runnable TypeScript, Fastify, and PostgreSQL backend currently uses direct USDC settlement on Base Sepolia.
+AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The runnable TypeScript, Fastify, and PostgreSQL payment backend uses direct USDC settlement on Base Sepolia. A standalone command can inspect Arc testnet Gateway payment evidence by nonce.
 
 ## Buyer-side payment recovery
 
@@ -21,8 +21,21 @@ The operations agent uses read-only tools and produces a structured recommendati
 ### Delivery milestones
 
 1. Run one purchase using Circle Agent Wallet, Arc testnet, and the project-operated Gateway x402 trace API. Confirm that the payment executor can persist the nonce before submission and associate the returned trace with the request.
-2. Implement nonce-based recovery and replay concurrent budget requests, a changed quote, duplicate requests, retries after grant revocation, a lost response after submission, and a confirmed charge with missing delivery. Require zero duplicate charges and zero out-of-policy submissions in these cases. Check the final reservation, journal, and audit evidence against the expected result for each case.
-3. Add the operations agent and replay the same labeled incidents with and without its recommendations. Use the same safe backend rules in both runs. Measure correct next steps, evidence accuracy, manual review rate, and time to triage. Report unsafe recommendations separately from executed actions. Record which evidence came from Circle testnet and which came from injected failures.
+2. Connect nonce lookup to the durable recovery worker. Replay a crash after committing the authorization and before submission, a crash after external acceptance and before recording the response, conflicting transfer records for the same nonce, and a confirmed charge with missing delivery. Keep the existing concurrency, idempotency, quote validation, and revocation cases. Check for duplicate charges, out-of-policy submissions, and incorrect budget or journal balances. Add an append-only audit history with actor, action, timestamp, and state transition. Give the agent read and request access, operations access to recovery, and finance access to fund adjustments.
+3. Add the operations agent and replay the same labeled incidents with and without its recommendations. Use the same backend rules in both runs. Measure correct next steps, evidence accuracy, manual review rate, and time to triage. Report unsafe recommendations separately from executed actions. Test evidence-backed incident classification and queue priority after establishing the baseline.
+
+For mainnet deployment, pair application task budgets and service restrictions with Circle Agent Wallet limits and recipient policies for supported operations. Verify enforcement against the chosen Gateway payment flow before relying on it. Use application-side controls in the Arc testnet demo.
+
+### Inspect Circle Gateway payment evidence
+
+Build the project, then pass the authorization nonce, payer, recipient, and expected amount in integer USDC base units:
+
+```sh
+npm run build
+npm run reconcile:gateway -- "$NONCE" "$PAYER" "$RECIPIENT" 1000
+```
+
+The command makes a read-only Arc testnet lookup. A single matching transfer returns `pending`, `charged`, or `failed`, together with its Gateway transfer ID and batch transaction hash when available. An empty result returns `unknown`. Multiple results or mismatched payment terms return `conflict` with exit code 2. Unavailable or invalid Gateway responses fail with exit code 1. The command reports evidence for one authorization and does not post a ledger entry.
 
 See [Circle Agent Stack](https://www.circle.com/agent-stack), [Agent Nanopayments](https://developers.circle.com/agent-stack/agent-nanopayments), [Circle Agent Stack overview](https://help.circle.com/support/en/circle-agent-stack-overview?id=kb_article_view&sysparm_article=KB0011122), and [Gateway seller reconciliation](https://developers.circle.com/gateway-nanopayments/howtos/x402-seller-reconciliation).
 
