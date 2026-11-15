@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import { recordAudit } from './audit.js';
 import { resolveReservation } from './budget.js';
 import { transaction } from './db.js';
 import { observeGatewayPayment, type ExpectedGatewayPayment, type GatewayObservation } from './gateway-reconciliation.js';
@@ -64,6 +65,10 @@ export async function checkGatewayPayment(
 
     await client.query('INSERT INTO gateway_payment_observations (request_id, source, evidence) VALUES ($1, $2, $3)',
       [requestId, source, JSON.stringify(evidence)]);
+    await recordAudit(client, {
+      actor: source, action: 'gateway.payment.observed', entity: `gateway_purchase:${requestId}`,
+      stateAfter: evidence.status,
+    });
     return evidence;
   });
 }

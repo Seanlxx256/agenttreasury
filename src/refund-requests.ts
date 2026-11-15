@@ -1,4 +1,5 @@
 import type { Pool, PoolClient } from 'pg';
+import { recordAudit } from './audit.js';
 import { transaction } from './db.js';
 import { PaymentError } from './payments.js';
 
@@ -67,6 +68,9 @@ export async function requestRefund(pool: Pool, intentId: string, agentId: strin
       `INSERT INTO refund_requests (intent_id, reason, requested_by) VALUES ($1, $2, $3)
        RETURNING ${requestColumns}`, [intentId, reason, agentId],
     );
+    await recordAudit(client, {
+      actor: agentId, action: 'refund.requested', entity: `refund_request:${intentId}`, stateAfter: 'PENDING',
+    });
     return request!;
   });
 }
@@ -91,6 +95,10 @@ export async function decideRefund(pool: Pool, intentId: string, decision: 'APPR
       UPDATE refund_requests SET status = $2, decided_by = 'finance-operator', decided_at = now()
       WHERE intent_id = $1 RETURNING ${requestColumns}
     `, [intentId, decision]);
+    await recordAudit(client, {
+      actor: 'finance-operator', action: 'refund.decided', entity: `refund_request:${intentId}`,
+      stateBefore: current.status, stateAfter: decision,
+    });
     return updated!;
   });
 }
