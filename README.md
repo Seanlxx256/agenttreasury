@@ -189,6 +189,8 @@ npm run eval:gateway -- --model your-installed-model
 
 Action accuracy counts unavailable or rejected model responses as misses. Citation precision measures how many submitted references support the labeled action. A correct citation set also includes all required references. Escalation rate reports recommended escalation or conflict review among available recommendations. Generation time measures the time to produce the result. Human review time requires a separate operator study. The scenarios exercise synthetic incidents and can be run without a wallet or database.
 
+The first measured local run recorded 11 of 12 correct actions for rules and 6 of 12 for Qwen2.5 0.5B. See the [evaluation report](docs/gateway-triage-evaluation.md) for failure cases and reproducibility details.
+
 ### Send a testnet refund from the console
 
 Build, apply migration 010 and restart the API. Start the refund worker against the same database with DATABASE_URL, BASE_SEPOLIA_RPC_URL, MERCHANT_TEST_KEY and PAYMENT_RELAYER_KEY configured. The API and browser do not need wallet keys for this action.
