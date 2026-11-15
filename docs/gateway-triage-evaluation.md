@@ -94,3 +94,22 @@ On 2026-11-15, local Qwen2.5 0.5B produced the following results for cases with 
 | `gateway-incidents-v1` | 3/3 | 2/3 | 2/3 | 0/3 | 1/3 |
 
 The model also returned the expected action in all six cases where policy allowed only one action. The six unnecessary escalations in the table all passed validation, so falling back on missing or rejected responses did not prevent them. Examples include checking an unresolved payment by its original authorization, retrieving a trace from the seller, and asking the merchant to investigate a missing trace. These counts cover the evaluation fixtures, including multiple stages of the same Arc purchase. They do not measure production escalation rates or operator time.
+
+### Optional evidence selection
+
+The console displays one rule action with its required evidence. The model may add up to two saved facts. The evaluation compares those additions with the hand-labeled relevant facts for each case. The prior action selection experiment remains available in the evaluation command.
+
+| Dataset | Accepted model responses | Relevant additional facts | Cases with a relevant addition | Mean model call time |
+| --- | ---: | ---: | ---: | ---: |
+| `gateway-triage-v1` | 12/12 | 0 | 0/12 | 310 ms |
+| `arc-recovery-v1` | 3/3 | 1 | 1/3 | 227 ms |
+| `gateway-incidents-v1` | 6/6 | 0 | 0/6 | 219 ms |
+
+Local Qwen2.5 0.5B added one fact across 21 cases on 2026-11-15. In the Arc replay before the first Gateway lookup, it highlighted that the seller had saved the trace. This explains why recovery may be possible after the original authorization is checked. It does not resolve the payment status. The timings cover local model calls and validation. Operator review time was not measured.
+
+```sh
+npm run build
+npm run --silent eval:gateway -- --dataset arc-recovery-v1 --support-rules --model qwen2.5:0.5b
+```
+
+For a timed operator study, give reviewers comparable cases in both console configurations, balancing their order and avoiding repeat exposure to the same case. Start timing at purchase selection and stop when the reviewer submits the next action and supporting evidence. Report the time to a correct decision and the share of correct decisions for both configurations. Include model wait time in the assisted condition and record whether the model surfaced an additional fact.

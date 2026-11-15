@@ -131,7 +131,7 @@ export function registerFinanceConsole(
       ) observations
       ORDER BY observations.id DESC
     `, [id]);
-    return reviewGatewayTriage(prepareGatewayTriage(purchase, rows), process.env.GATEWAY_TRIAGE_MODEL);
+    return reviewGatewayTriage(prepareGatewayTriage(purchase, rows), process.env.GATEWAY_TRIAGE_MODEL, fetch, 'support-rules');
   });
 
   for (const [path, file, type] of [

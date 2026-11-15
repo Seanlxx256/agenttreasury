@@ -52,6 +52,7 @@ type Dataset = keyof typeof gatewayTriageDatasets;
 
 export async function evaluateGatewayTriage(
   model?: string, request: typeof fetch = fetch, dataset: Dataset = 'gateway-triage-v1',
+  mode: 'choose-action' | 'support-rules' = 'choose-action',
 ) {
   const cases = [];
   for (const sample of gatewayTriageDatasets[dataset]) {
@@ -59,8 +60,10 @@ export async function evaluateGatewayTriage(
     const input = prepareGatewayTriage(sample.purchase, sample.observations);
     const rules = score(input.rules, sample, performance.now() - started);
     const modelStarted = performance.now();
-    const { agent } = await reviewGatewayTriage(input, model, request);
+    const { agent } = await reviewGatewayTriage(input, model, request, mode);
     const modelElapsed = performance.now() - modelStarted;
+    const extra = agent.status === 'ready' ? agent.recommendation.citations.filter((id) => !rules.citations.includes(id)) : [];
+    const relevant = [...sample.requiredCitations, ...(sample.optionalCitations ?? [])];
     cases.push({
       name: sample.name,
       expectedAction: sample.expectedAction,
@@ -68,6 +71,7 @@ export async function evaluateGatewayTriage(
       allowedActions: input.allowed.map(({ action }) => action),
       expectedActionAllowed: input.allowed.some(({ action }) => action === sample.expectedAction),
       rules,
+      ...(mode === 'support-rules' ? { extraEvidence: extra.map((id) => ({ id, relevant: relevant.includes(id) })) } : {}),
       agent: model ? {
         status: agent.status,
         ...score(agent.status === 'ready' ? agent.recommendation : undefined, sample, modelElapsed),
@@ -76,6 +80,7 @@ export async function evaluateGatewayTriage(
   }
 
   const agentResults = cases.flatMap(({ agent }) => agent ? [agent] : []);
+  const extraEvidence = cases.flatMap(({ extraEvidence }) => extraEvidence ?? []);
   const withChoice = cases.filter(({ allowedActions }) => allowedActions.length > 1);
   const withoutChoice = cases.filter(({ allowedActions }) => allowedActions.length === 1);
   const summarizeGroup = (group: typeof withChoice) => ({
@@ -90,6 +95,12 @@ export async function evaluateGatewayTriage(
   return {
     dataset,
     model: model ?? null,
+    mode,
+    ...(mode === 'support-rules' ? { supplementalEvidence: {
+      selected: extraEvidence.length,
+      relevant: extraEvidence.filter(({ relevant }) => relevant).length,
+      casesWithRelevantEvidence: cases.filter(({ extraEvidence }) => extraEvidence?.some(({ relevant }) => relevant)).length,
+    } } : {}),
     rules: summarize(cases.map(({ rules }) => rules)),
     agent: model ? {
       ...summarize(agentResults),
@@ -106,17 +117,17 @@ export async function evaluateGatewayTriage(
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { values } = parseArgs({ options: {
-    'rules-only': { type: 'boolean' }, model: { type: 'string' },
+    'rules-only': { type: 'boolean' }, 'support-rules': { type: 'boolean' }, model: { type: 'string' },
     dataset: { type: 'string', default: 'gateway-triage-v1' },
   } });
   const { dataset } = values;
   if (!Object.hasOwn(gatewayTriageDatasets, dataset) || values.model === '' ||
       (values['rules-only'] && values.model !== undefined)) {
     const datasets = Object.keys(gatewayTriageDatasets).join('|');
-    throw new Error(`Usage: npm run eval:gateway -- [--dataset ${datasets}] [--rules-only | --model MODEL]`);
+    throw new Error(`Usage: npm run eval:gateway -- [--dataset ${datasets}] [--support-rules] [--rules-only | --model MODEL]`);
   }
   const model = values['rules-only'] ? undefined : (values.model ?? process.env.GATEWAY_TRIAGE_MODEL) || undefined;
-  const result = await evaluateGatewayTriage(model, fetch, dataset as Dataset);
+  const result = await evaluateGatewayTriage(model, fetch, dataset as Dataset, values['support-rules'] ? 'support-rules' : 'choose-action');
   console.log(JSON.stringify(result, null, 2));
   if (result.agent?.recommendations === 0) process.exitCode = 2;
 }

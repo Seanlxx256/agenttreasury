@@ -146,21 +146,22 @@ function showGatewayPurchase(purchase, path, session) {
 
 function showTriage(container, { facts, rules, agent }) {
   const byRef = new Map(facts.map(({ id, description }) => [id, description]));
-  const recommendation = (label, { action, rationale, citations }) => {
+  const evidenceList = (citations) => {
     const evidence = element('ul', undefined, 'reports');
     for (const id of citations) evidence.append(element('li', id + ' · ' + byRef.get(id)));
-    return [element('h3', label), element('strong', action.replaceAll('-', ' ')), element('p', rationale), evidence];
+    return evidence;
   };
-  container.replaceChildren(...recommendation('Rule recommendation', rules));
+  container.replaceChildren(element('h3', 'Recommended action'), element('strong', rules.action.replaceAll('-', ' ')),
+    element('p', rules.rationale), evidenceList(rules.citations));
   if (agent.status === 'ready') {
-    container.append(...recommendation('Agent recommendation', agent.recommendation));
+    const extra = agent.recommendation.citations.filter((id) => !rules.citations.includes(id));
+    if (extra.length) container.append(element('h3', 'Additional evidence selected by the agent'), evidenceList(extra));
   } else {
     const messages = {
-      disabled: 'Configure a local model to add an agent recommendation.',
-      unavailable: 'The local model is unavailable.',
-      rejected: 'The model response did not match the allowed actions and evidence.',
+      unavailable: 'Agent evidence selection is unavailable.',
+      rejected: 'Agent evidence selection could not be verified.',
     };
-    container.append(element('p', messages[agent.status], 'muted'));
+    if (messages[agent.status]) container.append(element('p', messages[agent.status], 'muted'));
   }
 }
 

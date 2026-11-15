@@ -92,14 +92,18 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
 
 export async function reviewGatewayTriage(
   input: ReturnType<typeof prepareGatewayTriage>, model?: string, request: typeof fetch = fetch,
+  mode: 'choose-action' | 'support-rules' = 'choose-action',
 ) {
-  const { facts, rules, allowed } = input;
+  const { facts, rules } = input;
+  const supportingRules = mode === 'support-rules';
+  const allowed = supportingRules ? [rules] : input.allowed;
+  const maxCitations = supportingRules ? rules.citations.length + 2 : 8;
   if (!model) return { facts, rules, agent: { status: 'disabled' as const } };
   const schema = {
     type: 'object', required: ['action', 'citations'], additionalProperties: false,
     properties: {
       action: { type: 'string', enum: allowed.map(({ action }) => action) },
-      citations: { type: 'array', minItems: 1, uniqueItems: true, maxItems: 8,
+      citations: { type: 'array', minItems: 1, uniqueItems: true, maxItems: maxCitations,
         items: { type: 'string', enum: facts.map(({ id }) => id) } },
     },
   };
@@ -111,7 +115,9 @@ export async function reviewGatewayTriage(
       body: JSON.stringify({
         model, stream: false, format: schema, options: { temperature: 0, num_predict: 512 },
         messages: [
-          { role: 'system', content: 'Select the best action from allowed using the facts. Return JSON with action and citations. Copy requiredCitations from the selected action into citations exactly.' },
+          { role: 'system', content: supportingRules
+            ? 'The action has already been decided. Return that action and copy all requiredCitations into citations. Add up to two supplied fact IDs only if they help the operator understand why this action is appropriate. Leave out unrelated facts.'
+            : 'Select the best action from allowed using the facts. Return JSON with action and citations. Copy requiredCitations from the selected action into citations exactly.' },
           { role: 'user', content: JSON.stringify({
             facts, allowed: allowed.map(({ action, citations }) => ({ action, requiredCitations: citations })),
           }) },
@@ -134,7 +140,7 @@ export async function reviewGatewayTriage(
   if (result && typeof result === 'object' && 'action' in result && 'citations' in result) {
     const { action, citations } = result;
     const option = allowed.find((candidate) => candidate.action === action);
-    if (option && Array.isArray(citations) && citations.length <= 8 && new Set(citations).size === citations.length &&
+    if (option && Array.isArray(citations) && citations.length <= maxCitations && new Set(citations).size === citations.length &&
         citations.every((id) => facts.some((fact) => fact.id === id)) &&
         option.citations.every((id) => citations.includes(id))) {
       return { facts, rules, agent: { status: 'ready' as const, model,

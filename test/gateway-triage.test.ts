@@ -131,3 +131,18 @@ test('triage evaluation separates forced actions and counts unnecessary escalati
   assert.equal(multipleActions.agentWithRuleFallback?.unnecessaryEscalationRate, 1 / 3);
   assert.equal(singleAction.agentWithRuleFallback?.correctActions, 3);
 });
+
+test('evidence selection cannot replace the rule action or add unknown references', async () => {
+  const input = prepareGatewayTriage(purchase, [charged]);
+  const response = (action: string, citations: string[]): typeof fetch => async () =>
+    Response.json({ message: { content: JSON.stringify({ action, citations }) } });
+  const citations = [...input.rules.citations, 'journal'];
+  const review = (action: string, refs: string[]) =>
+    reviewGatewayTriage(input, 'test-model', response(action, refs), 'support-rules');
+  assert.deepEqual((await review('escalate', citations)).agent, { status: 'rejected' });
+  assert.deepEqual((await review('retrieve-delivery', citations.slice(1))).agent, { status: 'rejected' });
+  assert.deepEqual((await review('retrieve-delivery', [...citations, 'invented'])).agent, { status: 'rejected' });
+  assert.deepEqual((await review('retrieve-delivery', [...citations, 'budget', 'polling'])).agent, { status: 'rejected' });
+  assert.deepEqual((await review('retrieve-delivery', citations)).agent, { status: 'ready', model: 'test-model',
+    recommendation: { ...input.rules, citations } });
+});
