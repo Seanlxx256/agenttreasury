@@ -37,6 +37,21 @@ export async function baseReconciliationChain(rpc: string): Promise<Reconciliati
   if (await client.getChainId() !== baseSepolia.id) throw new Error('RPC endpoint must serve Base Sepolia');
   const transfer = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)');
 
+  async function scanTransfers(args: { from: Address } | { to: Address }, fromBlock: bigint, toBlock: bigint) {
+    // The public Base Sepolia endpoint accepts at most 200 blocks per log request.
+    const pageSize = 200n;
+    const readPage = (start: bigint, end: bigint) => client.getLogs({
+      address: baseSepoliaUsdc, event: transfer, args, fromBlock: start, toBlock: end, strict: true,
+    });
+    const logs: Awaited<ReturnType<typeof readPage>> = [];
+    for (let start = fromBlock; start <= toBlock; start += pageSize) {
+      const pageEnd = start + pageSize - 1n;
+      const page = await readPage(start, pageEnd < toBlock ? pageEnd : toBlock);
+      for (const log of page) logs.push(log);
+    }
+    return logs;
+  }
+
   return {
     async finalized() {
       return (await client.getBlock({ blockTag: 'finalized' })).number;
@@ -49,18 +64,14 @@ export async function baseReconciliationChain(rpc: string): Promise<Reconciliati
         args: [wallet], blockNumber });
     },
     async outgoing(payer, fromBlock, toBlock) {
-      const logs = await client.getLogs({
-        address: baseSepoliaUsdc, event: transfer, args: { from: payer }, fromBlock, toBlock, strict: true,
-      });
+      const logs = await scanTransfers({ from: payer }, fromBlock, toBlock);
       return logs.map((log) => ({
         transactionHash: log.transactionHash, logIndex: log.logIndex,
         recipient: log.args.to.toLowerCase(), amount: log.args.value,
       }));
     },
     async incoming(payer, fromBlock, toBlock) {
-      const logs = await client.getLogs({
-        address: baseSepoliaUsdc, event: transfer, args: { to: payer }, fromBlock, toBlock, strict: true,
-      });
+      const logs = await scanTransfers({ to: payer }, fromBlock, toBlock);
       return logs.map((log) => ({
         transactionHash: log.transactionHash, logIndex: log.logIndex,
         blockNumber: log.blockNumber, blockHash: log.blockHash,

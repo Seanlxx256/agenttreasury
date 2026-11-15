@@ -197,7 +197,7 @@ Run `npm run migrate` after building. With DATABASE_URL and BASE_SEPOLIA_RPC_URL
 npm run reconcile -- "$PAYER_ADDRESS" "$FROM_BLOCK" "$TO_BLOCK"
 ```
 
-The command independently reads outgoing USDC Transfer logs and matches them one-to-one against the payment journal by transaction hash, recipient, and amount. It deduplicates logs by transaction hash and log index. Journal entries with a receipt outside the requested range are excluded. A missing receipt is reported separately because its block cannot be determined.
+The command reads USDC Transfer logs in pages of up to 200 blocks, within the public Base Sepolia RPC limit. It matches outgoing transfers one-to-one against the payment journal by transaction hash, recipient, and amount, and deduplicates logs by transaction hash and log index. Journal entries with a receipt outside the requested range are excluded. A missing receipt is reported separately because its block cannot be determined.
 
 A discrepancy report includes the affected transaction hash and, when available, the intent ID or log index. Exit code 0 indicates a match, 2 indicates discrepancies, and an execution error returns 1. Repeating the same wallet and range refreshes the stored report in `reconciliation_runs`. Run it again if settlement or journal posting catches up after an earlier scan.
 
@@ -217,6 +217,8 @@ The `balance` report compares the actual USDC closing balance with two independe
 | Transfer closing | Onchain opening + incoming USDC logs − outgoing USDC logs |
 
 The opening balance comes from the block immediately before the window, and the closing balance comes from the last block in the window. The report records both block hashes and computes each difference as actual closing minus calculated closing. A ledger difference with balanced transfer logs points to a booking or classification gap; a transfer difference means the retrieved logs do not explain the observed balance change. A zero balance difference still requires every transfer to match. Use an RPC endpoint that can read historical contract state and choose a range after the USDC contract deployment. This checks movement within a selected Base Sepolia window; it does not attest to prior activity. Arc Gateway balances and scheduled scans are separate work.
+
+A live run with the existing Base Sepolia test wallet matched the 20 test USDC funding credit at block `58720282`, two 0.002 test USDC payments at `58725969` and `58747677`, and their refunds at `58735879` and `58753696`. Both balance differences were zero in each checked window. The 2,000-block window `58723970..58725969` also matched through the public RPC.
 
 ## Finance console
 
