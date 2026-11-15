@@ -30,6 +30,8 @@ For mainnet deployment, pair application task budgets and service restrictions w
 
 Two wallets are involved and they are not interchangeable. The payer must be an EOA because [Gateway Nanopayments and x402 batch settlement require EOA signatures and do not support ERC-1271](https://developers.circle.com/gateway-nanopayments). A Circle Agent Wallet holds funds through a backing EOA, but its signing key stays with the wallet API, so a deposit it owns does not make it eligible to sign batch payments.
 
+Chain ID, USDC address, and the Gateway contract are read from Circle's official [`@circle-fin/x402-batching`](https://www.npmjs.com/package/@circle-fin/x402-batching) SDK (`CHAIN_CONFIGS`) instead of being hardcoded. The default is Arc testnet. Set `GATEWAY_NETWORK=arc` to target Arc mainnet, which switches the chain ID, Gateway contract, RPC, and Gateway API base URL in one place. Override the API base URL with `GATEWAY_API` if needed.
+
 Start with the diagnostic, which reads the Circle CLI session, the Agent Wallet, its Gateway balance and backing EOA, and the local payer key:
 
 ```sh
