@@ -12,6 +12,9 @@ import { recoverTypedDataAddress } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { buildGatewayMerchant } from '../src/gateway-merchant.js';
 import { purchaseGatewayTrace } from '../src/gateway-purchase.js';
+import { processGatewayReconciliation } from '../src/gateway-reconciliation-worker.js';
+import { reserveAmount } from '../src/budget.js';
+import { transaction } from '../src/db.js';
 import { arcGatewayNetwork, gatewayDomain, gatewayValidity } from '../src/gateway-x402.js';
 import { baseSepoliaUsdc, createBaseSettlement } from '../src/base-settlement.js';
 import type { Authorization, SettlementRail } from '../src/base-settlement.js';
@@ -72,6 +75,80 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
   assert.equal((await app.inject({ url: '/health/ready' })).statusCode, 503);
   await Promise.all([migrate(pool), migrate(pool)]);
   assert.equal((await app.inject({ url: '/health/ready' })).statusCode, 200);
+
+  await t.test('Gateway worker reconciles after lease expiry and preserves uncertain budgets for review', async () => {
+    const payer = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const recipient = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const origin = 'http://127.0.0.1:3002';
+    const seeded = await seedGateway(pool, { origin, payer, recipient }, 3000, 3000);
+    const taskId = seeded.taskId;
+    const makeReserved = async (submitted: boolean) => {
+      const id = randomUUID();
+      const nonce = `0x${randomBytes(32).toString('hex')}`;
+      await transaction(pool, async (client) => {
+        await reserveAmount(client, taskId, '2026-01-01', '1000');
+        await client.query(`
+          INSERT INTO gateway_demo_purchases
+            (request_id, endpoint, nonce, payer, recipient, amount_units, task_id, budget_day,
+             budget_status, authorized_at, submitted_at)
+          VALUES ($1, $2, $3, $4, $5, 1000, $6, '2026-01-01',
+            'reserved', now() - interval '3 minutes', CASE WHEN $7 THEN now() END)
+        `, [id, `${origin}/trace/${id}`, nonce, payer, recipient, taskId, submitted]);
+      });
+      return { id, nonce };
+    };
+    const counters = async () =>
+      (await pool.query('SELECT reserved, spent FROM research_tasks WHERE id = $1', [taskId])).rows[0];
+    const abandoned = await makeReserved(false);
+    const noNetwork: typeof fetch = () => {
+      assert.fail('An unsubmitted purchase does not need a Gateway lookup');
+    };
+    assert.equal(await processGatewayReconciliation(pool, noNetwork), true);
+    assert.deepEqual(await counters(), { reserved: '0', spent: '0' });
+    const expiry = await pool.query(
+      'SELECT evidence FROM gateway_payment_observations WHERE request_id = $1 AND source = $2',
+      [abandoned.id, 'worker'],
+    );
+    assert.deepEqual(expiry.rows[0]?.evidence, { status: 'submission-expired' });
+
+    const submitted = await makeReserved(true);
+    await pool.query("UPDATE gateway_demo_purchases SET reconcile_after = now() + interval '30 seconds' WHERE request_id = $1",
+      [submitted.id]);
+    assert.equal(await processGatewayReconciliation(pool, noNetwork), false);
+    await pool.query("UPDATE gateway_demo_purchases SET reconcile_after = now() - interval '1 second' WHERE request_id = $1",
+      [submitted.id]);
+    let lookups = 0;
+    const gateway: typeof fetch = async (url) => {
+      ++lookups;
+      assert.equal(new URL(String(url)).searchParams.get('nonce'), submitted.nonce);
+      return Response.json({ transfers: [{
+        id: randomUUID(), status: 'confirmed', nonce: submitted.nonce, fromAddress: payer, toAddress: recipient,
+        token: 'USDC', sendingNetwork: arcGatewayNetwork, recipientNetwork: arcGatewayNetwork, amount: '1000',
+        txHash: `0x${'b'.repeat(64)}`,
+      }] });
+    };
+    const work = await Promise.all([processGatewayReconciliation(pool, gateway), processGatewayReconciliation(pool, gateway)]);
+    assert.equal(work.filter(Boolean).length, 1);
+    assert.equal(lookups, 1);
+    assert.deepEqual(await counters(), { reserved: '0', spent: '1000' });
+    const journal = await pool.query('SELECT 1 FROM gateway_payment_journal WHERE request_id = $1', [submitted.id]);
+    assert.equal(journal.rowCount, 1);
+
+    const uncertain = await makeReserved(true);
+    const noTransfer: typeof fetch = async () => Response.json({ transfers: [] });
+    assert.equal(await processGatewayReconciliation(pool, noTransfer), true);
+    assert.equal(await processGatewayReconciliation(pool, noNetwork), false);
+    await pool.query('UPDATE gateway_demo_purchases SET reconcile_attempts = 11, reconcile_after = now() WHERE request_id = $1',
+      [uncertain.id]);
+    assert.equal(await processGatewayReconciliation(pool, noTransfer), true);
+    assert.equal(await processGatewayReconciliation(pool, noNetwork), false);
+    const review = await pool.query(
+      'SELECT reconcile_attempts, reconcile_review_at IS NOT NULL AS review FROM gateway_demo_purchases WHERE request_id = $1',
+      [uncertain.id],
+    );
+    assert.deepEqual(review.rows[0], { reconcile_attempts: 12, review: true });
+    assert.deepEqual(await counters(), { reserved: '1000', spent: '1000' });
+  });
 
   await t.test('Arc buyer recovers lost delivery by nonce without resubmitting payment', async () => {
     const payer = privateKeyToAccount(generatePrivateKey());

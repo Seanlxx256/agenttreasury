@@ -10,7 +10,7 @@ export async function checkGatewayPayment(
   pool: Pool,
   requestId: string,
   expected: ExpectedGatewayPayment,
-  source: 'buyer' | 'finance',
+  source: 'buyer' | 'finance' | 'worker',
   request: typeof fetch = fetch,
 ) {
   let evidence: CheckedPayment;

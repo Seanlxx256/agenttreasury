@@ -91,6 +91,9 @@ function showGatewayPurchase(purchase, path, session) {
     ['Seller delivery', purchase.sellerHasDelivery ? 'Saved' : 'Missing'],
     ['Buyer delivery', purchase.buyerHasDelivery ? 'Saved' : 'Missing'],
   ]), check, element('h3', 'Gateway observations'));
+  if (purchase.reviewRequired) {
+    check.after(element('p', 'Automatic checks paused. Review the Gateway observations.', 'muted'));
+  }
   if (purchase.journal) {
     const { transferId, batchHash, postedAt, lines } = purchase.journal;
     const entries = element('ul', undefined, 'reports');

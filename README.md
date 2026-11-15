@@ -59,11 +59,13 @@ REQUEST_ID=$(node -p 'crypto.randomUUID()')
 npm run buy:gateway -- "$REQUEST_ID"
 ```
 
-The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer reserves the task budget and stores the request and nonce before sending the signed request. Apply migration `014` before restarting the buyer, merchant, and finance API.
+The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer reserves the task budget and stores the request and nonce before sending the signed request. Apply migration `015` before restarting the buyer, merchant, and finance API.
 
 If the paid response is lost, rerun `npm run buy:gateway -- "$REQUEST_ID"`. The buyer queries Gateway using the stored nonce. When Gateway confirms a matching charge, the buyer uses a separate retrieval token to fetch the original trace and save it locally. The merchant serves the stored result through a read-only endpoint. The same purchase ID and nonce can be submitted to the seller only once.
 
 The command reports pending, failed, or conflicting payments separately. A confirmed charge with no retrievable artifact returns `charged-delivery-missing` for operator review. Run the buyer again or select **Check Gateway** in the finance console once Gateway updates the transfer. Confirmation converts the reservation into spend and posts a balanced journal entry keyed by the transfer ID. A matching terminal failure releases the reservation. Changing or unavailable evidence is recorded for review. Purchases created before migration `014` can still query Gateway by nonce with their original terms. Their budgets remain untracked.
+
+Run `npm run worker:gateway` in a third terminal with the same `DATABASE_URL` to reconcile reserved payments in the background. The worker leases one purchase at a time for 30 seconds and retries unresolved lookups with backoff. It pauses on conflicting evidence or after 12 unresolved checks, keeps the budget reserved, and flags the purchase for review in the finance console. **Check Gateway** remains available for manual follow-up. A reservation older than two minutes can be released if it still has no submission marker. A process that resumes signing after release cannot submit that authorization.
 
 ### Inspect Circle Gateway payment evidence
 

@@ -35,9 +35,11 @@ export function registerFinanceConsole(
     const { rows: [purchase] } = await pool.query<ExpectedGatewayPayment & {
       issuedAt: Date; buyerHasDelivery: boolean; sellerHasDelivery: boolean;
       taskId: string | null; budgetStatus: string | null; journal: unknown;
+      reviewRequired: boolean;
     }>(`
       SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
              p.task_id AS "taskId", p.budget_status AS "budgetStatus",
+             (p.budget_status = 'reserved' AND p.reconcile_review_at IS NOT NULL) IS TRUE AS "reviewRequired",
              p.authorized_at AS "issuedAt", (p.delivery IS NOT NULL) AS "buyerHasDelivery",
              (d.delivery IS NOT NULL) AS "sellerHasDelivery",
              CASE WHEN j.request_id IS NOT NULL THEN jsonb_build_object(
