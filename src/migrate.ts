@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 import { transaction } from './db.js';
 
 export async function migrate(pool: Pool) {
-  const files = ['001_init.sql', '002_quote_worker.sql', '003_settlement.sql', '004_payment_ledger.sql', '005_reconciliation.sql', '006_payment_refunds.sql', '007_merchant_delivery.sql', '008_refund_authorizations.sql', '009_refund_requests.sql', '010_finance_refund_jobs.sql', '011_gateway_demo_purchases.sql', '012_gateway_demo_deliveries.sql', '013_gateway_payment_observations.sql', '014_gateway_task_accounting.sql', '015_gateway_background_reconciliation.sql', '016_gateway_operations_observations.sql'];
+  const files = ['001_init.sql', '002_quote_worker.sql', '003_settlement.sql', '004_payment_ledger.sql', '005_reconciliation.sql', '006_payment_refunds.sql', '007_merchant_delivery.sql', '008_refund_authorizations.sql', '009_refund_requests.sql', '010_finance_refund_jobs.sql', '011_gateway_demo_purchases.sql', '012_gateway_demo_deliveries.sql', '013_gateway_payment_observations.sql', '014_gateway_task_accounting.sql', '015_gateway_background_reconciliation.sql', '016_gateway_operations_observations.sql', '017_wallet_funding.sql'];
   await transaction(pool, async (client) => {
     await client.query('SELECT pg_advisory_xact_lock(745313)');
     await client.query('CREATE TABLE IF NOT EXISTS schema_migrations (version integer PRIMARY KEY)');

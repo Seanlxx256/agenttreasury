@@ -15,6 +15,7 @@
     "worker": "node dist/src/worker.js",
     "settle": "node dist/src/settle.js",
     "reconcile": "node dist/src/reconcile.js",
+    "funding:record": "node dist/src/record-funding.js",
     "reconcile:gateway": "node dist/src/reconcile-gateway.js",
     "eval:gateway": "node dist/src/evaluate-gateway-triage.js",
     "study:gateway": "npm run --silent build && node dist/src/study-gateway-triage.js",

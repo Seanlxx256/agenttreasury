@@ -3,7 +3,7 @@ import { createPublicClient, decodeEventLog, http, parseAbi } from 'viem';
 import type { Hash } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { baseSepoliaUsdc } from './base-settlement.js';
-import { transaction } from './db.js';
+import { lockIncomingTransfer, transaction } from './db.js';
 import { PaymentError } from './payments.js';
 
 interface Receipt {
@@ -124,6 +124,10 @@ export async function recordRefund(
     await client.query('SELECT intent_id FROM payment_journal WHERE intent_id = $1 FOR UPDATE', [intentId]);
     const { rows: [previous] } = await client.query<Refund>(readRefund, [intentId]);
     if (previous) return replay(previous);
+    await lockIncomingTransfer(client, payment.network, hash, logIndex);
+    const funding = await client.query(`SELECT 1 FROM wallet_funding
+      WHERE network = $1 AND transaction_hash = $2 AND log_index = $3`, [payment.network, hash, logIndex]);
+    if (funding.rowCount) throw new PaymentError(409, 'REFUND_TRANSFER_ALREADY_USED');
 
     const { rows: [inserted] } = await client.query<Refund>(`
       INSERT INTO payment_refunds (intent_id, network, transaction_hash, log_index, block_number, block_hash, reason)

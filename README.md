@@ -201,7 +201,22 @@ The command independently reads outgoing USDC Transfer logs and matches them one
 
 A discrepancy report includes the affected transaction hash and, when available, the intent ID or log index. Exit code 0 indicates a match, 2 indicates discrepancies, and an execution error returns 1. Repeating the same wallet and range refreshes the stored report in `reconciliation_runs`. Run it again if settlement or journal posting catches up after an earlier scan.
 
-The command also reconciles incoming USDC against recorded refunds. A refund matches by transaction hash, log index, sender, amount, block number, and block hash. Successful matches appear in `matchedRefunds`. Missing or mismatched transfers appear in `refundDiscrepancies`. Other incoming transfers, including faucet funding, are reported as unclassified until they are accounted for. Funding entries, balance-level reconciliation, and scheduled scans are future work.
+The command reconciles incoming USDC against recorded refunds and funding. Each match checks the transaction hash, log index, sender, amount, block number, and block hash. Unclassified incoming transfers remain discrepancies. After building and applying migration 017, a finance operator can record a finalized funding transfer, such as a faucet deposit:
+
+```sh
+npm run funding:record -- "$PAYER_ADDRESS" "$FUNDING_TX_HASH" "$TRANSFER_LOG_INDEX" "Testnet wallet funding"
+```
+
+The command uses the same `DATABASE_URL` and `BASE_SEPOLIA_RPC_URL` as reconciliation. It verifies the USDC receipt and books the wallet asset increase (debit `USDC_WALLET_ASSET`, credit `USDC_FUNDING_SOURCE`). It does not send any transactions. Repeating the command with identical arguments returns the existing entry. A transfer cannot be posted as both funding and a refund.
+
+The `balance` report compares the actual USDC closing balance with two independent calculations, all in USDC base units:
+
+| Calculation | Inputs |
+| --- | --- |
+| Ledger closing | Onchain opening + recorded funding + recorded refunds − recorded payments |
+| Transfer closing | Onchain opening + incoming USDC logs − outgoing USDC logs |
+
+The opening balance comes from the block immediately before the window, and the closing balance comes from the last block in the window. The report records both block hashes and computes each difference as actual closing minus calculated closing. A ledger difference with balanced transfer logs points to a booking or classification gap; a transfer difference means the retrieved logs do not explain the observed balance change. A zero balance difference still requires every transfer to match. Use an RPC endpoint that can read historical contract state and choose a range after the USDC contract deployment. This checks movement within a selected Base Sepolia window; it does not attest to prior activity. Arc Gateway balances and scheduled scans are separate work.
 
 ## Finance console
 

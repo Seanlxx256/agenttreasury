@@ -23,6 +23,7 @@ import { reconcilePayments } from '../src/reconciliation.js';
 import type { ReconciliationChain } from '../src/reconciliation.js';
 import { buildMerchant, deliverySignature } from '../src/merchant.js';
 import { recordRefund } from '../src/refunds.js';
+import { recordFunding } from '../src/record-funding.js';
 import type { RefundChain } from '../src/refunds.js';
 import { collectPurchaseEvidence } from '../src/purchase-evidence.js';
 import { processSettlement } from '../src/settlement-worker.js';
@@ -591,6 +592,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     const chain: ReconciliationChain = {
       finalized: async () => 200n,
       blockHash: async () => blockHash,
+      balanceAt: async (_wallet, block) => block === 149n ? 10000n : 8000n,
       outgoing: async () => outgoing,
       incoming: async () => [],
       transactionBlock: async () => 151n,
@@ -737,6 +739,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     const chain: ReconciliationChain = {
       finalized: async () => 120n,
       blockHash: async () => refund.block_hash,
+      balanceAt: async (_wallet, block) => block === 110n ? transfer.amount : 0n,
       outgoing: async () => [],
       incoming: async () => incoming,
       transactionBlock: async () => 100n,
@@ -763,6 +766,87 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     const { rows } = await pool.query('SELECT report FROM reconciliation_runs WHERE from_block = 110 AND to_block = 110');
     assert.equal(rows.length, 1);
     assert.deepEqual(rows[0]?.report, restored);
+  });
+
+  await t.test('wallet balance reconciliation separates missing journal entries from missing RPC logs', async () => {
+    const { rows: [refund] } = await pool.query(`
+      SELECT r.*, j.payer, j.amount, j.transaction_hash AS payment_hash, i.payee AS sender
+      FROM payment_refunds r JOIN payment_journal j ON j.intent_id = r.intent_id
+      JOIN payment_intents i ON i.id = r.intent_id
+    `);
+    assert.ok(refund);
+    const fundingHash = `0x${'98'.repeat(32)}` as const;
+    const unknownHash = `0x${'99'.repeat(32)}` as const;
+    const funding = { transactionHash: fundingHash, logIndex: 2, blockNumber: 95n,
+      blockHash: refund.block_hash, sender: refund.sender, amount: 10000n };
+    const refundLog = { ...funding, transactionHash: refund.transaction_hash, logIndex: refund.log_index,
+      blockNumber: BigInt(refund.block_number), amount: BigInt(refund.amount) };
+    let finalized = 94n;
+    const fundingChain: RefundChain = {
+      finalized: async () => finalized,
+      blockHash: async () => refund.block_hash,
+      receipt: async (hash) => {
+        const log = hash === fundingHash ? funding : refundLog;
+        return { blockNumber: log.blockNumber, blockHash: log.blockHash, transactionIndex: 0, status: 'success',
+          logs: [{ address: baseSepoliaUsdc, from: log.sender, to: refund.payer,
+            logIndex: log.logIndex, amount: log.amount }] };
+      },
+    };
+    const post = () => recordFunding(pool, fundingChain, refund.payer, fundingHash, funding.logIndex, 'Test deposit');
+    await assert.rejects(post(), /FUNDING_NOT_FINALIZED/);
+    finalized = 120n;
+    const [first, repeated] = await Promise.all([post(), post()]);
+    assert.deepEqual(first, repeated);
+    assert.deepEqual(first.journal.map(({ account, side, amount }) => ({ account, side, amount })), [
+      { account: 'USDC_WALLET_ASSET', side: 'DEBIT', amount: '10000' },
+      { account: 'USDC_FUNDING_SOURCE', side: 'CREDIT', amount: '10000' },
+    ]);
+    await assert.rejects(recordFunding(pool, fundingChain, refund.payer, refundLog.transactionHash,
+      refundLog.logIndex, 'Refund misclassified as funding'), /FUNDING_TRANSFER_ALREADY_USED/);
+
+    let incoming = [funding, funding, refundLog];
+    let closing = 15000n;
+    const chain: ReconciliationChain = {
+      finalized: async () => finalized,
+      blockHash: async () => refund.block_hash,
+      balanceAt: async (_wallet, block) => {
+        assert.ok(block === 94n || block === 110n);
+        return block === 94n ? 5000n : closing;
+      },
+      incoming: async () => incoming,
+      outgoing: async () => [{ transactionHash: refund.payment_hash, logIndex: 0,
+        recipient: refund.sender, amount: refundLog.amount }],
+      transactionBlock: async () => 100n,
+    };
+    const reconcile = (view = chain) => reconcilePayments(pool, view, refund.payer, 95n, 110n);
+    const matched = await reconcile();
+    assert.equal(matched.status, 'MATCHED');
+    assert.deepEqual(matched.matchedFunding, [{ transactionHash: fundingHash, logIndex: funding.logIndex }]);
+    assert.deepEqual(matched.balance, {
+      status: 'MATCHED', openingBlock: '94', openingBlockHash: refund.block_hash, opening: '5000', closing: '15000',
+      funding: '10000', payments: '2000', refunds: '2000', chainIncoming: '12000', chainOutgoing: '2000',
+      ledgerClosing: '15000', transferClosing: '15000', ledgerDifference: '0', transferDifference: '0',
+    });
+
+    incoming = [funding, refundLog, { ...funding, transactionHash: unknownHash, amount: 7n }];
+    closing += 7n;
+    const unbooked = await reconcile();
+    assert.equal(unbooked.status, 'DISCREPANCY');
+    assert.equal(unbooked.balance.ledgerDifference, '7');
+    assert.equal(unbooked.balance.transferDifference, '0');
+    assert.equal(unbooked.refundDiscrepancies[0]?.code, 'UNCLASSIFIED_INCOMING_TRANSFER');
+
+    incoming = [refundLog];
+    closing = 15000n;
+    const missingLog = await reconcile();
+    assert.equal(missingLog.status, 'DISCREPANCY');
+    assert.equal(missingLog.balance.ledgerDifference, '0');
+    assert.equal(missingLog.balance.transferDifference, '10000');
+    assert.equal(missingLog.fundingDiscrepancies[0]?.code, 'FUNDING_TRANSFER_UNMATCHED');
+
+    let openingReads = 0;
+    await assert.rejects(reconcile({ ...chain, blockHash: async (block) =>
+      block === 94n && openingReads++ > 0 ? unknownHash : refund.block_hash }), /Finalized block hash changed/);
   });
 
   await t.test('research purchase survives a lost settlement response across real HTTP services', async () => {
@@ -830,6 +914,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       const chain: ReconciliationChain = {
         finalized: async () => 101n,
         blockHash: async () => blockHash,
+        balanceAt: async (_wallet, block) => block === 100n ? 3000n : 1000n,
         transactionBlock: async () => 101n,
         incoming: async () => [],
         outgoing: async () => {

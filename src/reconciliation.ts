@@ -1,8 +1,9 @@
 import type { Pool } from 'pg';
-import { createPublicClient, http, parseAbiItem, TransactionReceiptNotFoundError } from 'viem';
+import { createPublicClient, erc20Abi, http, parseAbiItem, TransactionReceiptNotFoundError } from 'viem';
 import type { Address, Hash } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { baseSepoliaUsdc } from './base-settlement.js';
+import { transaction } from './db.js';
 
 interface Transfer {
   transactionHash: Hash;
@@ -23,6 +24,7 @@ interface IncomingTransfer {
 export interface ReconciliationChain {
   finalized(): Promise<bigint>;
   blockHash(block: bigint): Promise<Hash>;
+  balanceAt(wallet: Address, block: bigint): Promise<bigint>;
   outgoing(payer: Address, fromBlock: bigint, toBlock: bigint): Promise<Transfer[]>;
   incoming(payer: Address, fromBlock: bigint, toBlock: bigint): Promise<IncomingTransfer[]>;
   transactionBlock(hash: Hash): Promise<bigint | null>;
@@ -41,6 +43,10 @@ export async function baseReconciliationChain(rpc: string): Promise<Reconciliati
     },
     async blockHash(blockNumber) {
       return (await client.getBlock({ blockNumber })).hash;
+    },
+    balanceAt(wallet, blockNumber) {
+      return client.readContract({ address: baseSepoliaUsdc, abi: erc20Abi, functionName: 'balanceOf',
+        args: [wallet], blockNumber });
     },
     async outgoing(payer, fromBlock, toBlock) {
       const logs = await client.getLogs({
@@ -79,6 +85,20 @@ interface Posting {
   amount: string;
 }
 
+interface IncomingPosting {
+  transaction_hash: Hash;
+  log_index: number;
+  block_number: string;
+  block_hash: Hash;
+  sender: string;
+  amount: string;
+}
+
+function matchesIncoming(log: IncomingTransfer | undefined, posting: IncomingPosting) {
+  return log?.sender === posting.sender && log.amount === BigInt(posting.amount) &&
+    log.blockNumber === BigInt(posting.block_number) && log.blockHash === posting.block_hash;
+}
+
 export async function reconcilePayments(
   pool: Pool, chain: ReconciliationChain, payer: Address, fromBlock: bigint, toBlock: bigint,
 ) {
@@ -88,28 +108,39 @@ export async function reconcilePayments(
   if (toBlock > await chain.finalized()) throw new Error('Reconciliation requires a finalized end block');
   const network = 'eip155:84532';
   const wallet = payer.toLowerCase() as Address;
-  const endHash = await chain.blockHash(toBlock);
-  const { rows: postings } = await pool.query<Posting>(`
-    SELECT j.intent_id, j.transaction_hash, lower(i.payee) AS recipient, j.amount
-    FROM payment_journal j JOIN payment_intents i ON i.id = j.intent_id
-    WHERE j.network = $1 AND j.asset = $2 AND j.payer = $3 ORDER BY j.intent_id
-  `, [network, baseSepoliaUsdc, wallet]);
+  const openingBlock = fromBlock === 0n ? null : fromBlock - 1n;
+  const [endHash, openingHash] = await Promise.all([
+    chain.blockHash(toBlock), openingBlock === null ? null : chain.blockHash(openingBlock),
+  ]);
+  const { postings, refunds, funding } = await transaction(pool, async (client) => {
+    await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY');
+    const { rows: postings } = await client.query<Posting>(`
+      SELECT j.intent_id, j.transaction_hash, lower(i.payee) AS recipient, j.amount
+      FROM payment_journal j JOIN payment_intents i ON i.id = j.intent_id
+      WHERE j.network = $1 AND j.asset = $2 AND j.payer = $3 ORDER BY j.intent_id
+    `, [network, baseSepoliaUsdc, wallet]);
 
-  const { rows: refunds } = await pool.query<{
-    intent_id: string; transaction_hash: Hash; log_index: number;
-    block_number: string; block_hash: Hash; sender: string; amount: string;
-  }>(`
-    SELECT r.intent_id, r.transaction_hash, r.log_index, r.block_number, r.block_hash,
-      lower(i.payee) AS sender, j.amount
-    FROM payment_refunds r
-    JOIN payment_journal j ON j.intent_id = r.intent_id
-    JOIN payment_intents i ON i.id = r.intent_id
-    WHERE r.network = $1 AND j.asset = $2 AND j.payer = $3 AND r.block_number BETWEEN $4 AND $5
-    ORDER BY r.block_number, r.log_index, r.intent_id
-  `, [network, baseSepoliaUsdc, wallet, String(fromBlock), String(toBlock)]);
+    const range = [network, baseSepoliaUsdc, wallet, String(fromBlock), String(toBlock)];
+    const { rows: refunds } = await client.query<IncomingPosting & { intent_id: string }>(`
+      SELECT r.intent_id, r.transaction_hash, r.log_index, r.block_number, r.block_hash,
+        lower(i.payee) AS sender, j.amount
+      FROM payment_refunds r
+      JOIN payment_journal j ON j.intent_id = r.intent_id
+      JOIN payment_intents i ON i.id = r.intent_id
+      WHERE r.network = $1 AND j.asset = $2 AND j.payer = $3 AND r.block_number BETWEEN $4 AND $5
+      ORDER BY r.block_number, r.log_index, r.intent_id
+    `, range);
+    const { rows: funding } = await client.query<IncomingPosting>(`
+      SELECT transaction_hash, log_index, block_number, block_hash, sender, amount
+      FROM wallet_funding WHERE network = $1 AND asset = $2 AND payer = $3 AND block_number BETWEEN $4 AND $5
+      ORDER BY block_number, log_index, transaction_hash
+    `, range);
+    return { postings, refunds, funding };
+  });
 
-  const [outgoing, incoming] = await Promise.all([
+  const [outgoing, incoming, opening, closing] = await Promise.all([
     chain.outgoing(wallet, fromBlock, toBlock), chain.incoming(wallet, fromBlock, toBlock),
+    openingBlock === null ? 0n : chain.balanceAt(wallet, openingBlock), chain.balanceAt(wallet, toBlock),
   ]);
   const transfersByHash = new Map<Hash, Map<number, Transfer>>();
   for (const transfer of outgoing) {
@@ -122,6 +153,9 @@ export async function reconcilePayments(
     }
     logs.set(transfer.logIndex, transfer);
   }
+  const chainDebits = [...transfersByHash.values()].reduce((total, logs) =>
+    [...logs.values()].reduce((sum, log) => sum + log.amount, total), 0n);
+  let paymentTotal = 0n;
 
   const matched: { intentId: string; transactionHash: Hash; logIndex: number }[] = [];
   const discrepancies: {
@@ -142,6 +176,7 @@ export async function reconcilePayments(
       (log) => log.recipient === posting.recipient && log.amount === BigInt(posting.amount),
     );
     if (matchingLog) {
+      paymentTotal += BigInt(posting.amount);
       logs!.delete(matchingLog.logIndex);
       matched.push({ intentId: posting.intent_id, transactionHash: hash, logIndex: matchingLog.logIndex });
     } else {
@@ -155,6 +190,7 @@ export async function reconcilePayments(
       located.set(hash, transfersByHash.has(hash) ? fromBlock : await chain.transactionBlock(hash));
     }
     const block = located.get(hash)!;
+    if (block !== null && block >= fromBlock && block <= toBlock) paymentTotal += BigInt(posting.amount);
     if (block === null || (block >= fromBlock && block <= toBlock)) {
       discrepancies.push({
         code: block === null ? 'JOURNAL_RECEIPT_UNAVAILABLE' : 'JOURNAL_TRANSFER_UNMATCHED',
@@ -175,6 +211,7 @@ export async function reconcilePayments(
   const incomingByEvidence = new Map(incoming.map((log) => [
     `${log.transactionHash.toLowerCase()}:${log.logIndex}`, log,
   ]));
+  const chainCredits = [...incomingByEvidence.values()].reduce((sum, log) => sum + log.amount, 0n);
   const matchedRefunds: typeof matched = [];
   const refundDiscrepancies: {
     code: 'REFUND_TRANSFER_UNMATCHED' | 'UNCLASSIFIED_INCOMING_TRANSFER';
@@ -183,8 +220,7 @@ export async function reconcilePayments(
   for (const refund of refunds) {
     const key = `${refund.transaction_hash}:${refund.log_index}`;
     const log = incomingByEvidence.get(key);
-    if (log && log.sender === refund.sender && log.amount === BigInt(refund.amount) &&
-        log.blockNumber === BigInt(refund.block_number) && log.blockHash === refund.block_hash) {
+    if (matchesIncoming(log, refund)) {
       matchedRefunds.push({
         intentId: refund.intent_id, transactionHash: refund.transaction_hash, logIndex: refund.log_index,
       });
@@ -197,6 +233,19 @@ export async function reconcilePayments(
       });
     }
   }
+  const matchedFunding: { transactionHash: Hash; logIndex: number }[] = [];
+  const fundingDiscrepancies: { code: 'FUNDING_TRANSFER_UNMATCHED'; transactionHash: Hash; logIndex: number;
+    sender: string; amount: string }[] = [];
+  for (const posting of funding) {
+    const key = `${posting.transaction_hash}:${posting.log_index}`;
+    if (matchesIncoming(incomingByEvidence.get(key), posting)) {
+      matchedFunding.push({ transactionHash: posting.transaction_hash, logIndex: posting.log_index });
+      incomingByEvidence.delete(key);
+    } else {
+      fundingDiscrepancies.push({ code: 'FUNDING_TRANSFER_UNMATCHED', transactionHash: posting.transaction_hash,
+        logIndex: posting.log_index, sender: posting.sender, amount: posting.amount });
+    }
+  }
   for (const log of incomingByEvidence.values()) {
     refundDiscrepancies.push({
       code: 'UNCLASSIFIED_INCOMING_TRANSFER', transactionHash: log.transactionHash,
@@ -204,12 +253,32 @@ export async function reconcilePayments(
     });
   }
 
-  if (await chain.blockHash(toBlock) !== endHash) throw new Error('Finalized block hash changed during reconciliation');
+  const fundingTotal = funding.reduce((sum, posting) => sum + BigInt(posting.amount), 0n);
+  const refundTotal = refunds.reduce((sum, posting) => sum + BigInt(posting.amount), 0n);
+  const ledgerClosing = opening + fundingTotal + refundTotal - paymentTotal;
+  const transferClosing = opening + chainCredits - chainDebits;
+  const balanceMatched = ledgerClosing === closing && transferClosing === closing;
+  const [currentEndHash, currentOpeningHash] = await Promise.all([
+    chain.blockHash(toBlock), openingBlock === null ? null : chain.blockHash(openingBlock),
+  ]);
+  if (currentEndHash !== endHash || currentOpeningHash !== openingHash) {
+    throw new Error('Finalized block hash changed during reconciliation');
+  }
   const report = {
     network, asset: baseSepoliaUsdc, payer: wallet, fromBlock: String(fromBlock), toBlock: String(toBlock),
     toBlockHash: endHash,
-    status: discrepancies.length + refundDiscrepancies.length === 0 ? 'MATCHED' : 'DISCREPANCY',
-    matched, discrepancies, matchedRefunds, refundDiscrepancies,
+    status: balanceMatched && !discrepancies.length && !refundDiscrepancies.length && !fundingDiscrepancies.length
+      ? 'MATCHED' : 'DISCREPANCY',
+    matched, discrepancies, matchedRefunds, refundDiscrepancies, matchedFunding, fundingDiscrepancies,
+    balance: {
+      status: balanceMatched ? 'MATCHED' : 'DISCREPANCY',
+      openingBlock: openingBlock === null ? null : String(openingBlock), openingBlockHash: openingHash,
+      opening: String(opening), closing: String(closing),
+      funding: String(fundingTotal), payments: String(paymentTotal), refunds: String(refundTotal),
+      chainIncoming: String(chainCredits), chainOutgoing: String(chainDebits),
+      ledgerClosing: String(ledgerClosing), transferClosing: String(transferClosing),
+      ledgerDifference: String(closing - ledgerClosing), transferDifference: String(closing - transferClosing),
+    },
   };
   await pool.query(`
     INSERT INTO reconciliation_runs (network, asset, payer, from_block, to_block, to_block_hash, report)
