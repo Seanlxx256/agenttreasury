@@ -4,6 +4,7 @@ import { CHAIN_CONFIGS } from '@circle-fin/x402-batching/client';
 // Arc network selection. Testnet by default; set GATEWAY_NETWORK=arc for mainnet.
 // Chain ID, USDC address, and Gateway contract come from Circle's official SDK config.
 const gatewayChain = (process.env.GATEWAY_NETWORK === 'arc' ? 'arc' : 'arcTestnet') as 'arc' | 'arcTestnet';
+export const gatewayChainName = gatewayChain;
 const gatewayConfig = CHAIN_CONFIGS[gatewayChain];
 
 // The selected viem chain and RPC, so downstream modules switch networks with

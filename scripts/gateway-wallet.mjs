@@ -2,9 +2,9 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { createWalletClient, erc20Abi, http, parseAbi, parseUnits } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
-import { arcTestnetClient, arcTestnetUsdc, gatewayChainConfig, gatewayCircleChain, gatewayDomain, gatewayRpcUrl, gatewaySessionKey } from '../dist/src/gateway-x402.js';
+import { GatewayClient } from '@circle-fin/x402-batching/client';
+import { gatewayChainName, gatewayCircleChain, gatewayRpcUrl, gatewaySessionKey } from '../dist/src/gateway-x402.js';
 
 const [mode, amount, ...rest] = process.argv.slice(2);
 const validInspection = (mode === 'init' || mode === 'status') && amount === undefined;
@@ -35,33 +35,18 @@ if (mode === 'status') {
     console.log('Gateway batch settlement can only be signed by an EOA, so this key stays the payer.');
     console.log('A Circle Agent Wallet can hold funds but cannot sign that batch: npm run gateway:wallet -- status');
   } else {
-    const value = parseUnits(amount, 6);
-    if (value <= 0n) throw new Error('Deposit amount must be positive');
-    const chain = arcTestnetClient();
-    if (await chain.getChainId() !== gatewayChainConfig.id) throw new Error('RPC endpoint must serve the selected Arc network');
-    const wallet = createWalletClient({ account, chain: gatewayChainConfig, transport: http(process.env.ARC_TESTNET_RPC_URL ?? gatewayRpcUrl, {
-      timeout: 5000, retryCount: 0,
-    }) });
-    const gateway = gatewayDomain.verifyingContract;
-    const allowance = await chain.readContract({
-      abi: erc20Abi, address: arcTestnetUsdc, functionName: 'allowance', args: [account.address, gateway],
+    // Deposit through the official SDK, which wires the chain, RPC, USDC
+    // approval and the Gateway deposit call. Delegating here proves the SDK
+    // execution layer is used where it fits, not just its chain constants.
+    const gateway = new GatewayClient({
+      chain: gatewayChainName,
+      privateKey: account.privateKey,
+      rpcUrl: process.env.ARC_TESTNET_RPC_URL ?? gatewayRpcUrl,
     });
-    if (allowance < value) {
-      const hash = await wallet.writeContract({ abi: erc20Abi, address: arcTestnetUsdc,
-        functionName: 'approve', args: [gateway, value] });
-      await confirm(hash, 'Approval');
-    }
-    const hash = await wallet.writeContract({
-      abi: parseAbi(['function deposit(address token, uint256 value)']), address: gateway,
-      functionName: 'deposit', args: [arcTestnetUsdc, value],
-    });
-    await confirm(hash, 'Deposit');
-
-    async function confirm(hash, label) {
-      console.log(`${label} transaction: ${hash}`);
-      const receipt = await chain.waitForTransactionReceipt({ hash, timeout: 30000 });
-      if (receipt.status !== 'success') throw new Error(`${label} reverted`);
-    }
+    const result = await gateway.deposit(amount);
+    if (result.approvalTxHash) console.log(`Approval transaction: ${result.approvalTxHash}`);
+    console.log(`Deposit transaction: ${result.depositTxHash}`);
+    console.log(`Deposited ${result.formattedAmount} USDC (${result.amount} units) to ${result.depositor}`);
   }
 }
 

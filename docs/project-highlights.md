@@ -14,9 +14,11 @@ finance?*
 
 ## Highlights
 
-- **Official Circle SDK, not hand-rolled constants.** Chain ID, USDC address, and the
-  Gateway contract are read from `@circle-fin/x402-batching`'s `CHAIN_CONFIGS`, with an
-  `GATEWAY_NETWORK=arc` switch for mainnet.
+- **Official Circle SDK at the right layer.** Chain ID, USDC address, Gateway contract,
+  and payer deposits come from `@circle-fin/x402-batching`, with an `GATEWAY_NETWORK=arc`
+  switch for mainnet. The protocol is handwritten where the SDK's happy-path clients
+  would hide the failure states this project governs — the boundary is in
+  [sdk-adoption-boundary.md](sdk-adoption-boundary.md).
 - **Buyer-side recovery.** A six-state machine covers submission-unknown →
   charged-delivery-missing → delivered, keyed by request ID and authorization nonce so a
   retry can never double-charge.
@@ -30,8 +32,9 @@ finance?*
 - **Read-only triage agent.** A locally-run LLM picks an action and cites evidence, but
   the explanation is supplied by the server and the recommendation is advisory — the
   backend validates before acting. The constraints are regression-tested.
-- **Append-only audit and operator-gated refunds.** State transitions are recorded, and
-  refunds need a human decision.
+- **Append-only audit and operator-gated refunds on both rails.** State transitions are
+  recorded, refunds need a human decision, and the Gateway rail closes the loop for a
+  charged-but-undelivered payment: approval, seller-initiated return, onchain evidence.
 
 ## Warts found and fixed
 
@@ -51,7 +54,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 27/27.
+- `npm test` passes 32/32.
 - Triage evaluation is honest about model limits: the rule baseline scores near-perfect
   while a local Qwen2.5 0.5B scores well below it, so rules remain the default and the
   model is constrained, not trusted.
