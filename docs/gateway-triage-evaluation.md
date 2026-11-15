@@ -112,4 +112,27 @@ npm run build
 npm run --silent eval:gateway -- --dataset arc-recovery-v1 --support-rules --model qwen2.5:0.5b
 ```
 
-For a timed operator study, give reviewers comparable cases in both console configurations, balancing their order and avoiding repeat exposure to the same case. Start timing at purchase selection and stop when the reviewer submits the next action and supporting evidence. Report the time to a correct decision and the share of correct decisions for both configurations. Include model wait time in the assisted condition and record whether the model surfaced an additional fact.
+### Timed operator pilot
+
+With a local Ollama model running, assign roughly equal numbers of reviewers to groups A and B. Give each reviewer one run in an interactive terminal and save each report under a separate anonymous ID.
+
+```sh
+npm run --silent study:gateway -- --cohort A --model qwen2.5:0.5b > operator-A01.json
+npm run --silent study:gateway -- --cohort B --model qwen2.5:0.5b > operator-B01.json
+```
+
+Each run has 12 distinct synthetic cases drawn from the two synthetic datasets, arranged in six pairs with the same expected action. Each reviewer sees one case from each pair with additional evidence selection enabled and the other with rules alone. The two groups see the same cases in the same order with opposite conditions. The terminal presents the same rule action, required facts, and saved evidence in both conditions. The assisted condition can also highlight additional facts selected by the model. The runner withholds case names, expected answers, and feedback until the session finishes.
+
+Timing starts when the reviewer opens a case and stops after they submit the next action and supporting evidence. The report records the total time, model wait time, model status, and selected evidence. A decision passes when its action matches the label and it includes every required fact with no irrelevant references. The summary gives counts of correct decisions and median time among correct decisions in each condition. Model failures stay in the assigned assisted condition and are recorded so their effect can be examined. Keep failed and incorrect trials when analyzing accuracy.
+
+The runner uses a terminal to reproduce the two evidence presentations. The pilot measures review in that setting. Browser console timings and actual operator results remain to be collected.
+
+### Automated simulation
+
+With Ollama running, replay both cohorts without terminal input.
+
+```sh
+npm run --silent study:gateway -- --simulate --model qwen2.5:0.5b > operator-simulation.json
+```
+
+The script submits the displayed rule action and its required citations. Assisted cases call the configured model. The JSON includes both cohorts and labels every report as `simulation`. Reported durations measure script and model execution. For a single cohort, add `--cohort A` or `--cohort B`. The command still emits the report if every model response is unavailable or rejected, and returns exit code 2 in that case.
