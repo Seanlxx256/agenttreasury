@@ -126,6 +126,8 @@ Gateway marked the transfer `completed` 14 minutes and 25 seconds after acceptin
 
 ### Exercise recovery after a lost paid response
 
+The buyer-side state machine, evidence requirements, and human-intervention boundaries are specified in [`docs/x402-buyer-recovery.md`](docs/x402-buyer-recovery.md).
+
 With the local payer and recipient configured, use a fresh UUID to submit one test purchase with response loss enabled. Keep that UUID for all subsequent commands.
 
 ```sh
