@@ -1,7 +1,6 @@
-import { arcTestnet } from 'viem/chains';
+import { arcGatewayNetwork as network, gatewayTestnetApi } from './gateway-x402.js';
 
-const network = `eip155:${arcTestnet.id}`;
-const endpoint = 'https://gateway-api-testnet.circle.com/v1/x402/transfers';
+const endpoint = `${gatewayTestnetApi}/transfers`;
 
 export interface ExpectedGatewayPayment {
   nonce: string;

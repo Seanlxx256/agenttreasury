@@ -26,6 +26,38 @@ The operations agent uses read-only tools and produces a structured recommendati
 
 For mainnet deployment, pair application task budgets and service restrictions with Circle Agent Wallet limits and recipient policies for supported operations. Verify enforcement against the chosen Gateway payment flow before relying on it. Use application-side controls in the Arc testnet demo.
 
+### Run the Arc testnet purchase demo
+
+Install Circle CLI and authenticate a testnet Agent Wallet. Use two distinct public addresses for the payer and recipient. Fund the payer with test USDC and deposit it into Gateway before purchasing. See the [Agent Wallet quickstart](https://developers.circle.com/agent-stack/agent-wallets/quickstart).
+
+```sh
+npm install -g @circle-fin/cli
+circle wallet login you@example.com --testnet
+circle wallet list --type agent --chain ARC-TESTNET
+export GATEWAY_PAYER_ADDRESS=0xYourArcTestnetAgentWallet
+export GATEWAY_MERCHANT_RECIPIENT=0xYourSeparateRecipientAddress
+circle wallet fund --address "$GATEWAY_PAYER_ADDRESS" --chain ARC-TESTNET
+circle gateway deposit --address "$GATEWAY_PAYER_ADDRESS" --chain ARC-TESTNET --method direct --amount 0.5
+circle gateway balance --address "$GATEWAY_PAYER_ADDRESS" --chain ARC-TESTNET
+```
+
+Set `DATABASE_URL` to a development PostgreSQL database, then run:
+
+```sh
+npm run build
+npm run migrate
+npm run merchant:gateway
+```
+
+In a second terminal with the same environment values, generate and keep one request ID for the purchase:
+
+```sh
+REQUEST_ID=$(node -p 'crypto.randomUUID()')
+npm run buy:gateway -- "$REQUEST_ID"
+```
+
+The loopback merchant charges 0.001 test USDC and returns a labeled sample trace after Gateway accepts the payment for batch settlement. The buyer stores the request and nonce in PostgreSQL before sending the signed request. Reuse the same ID to read the saved result or the `submission-unknown` status. Use the nonce from that output to look up Gateway evidence if the merchant delivery is missing. This demo is a standalone payment client with a fixed quote. Task budget and journal integration are part of the recovery milestone.
+
 ### Inspect Circle Gateway payment evidence
 
 Build the project, then pass the authorization nonce, payer, recipient, and expected amount in integer USDC base units:

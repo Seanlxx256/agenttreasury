@@ -9,7 +9,10 @@ import { test } from 'node:test';
 import EmbeddedPostgres from 'embedded-postgres';
 import { Pool } from 'pg';
 import { recoverTypedDataAddress } from 'viem';
-import { generatePrivateKey } from 'viem/accounts';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { buildGatewayMerchant } from '../src/gateway-merchant.js';
+import { purchaseGatewayTrace } from '../src/gateway-purchase.js';
+import { arcGatewayNetwork, gatewayDomain, gatewayValidity } from '../src/gateway-x402.js';
 import { baseSepoliaUsdc, createBaseSettlement } from '../src/base-settlement.js';
 import type { Authorization, SettlementRail } from '../src/base-settlement.js';
 import { reconcilePayments } from '../src/reconciliation.js';
@@ -69,6 +72,86 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
   assert.equal((await app.inject({ url: '/health/ready' })).statusCode, 503);
   await Promise.all([migrate(pool), migrate(pool)]);
   assert.equal((await app.inject({ url: '/health/ready' })).statusCode, 200);
+
+  await t.test('Arc buyer persists the authorization before payment and never resubmits on replay', async () => {
+    const payer = privateKeyToAccount(generatePrivateKey());
+    const recipient = privateKeyToAccount(generatePrivateKey()).address;
+    const origin = 'http://127.0.0.1:3002';
+    let submissions = 0;
+    let signatures = 0;
+    const merchant = buildGatewayMerchant(origin, recipient, async (url, init) => {
+      ++submissions;
+      assert.equal(String(url), 'https://gateway-api-testnet.circle.com/v1/x402/settle');
+      const { paymentPayload, paymentRequirements } = JSON.parse(String(init?.body));
+      const nonce = paymentPayload.payload.authorization.nonce;
+      const saved = await pool.query('SELECT nonce FROM gateway_demo_purchases WHERE nonce = $1', [nonce]);
+      assert.equal(saved.rowCount, 1);
+      assert.equal(paymentRequirements.network, arcGatewayNetwork);
+      assert.equal(paymentRequirements.amount, '1000');
+      return Response.json({
+        success: true, transaction: randomUUID(), network: arcGatewayNetwork, payer: payer.address,
+      });
+    });
+    const sign: Parameters<typeof purchaseGatewayTrace>[2] = (data) => {
+      ++signatures;
+      assert.deepEqual(data.domain, gatewayDomain);
+      assert.ok(BigInt(data.message.validBefore) >= BigInt(Math.floor(Date.now() / 1000) + gatewayValidity - 1));
+      return payer.signTypedData({
+        ...data,
+        message: {
+          ...data.message, value: BigInt(data.message.value),
+          validAfter: BigInt(data.message.validAfter), validBefore: BigInt(data.message.validBefore),
+        },
+      });
+    };
+    const send: typeof fetch = async (url, init) => {
+      const headers = new Headers(init?.headers);
+      const response = await merchant.inject({
+        method: 'POST', url: String(url), headers: Object.fromEntries(headers),
+      });
+      return new Response(response.body, {
+        status: response.statusCode,
+        headers: response.headers as Record<string, string>,
+      });
+    };
+    const makePurchase = (requestId = randomUUID()) => ({
+      requestId, payer: payer.address, recipient, endpoint: `${origin}/trace/${requestId}`,
+    });
+    try {
+      const purchase = makePurchase();
+      await Promise.all([
+        purchaseGatewayTrace(pool, purchase, sign, send),
+        purchaseGatewayTrace(pool, purchase, sign, send),
+      ]);
+      const delivered = await purchaseGatewayTrace(pool, purchase, sign, send);
+      assert.equal(delivered.status, 'delivered');
+      assert.equal(submissions, 1);
+      assert.equal(signatures, 1);
+
+      const interrupted = makePurchase();
+      const lost = await purchaseGatewayTrace(pool, interrupted, sign, async (url, init) => {
+        const response = await send(url, init);
+        if (new Headers(init?.headers).has('payment-signature')) throw new Error('Lost paid response');
+        return response;
+      });
+      assert.equal(lost.status, 'submission-unknown');
+      assert.deepEqual(await purchaseGatewayTrace(pool, interrupted, sign, send), lost);
+      assert.equal(submissions, 2);
+      assert.equal(signatures, 2);
+
+      await assert.rejects(purchaseGatewayTrace(pool, makePurchase(), sign, async (url, init) => {
+        const response = await send(url, init);
+        const quote = JSON.parse(Buffer.from(response.headers.get('payment-required')!, 'base64').toString());
+        quote.accepts[0].amount = '1001';
+        return new Response(null, { status: 402, headers: {
+          'payment-required': Buffer.from(JSON.stringify(quote)).toString('base64'),
+        } });
+      }), /quote differs/);
+      assert.equal(signatures, 2);
+    } finally {
+      await merchant.close();
+    }
+  });
 
   const buyer = await seed(pool);
   const stranger = await seed(pool);
