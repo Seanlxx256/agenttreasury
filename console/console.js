@@ -87,9 +87,20 @@ function showGatewayPurchase(purchase, path, session) {
     ['Request ID', purchase.id], ['Authorization nonce', purchase.nonce],
     ['Payer', purchase.payer], ['Recipient', purchase.recipient],
     ['Amount', amount(purchase.amountUnits)], ['Authorization saved', timestamp(purchase.issuedAt)],
+    ['Task', purchase.taskId], ['Task budget', purchase.budgetStatus ?? 'Untracked'],
     ['Seller delivery', purchase.sellerHasDelivery ? 'Saved' : 'Missing'],
     ['Buyer delivery', purchase.buyerHasDelivery ? 'Saved' : 'Missing'],
   ]), check, element('h3', 'Gateway observations'));
+  if (purchase.journal) {
+    const { transferId, batchHash, postedAt, lines } = purchase.journal;
+    const entries = element('ul', undefined, 'reports');
+    for (const line of lines) {
+      entries.append(element('li', [line.side, line.account.replaceAll('_', ' ').toLowerCase(), amount(line.amount)].join(' · ')));
+    }
+    check.after(element('h3', 'Gateway journal'), metadata([
+      ['Transfer ID', transferId], ['Batch hash', batchHash], ['Posted', timestamp(postedAt)],
+    ]), entries);
+  }
   if (!purchase.observations.length) {
     gatewayDetail.append(element('p', 'No Gateway check recorded.', 'muted'));
     return;

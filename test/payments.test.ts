@@ -25,7 +25,7 @@ import { processSettlement } from '../src/settlement-worker.js';
 import { buildApp } from '../src/app.js';
 import { migrate } from '../src/migrate.js';
 import { processQuote } from '../src/quote-worker.js';
-import { seed } from '../src/seed.js';
+import { seed, seedGateway } from '../src/seed.js';
 
 async function availablePort() {
   const probe = createServer();
@@ -77,6 +77,8 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     const payer = privateKeyToAccount(generatePrivateKey());
     const recipient = privateKeyToAccount(generatePrivateKey()).address;
     const origin = 'http://127.0.0.1:3002';
+    const seeded = await seedGateway(pool, { origin, payer: payer.address, recipient }, 2000, 2000);
+    const task = { taskId: seeded.taskId, agentToken: seeded.token };
     const financeToken = randomUUID();
     const finance = buildApp(pool, false, undefined, financeToken);
     const headers = { authorization: `Bearer ${financeToken}` };
@@ -119,8 +121,9 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       });
     };
     const makePurchase = (requestId = randomUUID()) => ({
-      requestId, payer: payer.address, recipient, endpoint: `${origin}/trace/${requestId}`,
+      requestId, payer: payer.address, recipient, endpoint: `${origin}/trace/${requestId}`, task,
     });
+    const budget = async () => (await pool.query('SELECT reserved, spent FROM research_tasks WHERE id = $1', [task.taskId])).rows[0];
     try {
       const purchase = makePurchase();
       await Promise.all([
@@ -139,10 +142,13 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
         return response;
       });
       assert.equal(lost.status, 'submission-unknown');
+      assert.deepEqual(await budget(), { reserved: '2000', spent: '0' });
+      await assert.rejects(purchaseGatewayTrace(pool, makePurchase(), sign, send), /TASK_BUDGET_EXCEEDED/);
+      const transferId = randomUUID();
       const gateway: typeof fetch = async (url) => {
         assert.equal(new URL(String(url)).searchParams.get('nonce'), lost.nonce);
         return Response.json({ transfers: [{
-          id: randomUUID(), txHash: `0x${'b'.repeat(64)}`, status: 'confirmed',
+          id: transferId, txHash: `0x${'b'.repeat(64)}`, status: 'confirmed',
           nonce: lost.nonce, fromAddress: payer.address, toAddress: recipient,
           token: 'USDC', sendingNetwork: arcGatewayNetwork, recipientNetwork: arcGatewayNetwork, amount: '1000',
         }] });
@@ -155,15 +161,18 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       const notFound = await purchaseGatewayTrace(pool, interrupted, sign, send, async () =>
         Response.json({ transfers: [] }));
       assert.deepEqual(notFound.payment, { status: 'unknown' });
+      assert.deepEqual(await budget(), { reserved: '2000', spent: '0' });
       const wrongToken = await send(interrupted.endpoint, {
         method: 'GET', headers: { 'trace-retrieval-token': 'a'.repeat(64) },
       });
       assert.equal(wrongToken.status, 404);
-      const missingDelivery = await purchaseGatewayTrace(pool, interrupted, sign, async (_url, init) => {
+      const artifactUnavailable: typeof fetch = async (_url, init) => {
         assert.equal(init?.method, 'GET');
         return new Response(null, { status: 404 });
-      }, gateway);
-      assert.equal(missingDelivery.status, 'charged-delivery-missing');
+      };
+      const missingDeliveries = await Promise.all([1, 2].map(() =>
+        purchaseGatewayTrace(pool, interrupted, sign, artifactUnavailable, gateway)));
+      assert.ok(missingDeliveries.every(({ status }) => status === 'charged-delivery-missing'));
       const financeUrl = `/finance/gateway-purchases/${interrupted.requestId}`;
       assert.equal((await finance.inject({ url: financeUrl })).statusCode, 401);
       assert.equal((await finance.inject({ method: 'POST', url: financeUrl + '/check' })).statusCode, 401);
@@ -171,22 +180,31 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       assert.equal(audit.buyerHasDelivery, false);
       assert.equal(audit.sellerHasDelivery, true);
       assert.equal(audit.nonce, lost.nonce);
+      assert.equal(audit.budgetStatus, 'spent');
+      assert.equal(audit.journal.transferId, transferId);
+      assert.deepEqual(audit.journal.lines.map((line: { side: string }) => line.side), ['DEBIT', 'CREDIT']);
       assert.deepEqual(audit.observations.map(({ evidence }: { evidence: { status: string } }) => evidence.status),
-        ['charged', 'unknown', 'unavailable']);
+        ['charged', 'charged', 'unknown', 'unavailable']);
       assert.equal(audit.retrieval_token, undefined);
       assert.equal(audit.delivery, undefined);
 
       const fetchMock = t.mock.method(globalThis, 'fetch', gateway);
       try {
-        const checked = await finance.inject({ method: 'POST', url: financeUrl + '/check', headers });
-        assert.equal(checked.statusCode, 200);
-        assert.equal(checked.json().status, 'charged');
-        assert.equal(fetchMock.mock.callCount(), 1);
+        const checks = await Promise.all([1, 2].map(() =>
+          finance.inject({ method: 'POST', url: financeUrl + '/check', headers })));
+        for (const checked of checks) {
+          assert.equal(checked.statusCode, 200);
+          assert.equal(checked.json().status, 'charged');
+        }
+        assert.equal(fetchMock.mock.callCount(), 2);
       } finally {
         fetchMock.mock.restore();
       }
       const history = (await finance.inject({ url: financeUrl, headers })).json();
       assert.equal(history.observations[0].source, 'finance');
+      assert.deepEqual(await budget(), { reserved: '1000', spent: '1000' });
+      const journal = await pool.query('SELECT request_id FROM gateway_payment_journal WHERE request_id = $1', [interrupted.requestId]);
+      assert.equal(journal.rowCount, 1);
 
       const recovered = await purchaseGatewayTrace(pool, interrupted, sign, send, gateway);
       assert.equal(recovered.status, 'delivered');
@@ -206,6 +224,41 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
         } });
       }), /quote differs/);
       assert.equal(signatures, 2);
+
+      const uncharged = await seedGateway(pool, { origin, payer: payer.address, recipient }, 2000, 1000);
+      const failure = { ...makePurchase(), task: { taskId: uncharged.taskId, agentToken: uncharged.token } };
+      const lostBeforeMerchant = await purchaseGatewayTrace(pool, failure, sign, async (url, init) => {
+        if (new Headers(init?.headers).has('payment-signature')) throw new Error('Lost paid request');
+        return send(url, init);
+      });
+      await assert.rejects(purchaseGatewayTrace(pool, { ...makePurchase(), task: failure.task }, sign, send),
+        /DAILY_LIMIT_EXCEEDED/);
+      const rejected = await purchaseGatewayTrace(pool, failure, sign, send, async () =>
+        Response.json({ transfers: [{
+          id: randomUUID(), txHash: null, status: 'failed', nonce: lostBeforeMerchant.nonce,
+          fromAddress: payer.address, toAddress: recipient, token: 'USDC',
+          sendingNetwork: arcGatewayNetwork, recipientNetwork: arcGatewayNetwork, amount: '1000',
+        }] }));
+      assert.equal(rejected.status, 'payment-failed');
+      const contradicted = await purchaseGatewayTrace(pool, failure, sign, send, async () =>
+        Response.json({ transfers: [{
+          id: randomUUID(), txHash: `0x${'c'.repeat(64)}`, status: 'confirmed', nonce: lostBeforeMerchant.nonce,
+          fromAddress: payer.address, toAddress: recipient, token: 'USDC',
+          sendingNetwork: arcGatewayNetwork, recipientNetwork: arcGatewayNetwork, amount: '1000',
+        }] }));
+      assert.equal(contradicted.status, 'reconciliation-conflict');
+      const unchargedBudget = await pool.query('SELECT reserved, spent FROM research_tasks WHERE id = $1', [uncharged.taskId]);
+      assert.deepEqual(unchargedBudget.rows[0], { reserved: '0', spent: '0' });
+
+      const revoked = { ...makePurchase(), task: failure.task };
+      await assert.rejects(purchaseGatewayTrace(pool, revoked, async (data) => {
+        const signature = await sign(data);
+        await pool.query('UPDATE research_tasks SET enabled = false WHERE id = $1', [uncharged.taskId]);
+        return signature;
+      }, send), /TASK_DISABLED_OR_EXPIRED/);
+      const afterRevocation = await pool.query('SELECT reserved, spent FROM research_tasks WHERE id = $1', [uncharged.taskId]);
+      assert.deepEqual(afterRevocation.rows[0], { reserved: '0', spent: '0' });
+      assert.equal(submissions, 2);
     } finally {
       await Promise.all([merchant.close(), finance.close()]);
     }

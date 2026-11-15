@@ -34,12 +34,21 @@ export function registerFinanceConsole(
   async function gatewayPurchase(id: string) {
     const { rows: [purchase] } = await pool.query<ExpectedGatewayPayment & {
       issuedAt: Date; buyerHasDelivery: boolean; sellerHasDelivery: boolean;
+      taskId: string | null; budgetStatus: string | null; journal: unknown;
     }>(`
       SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
+             p.task_id AS "taskId", p.budget_status AS "budgetStatus",
              p.authorized_at AS "issuedAt", (p.delivery IS NOT NULL) AS "buyerHasDelivery",
-             (d.delivery IS NOT NULL) AS "sellerHasDelivery"
+             (d.delivery IS NOT NULL) AS "sellerHasDelivery",
+             CASE WHEN j.request_id IS NOT NULL THEN jsonb_build_object(
+               'transferId', j.transfer_id, 'batchHash', j.batch_hash, 'postedAt', j.posted_at,
+               'lines', (SELECT jsonb_agg(jsonb_build_object('account', l.account, 'side', l.side,
+                 'amount', l.amount::text) ORDER BY l.number)
+                FROM gateway_payment_journal_lines l WHERE l.request_id = j.request_id)
+             ) END AS journal
       FROM gateway_demo_purchases p
       LEFT JOIN gateway_demo_deliveries d ON d.request_id = p.request_id AND d.nonce = p.nonce
+      LEFT JOIN gateway_payment_journal j ON j.request_id = p.request_id
       WHERE p.request_id = $1
     `, [id]);
     if (!purchase) throw new PaymentError(404, 'GATEWAY_PURCHASE_NOT_FOUND');

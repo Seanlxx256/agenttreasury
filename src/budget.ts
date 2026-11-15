@@ -1,5 +1,14 @@
 import type { PoolClient } from 'pg';
 
+export async function reserveAmount(client: PoolClient, taskId: string, day: string, amount: string) {
+  await client.query('UPDATE research_tasks SET reserved = reserved + $2 WHERE id = $1', [taskId, amount]);
+  await client.query(
+    `INSERT INTO daily_spend (task_id, day, reserved) VALUES ($1, $2, $3)
+     ON CONFLICT (task_id, day) DO UPDATE SET reserved = daily_spend.reserved + EXCLUDED.reserved`,
+    [taskId, day, amount],
+  );
+}
+
 export async function resolveReservation(
   client: PoolClient, taskId: string, day: string, amount: string, settled: boolean,
 ) {

@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual } from 'node:crypto';
 import Fastify from 'fastify';
 import type { FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
@@ -7,7 +7,7 @@ import { deliverPayment } from './delivery.js';
 import type { MerchantConfig } from './merchant.js';
 import { decideRefund, requestRefund } from './refund-requests.js';
 import { getPaymentLedger } from './ledger.js';
-import { createIntent, getIntent, PaymentError } from './payments.js';
+import { createIntent, getIntent, PaymentError, tokenDigest } from './payments.js';
 import type { Purchase } from './payments.js';
 
 const uuid = {
@@ -15,9 +15,7 @@ const uuid = {
   pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
 } as const;
 
-export function tokenDigest(token: string) {
-  return createHash('sha256').update(token).digest();
-}
+export { tokenDigest } from './payments.js';
 
 export function buildApp(pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch }, financeToken?: string, localDemo = false) {
   const app = Fastify({

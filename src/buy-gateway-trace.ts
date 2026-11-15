@@ -6,11 +6,15 @@ import { purchaseGatewayTrace } from './gateway-purchase.js';
 import { gatewayDemoConfig, requestIdPattern } from './gateway-x402.js';
 
 const run = promisify(execFile);
-const { DATABASE_URL, GATEWAY_PAYER_ADDRESS } = process.env;
+const { DATABASE_URL, GATEWAY_PAYER_ADDRESS, GATEWAY_TASK_ID, AGENT_TOKEN } = process.env;
 const [requestId] = process.argv.slice(2);
 if (!DATABASE_URL || !GATEWAY_PAYER_ADDRESS || !isAddress(GATEWAY_PAYER_ADDRESS) ||
     !requestId || !requestIdPattern.test(requestId)) {
   throw new Error('Set DATABASE_URL and GATEWAY_PAYER_ADDRESS, then pass a lowercase request UUID');
+}
+if ((GATEWAY_TASK_ID || AGENT_TOKEN) &&
+    (!GATEWAY_TASK_ID || !requestIdPattern.test(GATEWAY_TASK_ID) || !AGENT_TOKEN || !/^[A-Za-z0-9_-]{43}$/.test(AGENT_TOKEN))) {
+  throw new Error('Set GATEWAY_TASK_ID and AGENT_TOKEN from the Gateway task seed');
 }
 
 const { recipient, origin } = gatewayDemoConfig();
@@ -22,6 +26,7 @@ const pool = new Pool({ connectionString: DATABASE_URL, connectionTimeoutMillis:
 try {
   const result = await purchaseGatewayTrace(pool, {
     requestId, payer, recipient, endpoint: `${origin}/trace/${requestId}`,
+    task: GATEWAY_TASK_ID && AGENT_TOKEN ? { taskId: GATEWAY_TASK_ID, agentToken: AGENT_TOKEN } : undefined,
   }, async (typedData) => {
     const data = JSON.stringify({
       ...typedData,

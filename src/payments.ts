@@ -1,6 +1,11 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 import { transaction } from './db.js';
+import { reserveAmount } from './budget.js';
+
+export function tokenDigest(token: string) {
+  return createHash('sha256').update(token).digest();
+}
 
 export interface Purchase {
   taskId: string;
@@ -102,12 +107,7 @@ export async function createIntent(pool: Pool, agentId: string, key: string, pur
     if (!intent) throw new Error('Payment intent was not persisted');
 
     if (intent.status === 'RESERVED') {
-      await client.query('UPDATE research_tasks SET reserved = reserved + $2 WHERE id = $1', [taskId, service.price]);
-      await client.query(
-        `INSERT INTO daily_spend (task_id, day, reserved) VALUES ($1, $2, $3)
-         ON CONFLICT (task_id, day) DO UPDATE SET reserved = daily_spend.reserved + EXCLUDED.reserved`,
-        [taskId, clock.day, service.price],
-      );
+      await reserveAmount(client, taskId, clock.day, service.price);
       await client.query("INSERT INTO outbox (intent_id, event_type) VALUES ($1, 'payment.reserved')", [intent.id]);
     }
     return { intent, created: true };

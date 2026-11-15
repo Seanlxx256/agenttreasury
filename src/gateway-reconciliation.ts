@@ -14,7 +14,8 @@ type GatewayPage = { transfers?: unknown; pagination?: { pageAfter?: unknown } }
 
 export type GatewayObservation =
   | { status: 'unknown' }
-  | ({ status: 'pending' | 'charged' | 'failed' } & TransferEvidence)
+  | ({ status: 'pending' | 'failed' } & TransferEvidence)
+  | { status: 'charged'; id: string; txHash: string }
   | { status: 'conflict'; reason: 'multiple-transfers' | 'transfer-mismatch' };
 
 export async function observeGatewayPayment(
@@ -53,10 +54,10 @@ export async function observeGatewayPayment(
       return { status: 'pending', ...evidence };
     case 'confirmed':
     case 'completed':
-      if (!/^0x[\da-f]{64}$/i.test(transfer.txHash ?? '')) {
+      if (!transfer.txHash || !/^0x[\da-f]{64}$/i.test(transfer.txHash)) {
         throw new Error('Confirmed Gateway transfer is missing a valid batch hash');
       }
-      return { status: 'charged', ...evidence };
+      return { status: 'charged', id: transfer.id, txHash: transfer.txHash.toLowerCase() };
     case 'failed':
       return { status: 'failed', ...evidence };
     default:
