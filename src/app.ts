@@ -17,7 +17,13 @@ const uuid = {
 
 export { tokenDigest } from './payments.js';
 
-export function buildApp(pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch }, financeToken?: string, localDemo = false) {
+export function buildApp(
+  pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch },
+  financeToken?: string, localDemo = false, operationsToken?: string,
+) {
+  if (financeToken && financeToken === operationsToken) {
+    throw new Error('Finance and Gateway operations tokens must be distinct');
+  }
   const app = Fastify({
     logger,
     bodyLimit: 8192,
@@ -116,15 +122,21 @@ export function buildApp(pool: Pool, logger = false, delivery?: { merchant: Merc
     },
   }, async (request) => requestRefund(pool, request.params.id, await authenticate(request), request.body.reason));
 
-  function authenticateFinance(request: FastifyRequest) {
-    if (!financeToken) throw new PaymentError(503, 'FINANCE_NOT_CONFIGURED');
+  function authenticateConsole(request: FastifyRequest) {
+    if (!financeToken && !operationsToken) throw new PaymentError(503, 'FINANCE_NOT_CONFIGURED');
     const token = /^Bearer (\S+)$/i.exec(request.headers.authorization ?? '')?.[1];
-    if (!token || !timingSafeEqual(tokenDigest(token), tokenDigest(financeToken))) {
-      throw new PaymentError(401, 'UNAUTHORIZED');
-    }
+    if (!token) throw new PaymentError(401, 'UNAUTHORIZED');
+    const digest = tokenDigest(token);
+    if (financeToken && timingSafeEqual(digest, tokenDigest(financeToken))) return 'finance';
+    if (operationsToken && timingSafeEqual(digest, tokenDigest(operationsToken))) return 'operations';
+    throw new PaymentError(401, 'UNAUTHORIZED');
   }
 
-  registerFinanceConsole(app, pool, authenticateFinance, localDemo);
+  function authenticateFinance(request: FastifyRequest) {
+    if (authenticateConsole(request) !== 'finance') throw new PaymentError(403, 'FINANCE_ROLE_REQUIRED');
+  }
+
+  registerFinanceConsole(app, pool, authenticateConsole, authenticateFinance, localDemo);
 
   app.post<{ Params: { id: string }; Body: { decision: 'APPROVED' | 'DENIED' } }>(
     '/finance/payment-intents/:id/refund-decision', {

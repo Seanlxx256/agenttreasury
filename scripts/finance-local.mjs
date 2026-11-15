@@ -91,7 +91,7 @@ try {
   await migrate(pool);
   const token = process.env.FINANCE_APPROVAL_TOKEN || financeToken;
   const delivery = process.env.MERCHANT_ENDPOINT ? { merchant: merchantConfig() } : undefined;
-  app = buildApp(pool, false, delivery, token, true);
+  app = buildApp(pool, false, delivery, token, true, process.env.GATEWAY_OPERATIONS_TOKEN);
   const address = await app.listen({ host: '127.0.0.1', port: apiPort });
   for (const signal of ['SIGINT', 'SIGTERM']) {
     process.once(signal, () => {

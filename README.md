@@ -171,6 +171,10 @@ With an existing database, configure DATABASE_URL and FINANCE_APPROVAL_TOKEN and
 
 Use **Arc Gateway purchase** to look up a purchase by its request ID. The buyer, seller, and finance API must use the same demo database. The console shows buyer and seller delivery separately and displays the ten latest Gateway checks. **Check Gateway** queries the saved nonce and records the result for review. Buyer retries also record their observations here.
 
+Apply migration `016` and set `GATEWAY_OPERATIONS_TOKEN` to a secret distinct from `FINANCE_APPROVAL_TOKEN`. The operations token opens the Arc review queue, purchase evidence, and manual Gateway checks. The finance token also grants access to Base payment intents and refund actions. History identifies manual checks by role.
+
+The review queue puts conflicting payment evidence first, confirmed charges without buyer delivery next, and paused automatic checks last. A Gateway outage does not clear an earlier conflict. A recovered delivery leaves the queue once the payment evidence agrees.
+
 ### Send a testnet refund from the console
 
 Build, apply migration 010 and restart the API. Start the refund worker against the same database with DATABASE_URL, BASE_SEPOLIA_RPC_URL, MERCHANT_TEST_KEY and PAYMENT_RELAYER_KEY configured. The API and browser do not need wallet keys for this action.

@@ -157,8 +157,16 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     const seeded = await seedGateway(pool, { origin, payer: payer.address, recipient }, 2000, 2000);
     const task = { taskId: seeded.taskId, agentToken: seeded.token };
     const financeToken = randomUUID();
-    const finance = buildApp(pool, false, undefined, financeToken);
+    const operationsToken = randomUUID();
+    const finance = buildApp(pool, false, undefined, financeToken, false, operationsToken);
     const headers = { authorization: `Bearer ${financeToken}` };
+    const operations = { authorization: `Bearer ${operationsToken}` };
+    const queueUrl = '/finance/gateway-purchases/review-queue';
+    const reviewQueue = async () => {
+      const response = await finance.inject({ url: queueUrl, headers: operations });
+      assert.equal(response.statusCode, 200);
+      return response.json() as { id: string; reason: string }[];
+    };
     let submissions = 0;
     let signatures = 0;
     const merchant = buildGatewayMerchant(pool, origin, recipient, async (url, init) => {
@@ -252,8 +260,23 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       assert.ok(missingDeliveries.every(({ status }) => status === 'charged-delivery-missing'));
       const financeUrl = `/finance/gateway-purchases/${interrupted.requestId}`;
       assert.equal((await finance.inject({ url: financeUrl })).statusCode, 401);
+      assert.equal((await finance.inject({ url: queueUrl, headers: { authorization: `Bearer ${seeded.token}` } })).statusCode, 401);
+      assert.deepEqual((await finance.inject({ url: '/finance/session', headers: operations })).json(),
+        { role: 'operations' });
+      assert.equal((await finance.inject({ url: '/finance/payment-intents', headers: operations })).statusCode, 403);
+      assert.equal((await finance.inject({
+        method: 'POST', url: `/finance/payment-intents/${interrupted.requestId}/testnet-refund`, headers: operations,
+      })).statusCode, 403);
+      assert.equal((await finance.inject({
+        method: 'POST', url: `/finance/payment-intents/${interrupted.requestId}/refund-decision`,
+        headers: operations, payload: { decision: 'APPROVED' },
+      })).statusCode, 403);
+      const queued = await reviewQueue();
+      const missingIndex = queued.findIndex(({ id }) => id === interrupted.requestId);
+      assert.equal(queued[missingIndex]?.reason, 'charged-delivery-missing');
+      assert.ok(queued.findIndex(({ reason }) => reason === 'checks-paused') > missingIndex);
       assert.equal((await finance.inject({ method: 'POST', url: financeUrl + '/check' })).statusCode, 401);
-      const audit = (await finance.inject({ url: financeUrl, headers })).json();
+      const audit = (await finance.inject({ url: financeUrl, headers: operations })).json();
       assert.equal(audit.buyerHasDelivery, false);
       assert.equal(audit.sellerHasDelivery, true);
       assert.equal(audit.nonce, lost.nonce);
@@ -267,7 +290,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
 
       const fetchMock = t.mock.method(globalThis, 'fetch', gateway);
       try {
-        const checks = await Promise.all([1, 2].map(() =>
+        const checks = await Promise.all([headers, operations].map((headers) =>
           finance.inject({ method: 'POST', url: financeUrl + '/check', headers })));
         for (const checked of checks) {
           assert.equal(checked.statusCode, 200);
@@ -278,7 +301,8 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
         fetchMock.mock.restore();
       }
       const history = (await finance.inject({ url: financeUrl, headers })).json();
-      assert.equal(history.observations[0].source, 'finance');
+      assert.deepEqual(history.observations.slice(0, 2).map(({ source }: { source: string }) => source).sort(),
+        ['finance', 'operations']);
       assert.deepEqual(await budget(), { reserved: '1000', spent: '1000' });
       const journal = await pool.query('SELECT request_id FROM gateway_payment_journal WHERE request_id = $1', [interrupted.requestId]);
       assert.equal(journal.rowCount, 1);
@@ -289,6 +313,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       assert.equal(recovered.nonce, lost.nonce);
       assert.deepEqual((await purchaseGatewayTrace(pool, interrupted, sign, send)).delivery, recovered.delivery);
       assert.equal((await finance.inject({ url: financeUrl, headers })).json().buyerHasDelivery, true);
+      assert.ok((await reviewQueue()).every(({ id }) => id !== interrupted.requestId));
       assert.equal(submissions, 2);
       assert.equal(signatures, 2);
 
@@ -324,6 +349,9 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
           sendingNetwork: arcGatewayNetwork, recipientNetwork: arcGatewayNetwork, amount: '1000',
         }] }));
       assert.equal(contradicted.status, 'reconciliation-conflict');
+      await purchaseGatewayTrace(pool, failure, sign, send, async () => new Response(null, { status: 503 }));
+      assert.equal((await reviewQueue())[0]?.id, failure.requestId);
+      assert.equal((await reviewQueue())[0]?.reason, 'payment-conflict');
       const unchargedBudget = await pool.query('SELECT reserved, spent FROM research_tasks WHERE id = $1', [uncharged.taskId]);
       assert.deepEqual(unchargedBudget.rows[0], { reserved: '0', spent: '0' });
 

@@ -10,20 +10,24 @@
 <body>
   <header class="top"><div class="brand"><span class="mark" aria-hidden="true">A</span> AgentTreasury</div><span class="network">Testnet</span></header>
   <main>
-    <div class="heading"><div><h1>Finance Console</h1><p>Review agent payments, refund requests, and settlement evidence.</p></div><button id="refresh" hidden>Refresh</button></div>
+    <div class="heading"><div><h1>Payment Console</h1><p id="console-description">Review agent payments and settlement evidence.</p></div>
+      <div id="session-actions" class="form-actions" hidden><button id="refresh">Refresh</button><button id="logout">Sign out</button></div>
+    </div>
     <form id="login" class="card login">
-      <label for="token">Finance approval token</label>
+      <label for="token">Finance or operations token</label>
       <div class="form-actions"><input id="token" type="password" required autocomplete="off"><button class="primary">Open console</button></div>
     </form>
     <p id="notice" role="status" aria-live="polite"></p>
     <div id="workspace" class="workspace" hidden>
-      <section class="card orders">
-        <div class="section-title"><h2>Payment intents</h2><button id="logout">Sign out</button></div>
+      <section class="card orders" id="base-orders">
+        <div class="section-title"><h2>Payment intents</h2></div>
         <ul id="orders"></ul>
       </section>
       <section class="card detail" id="detail" aria-label="Payment details"><p>Select a payment to view details.</p></section>
       <section class="card detail gateway" aria-labelledby="gateway-heading">
         <h2 id="gateway-heading">Arc Gateway purchase</h2>
+        <h3>Review queue</h3>
+        <ul id="gateway-queue" class="review-queue"></ul>
         <form id="gateway-lookup">
           <label for="gateway-id">Request ID</label>
           <div class="form-actions">

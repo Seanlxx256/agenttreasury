@@ -9,7 +9,8 @@ const pool = new Pool({
   statement_timeout: 5000,
   idle_in_transaction_session_timeout: 5000,
 });
-const app = buildApp(pool, true, process.env.MERCHANT_ENDPOINT ? { merchant: merchantConfig() } : undefined, process.env.FINANCE_APPROVAL_TOKEN);
+const app = buildApp(pool, true, process.env.MERCHANT_ENDPOINT ? { merchant: merchantConfig() } : undefined,
+  process.env.FINANCE_APPROVAL_TOKEN, false, process.env.GATEWAY_OPERATIONS_TOKEN);
 
 pool.on('error', (error) => app.log.error({ err: error }, 'Idle database connection failed'));
 app.addHook('onClose', async () => pool.end());

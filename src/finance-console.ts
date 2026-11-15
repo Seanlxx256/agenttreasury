@@ -29,7 +29,8 @@ const paymentParams = { type: 'object', required: ['id'],
   properties: { id: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } } };
 
 export function registerFinanceConsole(
-  app: FastifyInstance, pool: Pool, authenticate: (request: FastifyRequest) => void, localDemo: boolean,
+  app: FastifyInstance, pool: Pool, authenticateConsole: (request: FastifyRequest) => 'finance' | 'operations',
+  authenticate: (request: FastifyRequest) => void, localDemo: boolean,
 ) {
   async function gatewayPurchase(id: string) {
     const { rows: [purchase] } = await pool.query<ExpectedGatewayPayment & {
@@ -57,8 +58,40 @@ export function registerFinanceConsole(
     return purchase;
   }
 
+  app.get('/finance/session', async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return { role: authenticateConsole(request) };
+  });
+
+  app.get('/finance/gateway-purchases/review-queue', async (request, reply) => {
+    authenticateConsole(request);
+    reply.header('Cache-Control', 'no-store');
+    const { rows } = await pool.query(`
+      WITH cases AS (
+        SELECT p.request_id AS id, p.amount_units::text AS "amountUnits", p.authorized_at AS "issuedAt",
+          CASE
+            WHEN latest.status = 'conflict' THEN 'payment-conflict'
+            WHEN p.delivery IS NULL AND (p.budget_status = 'spent' OR latest.status = 'charged')
+              THEN 'charged-delivery-missing'
+            WHEN p.budget_status = 'reserved' AND p.reconcile_review_at IS NOT NULL THEN 'checks-paused'
+          END AS reason
+        FROM gateway_demo_purchases p
+        LEFT JOIN LATERAL (
+          SELECT evidence->>'status' AS status FROM gateway_payment_observations
+          WHERE request_id = p.request_id AND evidence->>'status' IN ('charged', 'failed', 'conflict')
+          ORDER BY id DESC LIMIT 1
+        ) latest ON true
+      )
+      SELECT id, "amountUnits", "issuedAt", reason FROM cases WHERE reason IS NOT NULL
+      ORDER BY CASE reason WHEN 'payment-conflict' THEN 1 WHEN 'charged-delivery-missing' THEN 2 ELSE 3 END,
+               "issuedAt", id
+      LIMIT 100
+    `);
+    return rows;
+  });
+
   app.get<{ Params: { id: string } }>('/finance/gateway-purchases/:id', {
-    preHandler: async (request) => authenticate(request), schema: { params: paymentParams },
+    preHandler: async (request) => { authenticateConsole(request); }, schema: { params: paymentParams },
   }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     const { id } = request.params;
@@ -71,11 +104,12 @@ export function registerFinanceConsole(
   });
 
   app.post<{ Params: { id: string } }>('/finance/gateway-purchases/:id/check', {
-    preHandler: async (request) => authenticate(request), schema: { params: paymentParams },
+    schema: { params: paymentParams },
   }, async (request, reply) => {
+    const role = authenticateConsole(request);
     reply.header('Cache-Control', 'no-store');
     const { id } = request.params;
-    return checkGatewayPayment(pool, id, await gatewayPurchase(id), 'finance');
+    return checkGatewayPayment(pool, id, await gatewayPurchase(id), role);
   });
 
   for (const [path, file, type] of [

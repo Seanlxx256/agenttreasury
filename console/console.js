@@ -8,10 +8,13 @@ const detail = byId('detail');
 const list = byId('orders');
 const gatewayLookup = byId('gateway-lookup');
 const gatewayDetail = byId('gateway-detail');
+const gatewayQueue = byId('gateway-queue');
 let token = '';
+let role = '';
 let selected = '';
 let generation = 0;
 let selection = 0;
+let gatewaySelection = 0;
 let pollTimer;
 const executionLabels = {
   QUEUED: 'Queued for worker',
@@ -77,7 +80,7 @@ function showGatewayPurchase(purchase, path, session) {
     try {
       await financeApi(path + '/check', { method: 'POST' });
       if (session !== generation || !check.isConnected) return;
-      const updated = await financeApi(path);
+      const [updated] = await Promise.all([financeApi(path), refreshGatewayQueue()]);
       if (session === generation && check.isConnected) showGatewayPurchase(updated, path, session);
     } finally {
       check.disabled = false;
@@ -121,24 +124,50 @@ function showGatewayPurchase(purchase, path, session) {
   gatewayDetail.append(history);
 }
 
+async function lookupGatewayPurchase(id) {
+  const session = generation;
+  const selection = ++gatewaySelection;
+  const path = '/gateway-purchases/' + encodeURIComponent(id);
+  byId('gateway-id').value = id;
+  gatewayDetail.replaceChildren(element('p', 'Loading purchase…'));
+  try {
+    const purchase = await financeApi(path);
+    if (session === generation && selection === gatewaySelection) showGatewayPurchase(purchase, path, session);
+  } catch (error) {
+    if (session !== generation || selection !== gatewaySelection) return;
+    gatewayDetail.replaceChildren();
+    throw error;
+  }
+}
+
+const gatewayReviewLabels = {
+  'payment-conflict': 'Conflicting payment evidence',
+  'charged-delivery-missing': 'Charged · buyer delivery missing',
+  'checks-paused': 'Automatic checks paused',
+};
+
+async function refreshGatewayQueue() {
+  const session = generation;
+  const rows = await financeApi('/gateway-purchases/review-queue');
+  if (session !== generation) return;
+  gatewayQueue.replaceChildren();
+  for (const row of rows) {
+    const label = gatewayReviewLabels[row.reason];
+    const button = element('button', undefined, 'order');
+    button.type = 'button';
+    button.append(element('strong', label + ' · ' + amount(row.amountUnits)),
+      element('div', row.id + ' · ' + timestamp(row.issuedAt), 'muted'));
+    button.addEventListener('click', () => showErrors(() => lookupGatewayPurchase(row.id)));
+    const entry = element('li');
+    entry.append(button);
+    gatewayQueue.append(entry);
+  }
+  if (!rows.length) gatewayQueue.append(element('li', 'No Arc purchases need review.', 'muted'));
+}
+
 gatewayLookup.addEventListener('submit', (event) => {
   event.preventDefault();
-  const session = generation;
-  const path = '/gateway-purchases/' + encodeURIComponent(byId('gateway-id').value);
-  const button = gatewayLookup.querySelector('button');
-  button.disabled = true;
-  gatewayDetail.replaceChildren(element('p', 'Loading purchase…'));
-  void showErrors(async () => {
-    try {
-      const purchase = await financeApi(path);
-      if (session === generation) showGatewayPurchase(purchase, path, session);
-    } catch (error) {
-      if (session === generation) gatewayDetail.replaceChildren();
-      throw error;
-    } finally {
-      button.disabled = false;
-    }
-  });
+  void showErrors(() => lookupGatewayPurchase(byId('gateway-id').value));
 });
 
 function journal(title, entry, demo) {
@@ -316,6 +345,10 @@ async function showErrors(action) {
   }
 }
 
+async function refreshConsole() {
+  await Promise.all([refreshGatewayQueue(), role === 'finance' ? refresh() : undefined]);
+}
+
 login.addEventListener('submit', (event) => {
   event.preventDefault();
   const input = byId('token');
@@ -325,33 +358,44 @@ login.addEventListener('submit', (event) => {
   button.disabled = true;
   void showErrors(async () => {
     try {
-      await refresh();
+      ({ role } = await financeApi('/session'));
+      byId('base-orders').hidden = role !== 'finance';
+      detail.hidden = role !== 'finance';
+      byId('console-description').textContent = role === 'finance'
+        ? 'Review agent payments, refund requests, and settlement evidence.'
+        : 'Review Arc Gateway payments and delivery incidents.';
+      await refreshConsole();
       workspace.hidden = false;
       login.hidden = true;
-      byId('refresh').hidden = false;
+      byId('session-actions').hidden = false;
     } catch (error) {
       token = '';
+      role = '';
       list.replaceChildren();
       detail.replaceChildren();
+      gatewayQueue.replaceChildren();
       throw error;
     } finally {
       button.disabled = false;
     }
   });
 });
-byId('refresh').addEventListener('click', () => showErrors(() => refresh()));
+byId('refresh').addEventListener('click', () => showErrors(refreshConsole));
 byId('logout').addEventListener('click', () => {
   clearTimeout(pollTimer);
   generation++;
   token = '';
+  role = '';
   selected = '';
   list.replaceChildren();
   detail.replaceChildren();
   gatewayLookup.reset();
   gatewayDetail.replaceChildren();
+  gatewayQueue.replaceChildren();
   workspace.hidden = true;
   login.hidden = false;
-  byId('refresh').hidden = true;
+  byId('session-actions').hidden = true;
+  byId('console-description').textContent = 'Review agent payments and settlement evidence.';
   notice.textContent = '';
   byId('token').focus();
 });
