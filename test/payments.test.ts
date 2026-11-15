@@ -14,6 +14,8 @@ import { buildGatewayMerchant } from '../src/gateway-merchant.js';
 import { purchaseGatewayTrace } from '../src/gateway-purchase.js';
 import { collectGatewayPurchaseEvidence } from '../src/gateway-purchase-evidence.js';
 import { processGatewayReconciliation } from '../src/gateway-reconciliation-worker.js';
+import type { GatewayBalanceChain } from '../src/gateway-balance-chain.js';
+import { reconcileGatewayBalances } from '../src/reconcile-gateway-balances.js';
 import { reserveAmount } from '../src/budget.js';
 import { transaction } from '../src/db.js';
 import { arcGatewayNetwork, gatewayDomain, gatewayValidity } from '../src/gateway-x402.js';
@@ -149,6 +151,43 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       [uncertain.id],
     );
     assert.deepEqual(review.rows[0], { reconcile_attempts: 12, review: true });
+    assert.deepEqual(await counters(), { reserved: '1000', spent: '1000' });
+
+    const batchHash = `0x${'b'.repeat(64)}` as const;
+    const depositHash = `0x${'d'.repeat(64)}` as const;
+    const batchId = `0x${'a'.repeat(64)}` as const;
+    let delta = -1000n;
+    const chain: GatewayBalanceChain = {
+      finalized: async () => 12n,
+      blockHash: async () => batchId,
+      totalBalance: async (_wallet, block) => block === 9n ? 5000n : 8000n + delta,
+      receiptBlock: async () => 11n,
+      movements: async () => ({
+        deposits: [{ hash: depositHash, logIndex: 1, amount: 3000n }],
+        withdrawals: [],
+        burns: [],
+        batches: [{ hash: batchHash, id: batchId, delta }],
+      }),
+    };
+    const pendingGateway: typeof fetch = async (url) => {
+      assert.equal(new URL(String(url)).searchParams.get('nonce'), uncertain.nonce);
+      return Response.json({ transfers: [{ id: randomUUID(), status: 'received', nonce: uncertain.nonce,
+        fromAddress: payer, toAddress: recipient, token: 'USDC', sendingNetwork: arcGatewayNetwork,
+        recipientNetwork: arcGatewayNetwork, amount: '1000', txHash: null }] });
+    };
+    const report = () => reconcileGatewayBalances(pool, chain, payer as `0x${string}`, 10n, 11n, pendingGateway);
+    const matched = await report();
+    assert.equal(matched.status, 'MATCHED');
+    assert.equal(matched.balance.closing, '7000');
+    assert.equal(matched.balance.journalDifference, '0');
+    assert.equal(matched.currentAuthorizations.pendingAmount, '1000');
+    assert.equal(matched.currentAuthorizations.unresolved[0]?.requestId, uncertain.id);
+    delta = -1200n;
+    const mismatch = await report();
+    assert.equal(mismatch.status, 'DISCREPANCY');
+    assert.equal(mismatch.balance.chainDifference, '0');
+    assert.equal(mismatch.balance.journalDifference, '-200');
+    assert.equal(mismatch.batches[0]?.status, 'DISCREPANCY');
     assert.deepEqual(await counters(), { reserved: '1000', spent: '1000' });
   });
 

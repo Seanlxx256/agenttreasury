@@ -41,9 +41,9 @@ export function recoverGatewayPayer(authorization: GatewayAuthorization, signatu
 export const gatewayValidity = 7 * 24 * 60 * 60 + 100;
 export const requestIdPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 
-export function arcTestnetClient() {
+export function arcTestnetClient(retryCount = 0) {
   return createPublicClient({ chain: arcTestnet, transport: http(process.env.ARC_TESTNET_RPC_URL, {
-    timeout: 5000, retryCount: 0,
+    timeout: 5000, retryCount,
   }) });
 }
 

@@ -15,13 +15,17 @@ import { seedGateway } from '../dist/src/seed.js';
 
 const [mode, suppliedId, ...extra] = process.argv.slice(2);
 const dropResponse = mode === 'buy-drop-response';
-if (!['prepare', 'buy', 'buy-drop-response', 'verify', 'reconcile'].includes(mode) || extra.length ||
-    (suppliedId !== undefined && !requestIdPattern.test(suppliedId)) ||
-    ((mode === 'verify' || mode === 'reconcile' || dropResponse) && !suppliedId) || (mode === 'prepare' && suppliedId)) {
-  throw new Error('Usage: npm run gateway:local -- prepare | buy [request-id] | buy-drop-response <request-id> | reconcile <request-id> | verify <request-id>');
+const balanceScan = mode === 'balance';
+const validRange = balanceScan && suppliedId && /^\d+$/.test(suppliedId) && extra.length === 1 && /^\d+$/.test(extra[0]);
+const validPurchaseCommand = ['prepare', 'buy', 'buy-drop-response', 'verify', 'reconcile'].includes(mode) && !extra.length &&
+  (suppliedId === undefined || requestIdPattern.test(suppliedId)) &&
+  (!(mode === 'verify' || mode === 'reconcile' || dropResponse) || suppliedId) && !(mode === 'prepare' && suppliedId);
+if (!validRange && !validPurchaseCommand) {
+  throw new Error('Usage: npm run gateway:local -- prepare | buy [request-id] | buy-drop-response <request-id> | reconcile <request-id> | verify <request-id> | balance <from-block> <to-block>');
 }
 
 const payer = process.env.GATEWAY_PAYER_ADDRESS;
+if (balanceScan && (!payer || !isAddress(payer))) throw new Error('Set GATEWAY_PAYER_ADDRESS to an Arc testnet address');
 const merchant = mode === 'buy' || dropResponse ? gatewayDemoConfig() : undefined;
 if (merchant && (!payer || !isAddress(payer) || payer.toLowerCase() === merchant.recipient.toLowerCase())) {
   throw new Error('Set GATEWAY_PAYER_ADDRESS and GATEWAY_MERCHANT_RECIPIENT to distinct Arc testnet addresses');
@@ -64,6 +68,8 @@ try {
 
   if (mode === 'prepare') {
     console.log(`Local Gateway PostgreSQL initialized and migrated on port ${dbPort}.`);
+  } else if (balanceScan) {
+    process.exitCode = await run('reconcile-gateway-balances.js', payer, suppliedId, extra[0]);
   } else if (mode === 'reconcile') {
     const { rows: [purchase] } = await pool.query(
       `SELECT nonce, payer, recipient, amount_units::text AS "amountUnits"
@@ -128,10 +134,10 @@ async function saveNew(path, contents) {
   }
 }
 
-function run(entry, requestId) {
+function run(entry, ...args) {
   const script = fileURLToPath(new URL(`../dist/src/${entry}`, import.meta.url));
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [script, requestId], { env, stdio: 'inherit', signal: abort.signal });
+    const child = spawn(process.execPath, [script, ...args], { env, stdio: 'inherit', signal: abort.signal });
     child.once('error', reject);
     child.once('close', (code) => resolve(code ?? 1));
   });

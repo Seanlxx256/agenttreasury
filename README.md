@@ -120,6 +120,22 @@ npm run reconcile:gateway -- "$NONCE" "$PAYER" "$RECIPIENT" 1000
 
 The command makes a read-only Arc testnet lookup. A single matching transfer returns `pending`, `charged`, or `failed`, together with its Gateway transfer ID and batch transaction hash when available. An empty result returns `unknown`. Multiple results or mismatched payment terms return `conflict` with exit code 2. Unavailable or invalid Gateway responses fail with exit code 1. The command reports evidence for one authorization and does not post a ledger entry.
 
+### Reconcile an Arc Gateway balance
+
+Set `GATEWAY_PAYER_ADDRESS` to the Arc testnet buyer address. With an existing local Gateway database, run:
+
+```sh
+npm run gateway:local -- balance 72411592 72412969
+```
+
+For another database, build first, set `DATABASE_URL`, and run `npm run reconcile:gateway-balances -- "$PAYER" "$FROM_BLOCK" "$TO_BLOCK"`. The inclusive window may contain up to 2,000 finalized blocks. Set `ARC_TESTNET_RPC_URL` to use a different RPC with access to historical contract state.
+
+The report pins both boundary block hashes and reads the Gateway contract's total USDC balance at each boundary. One calculation uses deposits, completed withdrawals, burns, and the buyer's signed net deltas decoded from settled batch transactions. A second uses the same onchain capital movements and replaces the batch net deltas with posted local payment debits. Both must match the closing balance, and each batch must match the local journal. Unexpected net credits or out-of-band activity surface as discrepancies for the buyer account. This compares net amounts per batch. Use `verify` for nonce-level verification.
+
+`currentAuthorizations` lists current Gateway evidence for unposted submissions and totals known pending authorizations. These are live lookups, separate from the historical balances. A missing transfer, conflicting evidence, unavailable lookup, or charged transfer awaiting a journal entry is listed for review. Amounts use integer USDC base units. Exit code 0 means the historical window matched, 2 signals a historical discrepancy, and 1 indicates an execution error.
+
+The live window above matched two batches of 0.001 test USDC each. The Gateway total moved from 0.500 to 0.498 test USDC with zero difference in both calculations.
+
 See [Circle Agent Stack](https://www.circle.com/agent-stack), [Agent Nanopayments](https://developers.circle.com/agent-stack/agent-nanopayments), [Circle Agent Stack overview](https://help.circle.com/support/en/circle-agent-stack-overview?id=kb_article_view&sysparm_article=KB0011122), and [Gateway seller reconciliation](https://developers.circle.com/gateway-nanopayments/howtos/x402-seller-reconciliation).
 
 ## Local setup for the existing payment backend
@@ -216,7 +232,7 @@ The `balance` report compares the actual USDC closing balance with two independe
 | Ledger closing | Onchain opening + recorded funding + recorded refunds − recorded payments |
 | Transfer closing | Onchain opening + incoming USDC logs − outgoing USDC logs |
 
-The opening balance comes from the block immediately before the window, and the closing balance comes from the last block in the window. The report records both block hashes and computes each difference as actual closing minus calculated closing. A ledger difference with balanced transfer logs points to a booking or classification gap; a transfer difference means the retrieved logs do not explain the observed balance change. A zero balance difference still requires every transfer to match. Use an RPC endpoint that can read historical contract state and choose a range after the USDC contract deployment. This checks movement within a selected Base Sepolia window; it does not attest to prior activity. Arc Gateway balances and scheduled scans are separate work.
+The opening balance comes from the block immediately before the window, and the closing balance comes from the last block in the window. The report records both block hashes and computes each difference as actual closing minus calculated closing. A ledger difference with balanced transfer logs points to a booking or classification gap; a transfer difference means the retrieved logs do not explain the observed balance change. A zero balance difference still requires every transfer to match. Use an RPC endpoint that can read historical contract state and choose a range after the USDC contract deployment. This checks movement within a selected Base Sepolia window; it does not attest to prior activity. Scheduled scans are separate work.
 
 A live run with the existing Base Sepolia test wallet matched the 20 test USDC funding credit at block `58720282`, two 0.002 test USDC payments at `58725969` and `58747677`, and their refunds at `58735879` and `58753696`. Both balance differences were zero in each checked window. The 2,000-block window `58723970..58725969` also matched through the public RPC.
 
