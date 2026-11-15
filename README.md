@@ -1,5 +1,7 @@
 # AgentTreasury
 
+> For a hiring-focused two-minute summary, see [project highlights](docs/project-highlights.md).
+
 AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The TypeScript, Fastify, and PostgreSQL backend is built around an Arc testnet purchase flow using Circle Gateway Nanopayments, with budget reservations, idempotent recovery, a balanced payment ledger, and an evidence-backed operations agent. An earlier Base Sepolia direct-settlement flow is retained as legacy reference material.
 
 ## Buyer-side payment recovery
