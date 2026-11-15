@@ -122,7 +122,7 @@ export async function purchaseGatewayTrace(
     option.asset?.toLowerCase() === requirements.asset && option.payTo?.toLowerCase() === requirements.payTo &&
     option.amount === requirements.amount && option.maxTimeoutSeconds === requirements.maxTimeoutSeconds &&
     option.extra?.name === requirements.extra.name && option.extra.version === requirements.extra.version &&
-    option.extra.verifyingContract?.toLowerCase() === requirements.extra.verifyingContract);
+    option.extra.verifyingContract?.toLowerCase() === requirements.extra.verifyingContract.toLowerCase());
   if (quote?.x402Version !== 2 || quote.resource?.url !== endpoint || !matches) {
     throw new Error('Gateway quote differs from the approved terms');
   }

@@ -1,6 +1,6 @@
-import { arcGatewayNetwork as network, gatewayTestnetApi } from './gateway-x402.js';
+import { arcGatewayNetwork as network, gatewayApi } from './gateway-x402.js';
 
-const endpoint = `${gatewayTestnetApi}/transfers`;
+const endpoint = `${gatewayApi}/transfers`;
 
 export interface ExpectedGatewayPayment {
   nonce: string;

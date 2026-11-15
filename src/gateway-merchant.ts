@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import type { Pool } from 'pg';
 import { isAddress } from 'viem';
 import {
-  arcGatewayNetwork, decodePaymentHeader, encodePaymentHeader, gatewayTestnetApi,
+  arcGatewayNetwork, decodePaymentHeader, encodePaymentHeader, gatewayApi,
   recoverGatewayPayer, requestIdPattern, traceOffer,
 } from './gateway-x402.js';
 
@@ -72,7 +72,7 @@ export function buildGatewayMerchant(pool: Pool, origin: string, recipient: stri
 
     let settlement;
     try {
-      const response = await request(`${gatewayTestnetApi}/settle`, {
+      const response = await request(`${gatewayApi}/settle`, {
         method: 'POST', redirect: 'error', signal: AbortSignal.timeout(10000),
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({

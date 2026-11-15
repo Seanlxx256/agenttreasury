@@ -1,15 +1,23 @@
 import { createPublicClient, http, isAddress, recoverTypedDataAddress, type Address, type Hex } from 'viem';
-import { arcTestnet } from 'viem/chains';
+import { CHAIN_CONFIGS } from '@circle-fin/x402-batching/client';
 
-export const arcGatewayNetwork = `eip155:${arcTestnet.id}`;
-export const gatewayTestnetApi = 'https://gateway-api-testnet.circle.com/v1/x402';
+// Arc network selection. Testnet by default; set GATEWAY_NETWORK=arc for mainnet.
+// Chain ID, USDC address, and Gateway contract come from Circle's official SDK config.
+const gatewayChain = (process.env.GATEWAY_NETWORK === 'arc' ? 'arc' : 'arcTestnet') as 'arc' | 'arcTestnet';
+const gatewayConfig = CHAIN_CONFIGS[gatewayChain];
+
+export const arcGatewayNetwork = `eip155:${gatewayConfig.chain.id}`;
+// Gateway REST API. Selected by network; override with GATEWAY_API if needed.
+const gatewayApiBase = process.env.GATEWAY_API
+  ?? (gatewayChain === 'arc' ? 'https://gateway-api.circle.com/v1/x402' : 'https://gateway-api-testnet.circle.com/v1/x402');
+export const gatewayApi = gatewayApiBase;
 export const gatewayTracePrice = '1000';
-export const arcTestnetUsdc = '0x3600000000000000000000000000000000000000';
+export const arcTestnetUsdc = gatewayConfig.tokens.USDC!.address as Address;
 export const gatewayDomain = {
   name: 'GatewayWalletBatched',
   version: '1',
-  chainId: arcTestnet.id,
-  verifyingContract: '0x0077777d7eba4688bdef3e311b846f25870a19b9',
+  chainId: gatewayConfig.chain.id,
+  verifyingContract: gatewayConfig.gatewayWallet as Address,
 } as const;
 export const gatewayAuthorizationTypes = {
   TransferWithAuthorization: [
@@ -42,9 +50,12 @@ export const gatewayValidity = 7 * 24 * 60 * 60 + 100;
 export const requestIdPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 
 export function arcTestnetClient(retryCount = 0) {
-  return createPublicClient({ chain: arcTestnet, transport: http(process.env.ARC_TESTNET_RPC_URL, {
-    timeout: 5000, retryCount,
-  }) });
+  return createPublicClient({
+    chain: gatewayConfig.chain,
+    transport: http(process.env.ARC_TESTNET_RPC_URL ?? gatewayConfig.rpcUrl, {
+      timeout: 5000, retryCount,
+    }),
+  });
 }
 
 export function traceOffer(endpoint: string, recipient: string) {
