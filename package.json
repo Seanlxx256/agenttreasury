@@ -20,6 +20,8 @@
     "worker:gateway": "node dist/src/settle-gateway.js",
     "merchant:gateway": "node dist/src/gateway-merchant-server.js",
     "buy:gateway": "node dist/src/buy-gateway-trace.js",
+    "gateway:local": "npm run --silent build && node --env-file-if-exists=.env scripts/gateway-local.mjs",
+    "gateway:wallet": "npm run --silent build && node --env-file-if-exists=.env scripts/gateway-wallet.mjs",
     "refund": "node dist/src/refund.js",
     "merchant": "node dist/src/merchant-server.js",
     "research": "node dist/src/research.js",

@@ -1,12 +1,12 @@
 # AgentTreasury
 
-AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The runnable TypeScript, Fastify, and PostgreSQL payment backend uses direct USDC settlement on Base Sepolia. A standalone command can inspect Arc testnet Gateway payment evidence by nonce.
+AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The TypeScript, Fastify, and PostgreSQL backend includes an Arc testnet purchase flow using Circle Gateway Nanopayments and a Base Sepolia payment flow using direct USDC settlement.
 
 ## Buyer-side payment recovery
 
 An on-call engineer delegates a transaction investigation and sets a USDC budget for it. The investigation uses an approved pay-per-call trace API when free evidence is insufficient. Payment acceptance, delivery, and onchain settlement can arrive at different times. If the API times out, the buyer needs to establish whether it paid, recover the trace when possible, and avoid a second charge.
 
-- Start with one Circle Agent Wallet on Arc testnet and one project-operated x402 trace endpoint backed by Circle Gateway Nanopayments. Verify the wallet and Gateway flow with test USDC first. Circle documents custom Agent Wallet spending policies as mainnet-only. The testnet demo exercises application-side task controls and keeps wallet credentials in the payment executor, outside the agent runtime.
+- Start with an Arc testnet externally owned account (EOA) and one project-operated x402 trace endpoint backed by Circle Gateway Nanopayments. Gateway batch settlement requires EOA signatures. The testnet demo exercises application-side task controls and keeps wallet credentials in the payment executor, outside the agent runtime.
 - Reuse Postgres budget reservations and idempotency. Check the task grant and price before handing a payment to the executor, and persist that handoff before the external call. A revocation blocks new handoffs. A payment already handed off may still complete and must remain visible for reconciliation. Verify that the integration can enforce the approved payment terms before allowing unattended spend.
 - Persist the logical request ID and authorization nonce before submission. Allow one authorization per logical request in the first release. Duplicate requests return the stored result or current status. Link each state change to the task, request, and operation, with the nonce once an authorization exists.
 
@@ -20,7 +20,7 @@ The operations agent uses read-only tools and produces a structured recommendati
 
 ### Delivery milestones
 
-1. Run one purchase using Circle Agent Wallet, Arc testnet, and the project-operated Gateway x402 trace API. Confirm that the payment executor can persist the nonce before submission and associate the returned trace with the request.
+1. Run one purchase using an Arc testnet EOA and the project-operated Gateway x402 trace API. Confirm that the payment executor can persist the nonce before submission and associate the returned trace with the request.
 2. Connect nonce lookup to the durable recovery worker. Replay a crash after committing the authorization and before submission, a crash after external acceptance and before recording the response, conflicting transfer records for the same nonce, and a confirmed charge with missing delivery. Keep the existing concurrency, idempotency, quote validation, and revocation cases. Check for duplicate charges, out-of-policy submissions, and incorrect budget or journal balances. Add an append-only audit history with actor, action, timestamp, and state transition. Give the agent read and request access, operations access to recovery, and finance access to fund adjustments.
 3. Add the operations agent and replay the same labeled incidents with and without its recommendations. Use the same backend rules in both runs. Measure correct next steps, evidence accuracy, manual review rate, and time to triage. Report unsafe recommendations separately from executed actions. Test evidence-backed incident classification and queue priority after establishing the baseline.
 
@@ -28,18 +28,28 @@ For mainnet deployment, pair application task budgets and service restrictions w
 
 ### Run the Arc testnet purchase demo
 
-Install Circle CLI and authenticate a testnet Agent Wallet. Use two distinct public addresses for the payer and recipient. Fund the payer with test USDC and deposit it into Gateway before purchasing. See the [Agent Wallet quickstart](https://developers.circle.com/agent-stack/agent-wallets/quickstart).
+Use two distinct public addresses for the payer and recipient. The payer must be an EOA because [Gateway Nanopayments batch settlement requires EOA signatures](https://developers.circle.com/gateway-nanopayments). The Arc testnet smart contract account provisioned by Circle Agent Wallet login can fund the test EOA with a regular transfer. A deposit owned by that smart contract account does not make it eligible to sign batch payments.
 
 ```sh
-npm install -g @circle-fin/cli
-circle wallet login you@example.com --testnet
-circle wallet list --type agent --chain ARC-TESTNET
-export GATEWAY_PAYER_ADDRESS=0xYourArcTestnetAgentWallet
+npm run gateway:wallet -- init
+export GATEWAY_PAYER_ADDRESS=0xYourPrintedArcTestnetEOA
 export GATEWAY_MERCHANT_RECIPIENT=0xYourSeparateRecipientAddress
-circle wallet fund --address "$GATEWAY_PAYER_ADDRESS" --chain ARC-TESTNET
-circle gateway deposit --address "$GATEWAY_PAYER_ADDRESS" --chain ARC-TESTNET --method direct --amount 0.5
-circle gateway balance --address "$GATEWAY_PAYER_ADDRESS" --chain ARC-TESTNET
+export GATEWAY_TESTNET_SIGNER_FILE=.gateway-local/payer-key
 ```
+
+Fund the printed address with Arc test USDC, leaving enough for gas, then run `npm run gateway:wallet -- deposit 0.5`. Wait for Gateway to credit the deposit before buying. The initializer reuses the existing test key and prints only the public address and key file location. If you already use Circle CLI with an imported EOA, you can leave `GATEWAY_TESTNET_SIGNER_FILE` unset and let the buyer use the CLI signer.
+
+For a local run with embedded PostgreSQL, keep the payer and recipient variables set and run:
+
+```sh
+npm run gateway:local -- buy
+```
+
+This starts a separate database and a loopback merchant, applies migrations, creates a scoped task, and submits one 0.001 test USDC purchase. Keep the printed request ID. If the purchase or accounting is pending, rerun `npm run gateway:local -- buy <request-id>` with that ID to reconcile the charge and recover delivery. A `buy` command without an ID starts a new purchase.
+
+Use `npm run gateway:local -- verify <request-id>` to inspect the evidence without submitting or reconciling a payment. The local database, task credentials, and purchase history persist in the ignored `.gateway-local/` directory. `npm run gateway:local -- prepare` runs database setup without a wallet. The default PostgreSQL and merchant ports are 55433 and 3002. Set `GATEWAY_DB_PORT` or `GATEWAY_MERCHANT_PORT` if those ports are occupied, and keep the same merchant port when resuming a purchase.
+
+### Run with a separate development database
 
 Set `DATABASE_URL` to a development PostgreSQL database, then run:
 
@@ -76,6 +86,10 @@ npm run --silent verify:gateway -- "$REQUEST_ID"
 ```
 
 Use the same `DATABASE_URL` as the buyer. The verifier uses the public Arc testnet RPC by default. Override it with `ARC_TESTNET_RPC_URL` if needed. It exits with 2 when evidence is pending and 3 when records disagree or the purchase failed. Connection and configuration errors exit with 1. Run it again with the same ID as evidence arrives.
+
+### Arc testnet acceptance run
+
+On 2026-11-15, the local buyer purchased the trace fixture for 0.001 test USDC. Circle Gateway returned [transfer `136232e5-b8bc-4bcd-8037-6cd4a246f3c3`](https://gateway-api-testnet.circle.com/v1/x402/transfers/136232e5-b8bc-4bcd-8037-6cd4a246f3c3) for request `794d6990-afe6-42b1-9f2f-df9c32535693`. The buyer and seller stored matching deliveries. Reopening the same request returned the stored trace and queried the original nonce. As of 08:29 UTC, Gateway still reported `received` with no batch hash. The verifier reported `PENDING` and the budget remained reserved.
 
 ### Inspect Circle Gateway payment evidence
 

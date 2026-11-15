@@ -3,3 +3,4 @@ dist/
 .env
 .wallet-init.lock/
 .finance-local/
+.gateway-local/

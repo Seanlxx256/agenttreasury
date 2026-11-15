@@ -1,9 +1,10 @@
-import { isAddress, recoverTypedDataAddress, type Address, type Hex } from 'viem';
+import { createPublicClient, http, isAddress, recoverTypedDataAddress, type Address, type Hex } from 'viem';
 import { arcTestnet } from 'viem/chains';
 
 export const arcGatewayNetwork = `eip155:${arcTestnet.id}`;
 export const gatewayTestnetApi = 'https://gateway-api-testnet.circle.com/v1/x402';
 export const gatewayTracePrice = '1000';
+export const arcTestnetUsdc = '0x3600000000000000000000000000000000000000';
 export const gatewayDomain = {
   name: 'GatewayWalletBatched',
   version: '1',
@@ -40,6 +41,12 @@ export function recoverGatewayPayer(authorization: GatewayAuthorization, signatu
 export const gatewayValidity = 7 * 24 * 60 * 60 + 100;
 export const requestIdPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 
+export function arcTestnetClient() {
+  return createPublicClient({ chain: arcTestnet, transport: http(process.env.ARC_TESTNET_RPC_URL, {
+    timeout: 5000, retryCount: 0,
+  }) });
+}
+
 export function traceOffer(endpoint: string, recipient: string) {
   return {
     x402Version: 2,
@@ -47,7 +54,7 @@ export function traceOffer(endpoint: string, recipient: string) {
     accepts: [{
       scheme: 'exact',
       network: arcGatewayNetwork,
-      asset: '0x3600000000000000000000000000000000000000',
+      asset: arcTestnetUsdc,
       amount: gatewayTracePrice,
       payTo: recipient.toLowerCase(),
       maxTimeoutSeconds: gatewayValidity,
