@@ -1,8 +1,32 @@
 # AgentTreasury
 
-AgentTreasury is a controlled USDC payments backend for a research agent. The current implementation covers task authorization, concurrent budget reservations, and asynchronous validation of x402 merchant quotes, and an EIP-3009 settlement worker for Base Sepolia. It uses TypeScript, Fastify, and PostgreSQL.
+AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The Circle wallet and Gateway integration below is planned. The runnable TypeScript, Fastify, and PostgreSQL backend currently uses direct USDC settlement on Base Sepolia.
 
-## Local setup
+## Buyer-side payment recovery
+
+An on-call engineer delegates a transaction investigation and sets a USDC budget for it. The investigation uses an approved pay-per-call trace API when free evidence is insufficient. Payment acceptance, delivery, and onchain settlement can arrive at different times. If the API times out, the buyer needs to establish whether it paid, recover the trace when possible, and avoid a second charge.
+
+- Start with one Circle Agent Wallet on Arc testnet and one project-operated x402 trace endpoint backed by Circle Gateway Nanopayments. Verify the wallet and Gateway flow with test USDC first. Circle documents custom Agent Wallet spending policies as mainnet-only. The testnet demo exercises application-side task controls and keeps wallet credentials in the payment executor, outside the agent runtime.
+- Reuse Postgres budget reservations and idempotency. Check the task grant and price before handing a payment to the executor, and persist that handoff before the external call. A revocation blocks new handoffs. A payment already handed off may still complete and must remain visible for reconciliation. Verify that the integration can enforce the approved payment terms before allowing unattended spend.
+- Persist the logical request ID and authorization nonce before submission. Allow one authorization per logical request in the first release. Duplicate requests return the stored result or current status. Link each state change to the task, request, and operation, with the nonce once an authorization exists.
+
+| Incident | Backend action | Operations agent |
+| --- | --- | --- |
+| API timed out | Query Gateway by nonce. Keep the reservation while the record is missing or pending. Move it to spent on a verified `confirmed` or `completed` transfer. Release it on a matching terminal `failed` transfer, which Circle documents as uncharged. Surface unresolved outcomes for review after bounded polling. | For unresolved cases, cite the available records and identify which evidence would determine the next step. |
+| Charge confirmed, result missing | Retrieve the artifact by the original request ID through a seller endpoint that supports retrieval without payment. Attach the artifact to the original purchase or open a case if retrieval is unavailable. | Check the seller's delivery record and recommend retrieval or operator follow-up, citing the request and payment records. |
+| Amount, status, or delivery records disagree | Compare the local request, Gateway transfer, and seller delivery record. Keep the evidence and flag mismatches in the finance console. Refunds and ledger adjustments require operator approval. | Explain which records disagree and propose the next check. Mark a cause as unknown when the records do not establish it. |
+
+The operations agent uses read-only tools and produces a structured recommendation with evidence references. The backend validates any proposed recovery before acting.
+
+### Delivery milestones
+
+1. Run one purchase using Circle Agent Wallet, Arc testnet, and the project-operated Gateway x402 trace API. Confirm that the payment executor can persist the nonce before submission and associate the returned trace with the request.
+2. Implement nonce-based recovery and replay concurrent budget requests, a changed quote, duplicate requests, retries after grant revocation, a lost response after submission, and a confirmed charge with missing delivery. Require zero duplicate charges and zero out-of-policy submissions in these cases. Check the final reservation, journal, and audit evidence against the expected result for each case.
+3. Add the operations agent and replay the same labeled incidents with and without its recommendations. Use the same safe backend rules in both runs. Measure correct next steps, evidence accuracy, manual review rate, and time to triage. Report unsafe recommendations separately from executed actions. Record which evidence came from Circle testnet and which came from injected failures.
+
+See [Circle Agent Stack](https://www.circle.com/agent-stack), [Agent Nanopayments](https://developers.circle.com/agent-stack/agent-nanopayments), [Circle Agent Stack overview](https://help.circle.com/support/en/circle-agent-stack-overview?id=kb_article_view&sysparm_article=KB0011122), and [Gateway seller reconciliation](https://developers.circle.com/gateway-nanopayments/howtos/x402-seller-reconciliation).
+
+## Local setup for the existing payment backend
 
 Use Node.js 22 or later and PostgreSQL. Start PostgreSQL with Docker Compose or set DATABASE_URL to an existing development database.
 
