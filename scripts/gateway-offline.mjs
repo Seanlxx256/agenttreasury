@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -19,10 +19,11 @@ import { seedGateway } from '../dist/src/seed.js';
 //   - The batch receipt lookup returns a confirmed receipt.
 //   - The paid response is dropped once to reproduce a lost delivery.
 
-const OFFLINE_TX_HASH = `0x${'ab'.repeat(32)}`;
+const requestId = randomUUID();
+const OFFLINE_TX_HASH = `0x${createHash('sha256').update(`offline:${requestId}`).digest('hex')}`;
+const OFFLINE_TRANSFER_ID = `offline-transfer-${requestId}`;
 const dbPort = 55434;
 const merchantPort = 3102;
-const requestId = randomUUID();
 
 const root = fileURLToPath(new URL('../.gateway-offline/', import.meta.url));
 const databaseDir = join(root, 'db');
@@ -51,7 +52,7 @@ function mockTransfers() {
     if (!pathname.endsWith('/transfers')) throw new Error(`Unexpected Gateway call: ${pathname}`);
     return jsonResponse({
       transfers: [{
-        id: 'offline-transfer', txHash: OFFLINE_TX_HASH, nonce: searchParams.get('nonce'),
+        id: OFFLINE_TRANSFER_ID, txHash: OFFLINE_TX_HASH, nonce: searchParams.get('nonce'),
         fromAddress: payer, toAddress: recipient, token: 'USDC',
         sendingNetwork: arcGatewayNetwork, recipientNetwork: arcGatewayNetwork,
         amount: '1000', status: 'confirmed',
