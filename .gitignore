@@ -5,3 +5,5 @@ dist/
 .finance-local/
 .gateway-local/
 .gateway-offline/
+*-evidence.json
+operator-A01.json
