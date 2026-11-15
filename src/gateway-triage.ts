@@ -64,6 +64,12 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
   } else if (ended) {
     rules = { action: 'close-case', rationale: 'The recorded evidence shows this attempt ended without a charge.',
       citations: ['observation-' + ended.id] };
+  } else if (purchase.reviewRequired && latest?.evidence.status === 'unavailable') {
+    rules = { action: 'escalate', rationale: 'Automatic checks are paused and the latest Gateway lookup was unavailable.',
+      citations: ['polling', 'observation-' + latest.id] };
+  } else if (purchase.reviewRequired && latest?.evidence.status === 'pending') {
+    rules = { action: 'check-gateway', rationale: 'Automatic checks are paused and the payment is pending. Check the original authorization.',
+      citations: ['polling', 'observation-' + latest.id] };
   } else if (purchase.reviewRequired || latest?.evidence.status !== 'pending') {
     rules = { action: 'check-gateway', rationale: 'Collect a fresh observation for the original authorization.',
       citations: latest && gatewayStatuses.has(latest.evidence.status) ? ['observation-' + latest.id] : ['budget'] };
@@ -77,7 +83,7 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
     allowed.push({ action: 'check-gateway', rationale: 'Check the original authorization again.',
       citations: rules.citations });
   }
-  if (rules.action !== 'review-conflict') {
+  if (rules.action !== 'review-conflict' && rules.action !== 'escalate') {
     allowed.push({ action: 'escalate', rationale: 'Ask an operator to assess the existing evidence.',
       citations: rules.citations });
   }

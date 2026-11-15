@@ -9,6 +9,27 @@ const purchase = {
 };
 const charged = { id: '42', evidence: { status: 'charged' } };
 
+test('paused Gateway outages require both citations and preserve known recovery actions', async () => {
+  const unresolved = { ...purchase, budgetStatus: 'reserved', journal: null };
+  const paused = { ...unresolved, reviewRequired: true };
+  const outage = { id: '44', evidence: { status: 'unavailable' } };
+  const pending = { id: '43', evidence: { status: 'pending' } };
+  const input = prepareGatewayTriage(paused, [outage, pending]);
+  assert.deepEqual(input.allowed.map(({ action }) => action), ['escalate']);
+
+  const review = (citations: string[]) => reviewGatewayTriage(input, 'test-model', async () =>
+    Response.json({ message: { content: JSON.stringify({ action: 'escalate', citations }) } }));
+  assert.equal((await review(['observation-44'])).agent.status, 'rejected');
+  assert.equal((await review(['polling'])).agent.status, 'rejected');
+  assert.equal((await review(['polling', 'observation-44'])).agent.status, 'ready');
+
+  assert.equal(prepareGatewayTriage(unresolved, [outage, pending]).rules.action, 'check-gateway');
+  const pausedPending = prepareGatewayTriage(paused, [pending]).rules;
+  assert.equal(pausedPending.action, 'check-gateway');
+  assert.deepEqual(pausedPending.citations, ['polling', 'observation-43']);
+  assert.equal(prepareGatewayTriage(paused, [outage, charged]).rules.action, 'retrieve-delivery');
+});
+
 test('triage preserves a payment conflict after a Gateway outage', () => {
   const input = prepareGatewayTriage(purchase, [
     { id: '44', evidence: { status: 'unavailable' } },

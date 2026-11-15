@@ -74,3 +74,9 @@ In the new dataset, the model correctly escalated the paused outage while the ru
 npm run build
 npm run --silent eval:gateway -- --dataset gateway-incidents-v1 --model qwen2.5:0.5b
 ```
+
+### Escalation after a paused Gateway outage
+
+When automatic checks are paused and the latest lookup is unavailable, an unresolved purchase now calls for operator review. The recommendation requires both the polling flag and the failed lookup. If the latest lookup is pending, the rules request a manual check of the original authorization and cite the pause and pending result. A recorded charge with a retrievable trace still calls for recovery.
+
+On `gateway-incidents-v1`, the rules improved from 5/6 to 6/6 for both actions and citation completeness. Local Qwen remained at 5/6 for actions and improved from 5/6 to 6/6 for citation completeness. The policy required escalation for the paused outage, so the citation gain reflects the changed requirement and the model's compliance. The model still escalated the case where the operator should contact the merchant about a missing trace.
