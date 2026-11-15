@@ -34,6 +34,7 @@
     "verify:gateway": "node dist/src/verify-gateway-purchase.js",
     "wallets:init": "node scripts/init-wallets.mjs",
     "refund:send": "node dist/src/refund-send.js",
+    "gateway:refund": "node dist/src/gateway-refund-send.js",
     "finance:local": "npm run build && node --env-file-if-exists=.env scripts/finance-local.mjs",
     "finance:demo": "npm run build && node scripts/finance-demo.mjs",
     "worker:refund": "node dist/src/finance-refund-worker.js"

@@ -20,7 +20,7 @@ The buyer maps a Gateway observation onto a terminal or recoverable status.
 | `delivered` | `charged` | saved delivery matches the request | none; purchase is complete |
 | `submission-unknown` | `unknown` or `unavailable` | no transfer found, or the lookup failed | query the nonce again; do not re-submit |
 | `payment-pending` | `pending` | transfer accepted but not settled, no batch hash | keep polling; the authorization stays reserved |
-| `charged-delivery-missing` | `charged` | charge confirmed, buyer delivery absent | recover via retrieval token; if recovery fails, escalate |
+| `charged-delivery-missing` | `charged` | charge confirmed, buyer delivery absent | recover via retrieval token; if recovery fails, request a refund |
 | `payment-failed` | `failed` | transfer reported failed | release the budget reservation |
 | `reconciliation-conflict` | `conflict` | multiple transfers, or a mismatch, or an accounting mismatch | stop and escalate; never auto-settle |
 
@@ -67,8 +67,18 @@ If the observation is `charged` but the accounting does not match, the result is
 Automatic recovery stops at three boundaries.
 
 1. **`reconciliation-conflict`** — multiple transfers, a mismatched transfer, or an accounting mismatch. The system will not guess which record is authoritative.
-2. **`charged-delivery-missing` with a failed recovery** — the Gateway confirms the charge and the buyer cannot retrieve the seller's saved delivery with the retrieval token. The buyer has paid and the goods exist but are unreachable; this needs a human to contact the seller out of band.
+2. **`charged-delivery-missing` with a failed recovery** — the Gateway confirms the charge and the buyer cannot retrieve the seller's saved delivery with the retrieval token. The buyer has paid and the goods exist but are unreachable; the buyer can open a refund request (below) or a human can contact the seller out of band.
 3. **Exhausted polling** — a `pending` observation that does not settle within the reconciliation window. The reservation stays in place and the case is surfaced for review rather than silently closed.
+
+## Gateway refund
+
+When a charge is confirmed and the delivery stays missing, the buyer can open a refund instead of holding an unrecoverable paid-but-empty purchase. The Gateway rail mirrors the Base rail's refund loop — approval, seller-initiated return, and onchain evidence — but keys off the batched charge instead of a payment intent.
+
+1. **Request and approve.** `gateway_refund_requests` holds the approval state. The agent calls `requestGatewayRefund`, which only succeeds when `gateway_payment_journal` already records the charge and neither the buyer nor the seller holds a delivery. A finance operator then approves or denies it (`decideGatewayRefund`), with both steps written to the audit history.
+2. **Return the funds.** Circle Gateway has no first-party refund endpoint, so a refund is the inverse of the batched charge: the seller moves the same USDC amount back to the payer's address. `npm run gateway:refund -- <requestId> <reason>` signs and broadcasts a plain USDC transfer and records the submitted hash in `gateway_refund_authorizations` so an interrupted run can resume without double-paying.
+3. **Prove it.** `recordGatewayRefund` verifies the same evidence rules as the Base rail's `recordRefund`: a later, finalized USDC `Transfer` from the seller recipient to the payer for exactly the charged amount, posted after the original batch, with stable block hashes. The proof lands in `gateway_payment_refunds` and reverses the journal in `gateway_refund_journal_lines`.
+
+The refund request requires the charge to exist and the delivery to be absent, and it refuses both a duplicate request and a refund of an already-delivered purchase, so the rail can never both deliver and refund the same charge.
 
 ## Idempotency and concurrency
 

@@ -38,12 +38,16 @@ export function registerFinanceConsole(
       issuedAt: Date; buyerHasDelivery: boolean; sellerHasDelivery: boolean;
       taskId: string | null; budgetStatus: string | null; journal: unknown;
       reviewRequired: boolean;
+      refundStatus: string | null; refundReason: string | null; refundDecidedAt: Date | null;
+      refundHash: string | null;
     }>(`
       SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
              p.task_id AS "taskId", p.budget_status AS "budgetStatus",
              (p.budget_status = 'reserved' AND p.reconcile_review_at IS NOT NULL) IS TRUE AS "reviewRequired",
              p.authorized_at AS "issuedAt", (p.delivery IS NOT NULL) AS "buyerHasDelivery",
              (d.delivery IS NOT NULL) AS "sellerHasDelivery",
+             q.status AS "refundStatus", q.reason AS "refundReason", q.decided_at AS "refundDecidedAt",
+             r.transaction_hash AS "refundHash",
              CASE WHEN j.request_id IS NOT NULL THEN jsonb_build_object(
                'transferId', j.transfer_id, 'batchHash', j.batch_hash, 'postedAt', j.posted_at,
                'lines', (SELECT jsonb_agg(jsonb_build_object('account', l.account, 'side', l.side,
@@ -53,6 +57,8 @@ export function registerFinanceConsole(
       FROM gateway_demo_purchases p
       LEFT JOIN gateway_demo_deliveries d ON d.request_id = p.request_id AND d.nonce = p.nonce
       LEFT JOIN gateway_payment_journal j ON j.request_id = p.request_id
+      LEFT JOIN gateway_refund_requests q ON q.request_id = p.request_id
+      LEFT JOIN gateway_payment_refunds r ON r.request_id = p.request_id
       WHERE p.request_id = $1
     `, [id]);
     if (!purchase) throw new PaymentError(404, 'GATEWAY_PURCHASE_NOT_FOUND');

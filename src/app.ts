@@ -6,6 +6,7 @@ import { registerFinanceConsole } from './finance-console.js';
 import { deliverPayment } from './delivery.js';
 import type { MerchantConfig } from './merchant.js';
 import { decideRefund, requestRefund } from './refund-requests.js';
+import { decideGatewayRefund, requestGatewayRefund } from './gateway-refund-requests.js';
 import { getPaymentLedger } from './ledger.js';
 import { createIntent, getIntent, PaymentError, tokenDigest } from './payments.js';
 import type { Purchase } from './payments.js';
@@ -147,6 +148,25 @@ export function buildApp(
       },
       preHandler: async (request) => authenticateFinance(request),
     }, async (request) => decideRefund(pool, request.params.id, request.body.decision),
+  );
+
+  app.post<{ Params: { id: string }; Body: { reason: string } }>('/gateway-purchases/:id/refund-request', {
+    schema: {
+      params: { type: 'object', required: ['id'], properties: { id: uuid } },
+      body: { type: 'object', required: ['reason'], additionalProperties: false,
+        properties: { reason: { type: 'string', minLength: 1, maxLength: 500 } } },
+    },
+  }, async (request) => requestGatewayRefund(pool, request.params.id, await authenticate(request), request.body.reason));
+
+  app.post<{ Params: { id: string }; Body: { decision: 'APPROVED' | 'DENIED' } }>(
+    '/finance/gateway-purchases/:id/refund-decision', {
+      schema: {
+        params: { type: 'object', required: ['id'], properties: { id: uuid } },
+        body: { type: 'object', required: ['decision'], additionalProperties: false,
+          properties: { decision: { enum: ['APPROVED', 'DENIED'] } } },
+      },
+      preHandler: async (request) => authenticateFinance(request),
+    }, async (request) => decideGatewayRefund(pool, request.params.id, request.body.decision),
   );
 
   return app;
