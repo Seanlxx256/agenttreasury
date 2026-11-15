@@ -8,15 +8,16 @@ import EmbeddedPostgres from 'embedded-postgres';
 import pg from 'pg';
 import { isAddress } from 'viem';
 import { buildGatewayMerchant } from '../dist/src/gateway-merchant.js';
+import { checkGatewayPayment } from '../dist/src/gateway-payment-evidence.js';
 import { gatewayDemoConfig, requestIdPattern } from '../dist/src/gateway-x402.js';
 import { migrate } from '../dist/src/migrate.js';
 import { seedGateway } from '../dist/src/seed.js';
 
 const [mode, suppliedId, ...extra] = process.argv.slice(2);
-if (!['prepare', 'buy', 'verify'].includes(mode) || extra.length ||
+if (!['prepare', 'buy', 'verify', 'reconcile'].includes(mode) || extra.length ||
     (suppliedId !== undefined && !requestIdPattern.test(suppliedId)) ||
-    (mode === 'verify' && !suppliedId) || (mode === 'prepare' && suppliedId)) {
-  throw new Error('Usage: npm run gateway:local -- prepare | buy [request-id] | verify <request-id>');
+    ((mode === 'verify' || mode === 'reconcile') && !suppliedId) || (mode === 'prepare' && suppliedId)) {
+  throw new Error('Usage: npm run gateway:local -- prepare | buy [request-id] | reconcile <request-id> | verify <request-id>');
 }
 
 const payer = process.env.GATEWAY_PAYER_ADDRESS;
@@ -62,6 +63,20 @@ try {
 
   if (mode === 'prepare') {
     console.log(`Local Gateway PostgreSQL initialized and migrated on port ${dbPort}.`);
+  } else if (mode === 'reconcile') {
+    const { rows: [purchase] } = await pool.query(
+      `SELECT nonce, payer, recipient, amount_units::text AS "amountUnits"
+       FROM gateway_demo_purchases WHERE request_id = $1 AND submitted_at IS NOT NULL`,
+      [suppliedId],
+    );
+    if (!purchase) throw new Error('No submitted Gateway purchase exists for that request ID');
+    const payment = await checkGatewayPayment(pool, suppliedId, purchase, 'operations');
+    console.log(JSON.stringify({ requestId: suppliedId, payment }, null, 2));
+    if (payment.status === 'charged') {
+      process.exitCode = await run('verify-gateway-purchase.js', suppliedId);
+    } else {
+      process.exitCode = { unavailable: 1, unknown: 2, pending: 2, conflict: 3, failed: 3 }[payment.status];
+    }
   } else if (mode === 'verify') {
     process.exitCode = await run('verify-gateway-purchase.js', suppliedId);
   } else {

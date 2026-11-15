@@ -47,7 +47,9 @@ npm run gateway:local -- buy
 
 This starts a separate database and a loopback merchant, applies migrations, creates a scoped task, and submits one 0.001 test USDC purchase. Keep the printed request ID. If the purchase or accounting is pending, rerun `npm run gateway:local -- buy <request-id>` with that ID to reconcile the charge and recover delivery. A `buy` command without an ID starts a new purchase.
 
-Use `npm run gateway:local -- verify <request-id>` to inspect the evidence without submitting or reconciling a payment. The local database, task credentials, and purchase history persist in the ignored `.gateway-local/` directory. `npm run gateway:local -- prepare` runs database setup without a wallet. The default PostgreSQL and merchant ports are 55433 and 3002. Set `GATEWAY_DB_PORT` or `GATEWAY_MERCHANT_PORT` if those ports are occupied, and keep the same merchant port when resuming a purchase.
+Once the trace has been delivered, use `npm run gateway:local -- reconcile <request-id>` to look up the stored authorization, update the budget and journal when Gateway reports a terminal result, and verify the batch receipt on Arc. This command only accepts an existing submitted purchase and needs no wallet settings or merchant process. Use `npm run gateway:local -- verify <request-id>` to inspect the evidence without updating the payment records.
+
+The local database, task credentials, and purchase history persist in the ignored `.gateway-local/` directory. `npm run gateway:local -- prepare` runs database setup without a wallet. The default PostgreSQL and merchant ports are 55433 and 3002. Set `GATEWAY_DB_PORT` or `GATEWAY_MERCHANT_PORT` if those ports are occupied, and keep the same merchant port when resuming a purchase.
 
 ### Run with a separate development database
 
@@ -89,7 +91,9 @@ Use the same `DATABASE_URL` as the buyer. The verifier uses the public Arc testn
 
 ### Arc testnet acceptance run
 
-On 2026-11-15, the local buyer purchased the trace fixture for 0.001 test USDC. Circle Gateway returned [transfer `136232e5-b8bc-4bcd-8037-6cd4a246f3c3`](https://gateway-api-testnet.circle.com/v1/x402/transfers/136232e5-b8bc-4bcd-8037-6cd4a246f3c3) for request `794d6990-afe6-42b1-9f2f-df9c32535693`. The buyer and seller stored matching deliveries. Reopening the same request returned the stored trace and queried the original nonce. As of 08:29 UTC, Gateway still reported `received` with no batch hash. The verifier reported `PENDING` and the budget remained reserved.
+On 2026-11-15, the local buyer purchased the trace fixture for 0.001 test USDC. Circle Gateway returned [transfer `136232e5-b8bc-4bcd-8037-6cd4a246f3c3`](https://gateway-api-testnet.circle.com/v1/x402/transfers/136232e5-b8bc-4bcd-8037-6cd4a246f3c3) for request `794d6990-afe6-42b1-9f2f-df9c32535693`. The buyer and seller stored matching deliveries. Reopening the same request returned the stored trace and queried the original nonce. The budget stayed reserved while Gateway reported `received`.
+
+Gateway marked the transfer `completed` 14 minutes and 25 seconds after accepting it, based on the timestamps in the transfer record. The local reconciliation marked the budget `spent` and posted a 0.001 test USDC debit to `DATA_PROCUREMENT_EXPENSE` and an equal credit to `USDC_GATEWAY_ASSET`. Verification returned `PASSED` with a successful [Arc testnet batch receipt](https://explorer.testnet.arc.io/tx/0x1823231fd53d743db147b8c445b90940e1671f526302921b1423794faf13a6c4) at block 72411592.
 
 ### Inspect Circle Gateway payment evidence
 
