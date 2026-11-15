@@ -14,14 +14,15 @@ import { migrate } from '../dist/src/migrate.js';
 import { seedGateway } from '../dist/src/seed.js';
 
 const [mode, suppliedId, ...extra] = process.argv.slice(2);
-if (!['prepare', 'buy', 'verify', 'reconcile'].includes(mode) || extra.length ||
+const dropResponse = mode === 'buy-drop-response';
+if (!['prepare', 'buy', 'buy-drop-response', 'verify', 'reconcile'].includes(mode) || extra.length ||
     (suppliedId !== undefined && !requestIdPattern.test(suppliedId)) ||
-    ((mode === 'verify' || mode === 'reconcile') && !suppliedId) || (mode === 'prepare' && suppliedId)) {
-  throw new Error('Usage: npm run gateway:local -- prepare | buy [request-id] | reconcile <request-id> | verify <request-id>');
+    ((mode === 'verify' || mode === 'reconcile' || dropResponse) && !suppliedId) || (mode === 'prepare' && suppliedId)) {
+  throw new Error('Usage: npm run gateway:local -- prepare | buy [request-id] | buy-drop-response <request-id> | reconcile <request-id> | verify <request-id>');
 }
 
 const payer = process.env.GATEWAY_PAYER_ADDRESS;
-const merchant = mode === 'buy' ? gatewayDemoConfig() : undefined;
+const merchant = mode === 'buy' || dropResponse ? gatewayDemoConfig() : undefined;
 if (merchant && (!payer || !isAddress(payer) || payer.toLowerCase() === merchant.recipient.toLowerCase())) {
   throw new Error('Set GATEWAY_PAYER_ADDRESS and GATEWAY_MERCHANT_RECIPIENT to distinct Arc testnet addresses');
 }
@@ -84,6 +85,17 @@ try {
     console.log(`Purchase request ID: ${requestId}`);
     console.log(`Verify this purchase: npm run gateway:local -- verify ${requestId}`);
     app = buildGatewayMerchant(pool, merchant.origin, merchant.recipient);
+    if (dropResponse) {
+      app.addHook('onSend', async (request, reply, payload) => {
+        if (request.method === 'POST' && request.url === `/trace/${requestId}` && reply.statusCode === 200) {
+          // The merchant has already saved the delivery after Gateway accepted the payment.
+          reply.hijack();
+          reply.raw.destroy();
+          console.log(`Dropped the paid response for ${requestId} after saving the seller delivery.`);
+        }
+        return payload;
+      });
+    }
     await app.listen({ host: '127.0.0.1', port: merchant.port });
     const taskFile = join(root, `${requestId}.json`);
     if (!existsSync(taskFile)) {

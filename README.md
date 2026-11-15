@@ -95,6 +95,20 @@ On 2026-11-15, the local buyer purchased the trace fixture for 0.001 test USDC. 
 
 Gateway marked the transfer `completed` 14 minutes and 25 seconds after accepting it, based on the timestamps in the transfer record. The local reconciliation marked the budget `spent` and posted a 0.001 test USDC debit to `DATA_PROCUREMENT_EXPENSE` and an equal credit to `USDC_GATEWAY_ASSET`. Verification returned `PASSED` with a successful [Arc testnet batch receipt](https://explorer.testnet.arc.io/tx/0x1823231fd53d743db147b8c445b90940e1671f526302921b1423794faf13a6c4) at block 72411592.
 
+### Exercise recovery after a lost paid response
+
+With the local payer and recipient configured, use a fresh UUID to submit one test purchase with response loss enabled. Keep that UUID for all subsequent commands.
+
+```sh
+REQUEST_ID=$(node -p 'crypto.randomUUID()')
+npm run gateway:local -- buy-drop-response "$REQUEST_ID"
+npm run gateway:local -- buy "$REQUEST_ID"
+```
+
+The first command closes the buyer connection after the local seller has saved the trace for a payment accepted by Gateway. Expect `submission-unknown` and exit code 2 from the buyer. The second command checks the original nonce and can return `payment-pending` until Gateway confirms the batch. Repeat it with the same ID after confirmation to retrieve the stored trace and verify the batch receipt and ledger. Use `npm run gateway:local -- reconcile "$REQUEST_ID"` after recovery to check that a repeat reconciliation keeps exactly one debit and one credit.
+
+On 2026-11-15, request `0c7b7fbc-e93b-4fa4-a297-373ea8852b90` reproduced this failure with a real Arc testnet payment. The buyer initially had no delivery, the seller had saved the trace fixture, and the budget remained reserved. After Gateway completed the batch, retrying the same request recovered the original trace. The buyer and seller records matched, the budget moved to `spent`, and verification returned `PASSED` with a successful [Arc batch receipt](https://explorer.testnet.arc.io/tx/0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe) at block 72412969. A repeat reconciliation kept one debit and one credit of 0.001 test USDC each. A final Gateway search by payer, recipient, network, and time range returned exactly one [completed transfer](https://gateway-api-testnet.circle.com/v1/x402/transfers/8e23024a-b7e3-4d63-8123-325281051ef5).
+
 ### Inspect Circle Gateway payment evidence
 
 Build the project, then pass the authorization nonce, payer, recipient, and expected amount in integer USDC base units:
