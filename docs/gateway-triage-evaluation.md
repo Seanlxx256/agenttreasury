@@ -136,3 +136,21 @@ npm run --silent study:gateway -- --simulate --model qwen2.5:0.5b > operator-sim
 ```
 
 The script submits the displayed rule action and its required citations. Assisted cases call the configured model. The JSON includes both cohorts and labels every report as `simulation`. Reported durations measure script and model execution. For a single cohort, add `--cohort A` or `--cohort B`. The command still emits the report if every model response is unavailable or rejected, and returns exit code 2 in that case.
+
+### Critical evidence for follow-up
+
+The `gateway-critical-evidence-v1` dataset uses six synthetic cases. Three have a labeled fact that can change the follow-up after the recommended action. Three controls have no labeled critical addition. Each method receives the same saved facts. The assisted result combines required rule citations with model additions accepted by the validator. Evidence labels are used for scoring only.
+
+| Case | Critical fact | Follow-up it informs |
+| --- | --- | --- |
+| Paid response lost and the charge is unknown | The seller saved the trace | Retrieve the saved trace if the original authorization confirms a charge |
+| Gateway confirms the charge and the buyer needs to recover the trace | The local journal is missing | Check accounting as well as recovering the trace |
+| Gateway conflicts with a previously recorded charge | The local journal was already posted | Include the posted entry in the conflict review |
+
+On 2026-11-15, Qwen2.5 0.5B accepted all six cases and returned only the required rule citations. Both configurations found 0/3 critical facts and displayed zero unrelated references. All six primary actions matched the labels under the rule policy. The model call added a mean of 364 ms locally. The rules remain the default. This replay measures evidence selection across six fixtures and contains no operator timing data.
+
+```sh
+npm run build
+npm run --silent eval:gateway -- --dataset gateway-critical-evidence-v1 --support-rules --rules-only
+npm run --silent eval:gateway -- --dataset gateway-critical-evidence-v1 --support-rules --model qwen2.5:0.5b
+```

@@ -35,6 +35,9 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
 
   const latest = observations[0];
   const decision = observations.find(({ evidence }) => decisive.has(evidence.status));
+  if (!purchase.journal && decision?.evidence.status === 'charged') {
+    facts.push({ id: 'journal-missing', description: 'Gateway reports a charge and no local payment journal was found.' });
+  }
   const ended = decision?.evidence.status === 'failed' ? decision
     : latest?.evidence.status === 'submission-expired' ? latest : undefined;
   const paymentRef = purchase.journal && decision?.evidence.status !== 'charged' ? 'journal'

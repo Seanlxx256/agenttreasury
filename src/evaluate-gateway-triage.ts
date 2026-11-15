@@ -11,7 +11,7 @@ function needsHumanReview(action: TriageAction | null) {
 
 function score(recommendation: TriageRecommendation | undefined, sample: GatewayTriageCase, elapsedMs: number) {
   const citations = recommendation?.citations ?? [];
-  const relevant = new Set([...sample.requiredCitations, ...(sample.optionalCitations ?? [])]);
+  const relevant = new Set([...sample.requiredCitations, ...(sample.optionalCitations ?? []), ...(sample.criticalEvidence ?? [])]);
   const supported = citations.filter((id) => relevant.has(id)).length;
   return {
     action: recommendation?.action ?? null,
@@ -23,6 +23,23 @@ function score(recommendation: TriageRecommendation | undefined, sample: Gateway
     supportedCitations: supported,
     elapsedMs,
   };
+}
+
+function scoreCriticalEvidence(citations: string[], sample: GatewayTriageCase) {
+  const critical = sample.criticalEvidence ?? [];
+  const relevant = new Set([...sample.requiredCitations, ...(sample.optionalCitations ?? []), ...critical]);
+  return {
+    expected: critical.length,
+    hits: critical.filter((id) => citations.includes(id)).length,
+    unrelated: citations.filter((id) => !relevant.has(id)).length,
+  };
+}
+
+function summarizeCriticalEvidence(rows: ReturnType<typeof scoreCriticalEvidence>[]) {
+  const expected = rows.reduce((total, row) => total + row.expected, 0);
+  const hits = rows.reduce((total, row) => total + row.hits, 0);
+  return { expected, hits, recall: expected ? hits / expected : null,
+    unrelated: rows.reduce((total, row) => total + row.unrelated, 0) };
 }
 
 function summarize(results: ReturnType<typeof score>[]) {
@@ -63,7 +80,7 @@ export async function evaluateGatewayTriage(
     const { agent } = await reviewGatewayTriage(input, model, request, mode);
     const modelElapsed = performance.now() - modelStarted;
     const extra = agent.status === 'ready' ? agent.recommendation.citations.filter((id) => !rules.citations.includes(id)) : [];
-    const relevant = [...sample.requiredCitations, ...(sample.optionalCitations ?? [])];
+    const relevant = [...sample.requiredCitations, ...(sample.optionalCitations ?? []), ...(sample.criticalEvidence ?? [])];
     cases.push({
       name: sample.name,
       expectedAction: sample.expectedAction,
@@ -72,6 +89,11 @@ export async function evaluateGatewayTriage(
       expectedActionAllowed: input.allowed.some(({ action }) => action === sample.expectedAction),
       rules,
       ...(mode === 'support-rules' ? { extraEvidence: extra.map((id) => ({ id, relevant: relevant.includes(id) })) } : {}),
+      ...(mode === 'support-rules' && sample.criticalEvidence ? { criticalEvidence: {
+        targets: sample.criticalEvidence,
+        rules: scoreCriticalEvidence(rules.citations, sample),
+        assisted: model ? scoreCriticalEvidence([...rules.citations, ...extra], sample) : null,
+      } } : {}),
       agent: model ? {
         status: agent.status,
         ...score(agent.status === 'ready' ? agent.recommendation : undefined, sample, modelElapsed),
@@ -81,6 +103,7 @@ export async function evaluateGatewayTriage(
 
   const agentResults = cases.flatMap(({ agent }) => agent ? [agent] : []);
   const extraEvidence = cases.flatMap(({ extraEvidence }) => extraEvidence ?? []);
+  const criticalCases = cases.flatMap(({ criticalEvidence }) => criticalEvidence ? [criticalEvidence] : []);
   const withChoice = cases.filter(({ allowedActions }) => allowedActions.length > 1);
   const withoutChoice = cases.filter(({ allowedActions }) => allowedActions.length === 1);
   const summarizeGroup = (group: typeof withChoice) => ({
@@ -96,6 +119,10 @@ export async function evaluateGatewayTriage(
     dataset,
     model: model ?? null,
     mode,
+    ...(criticalCases.length ? { criticalEvidence: {
+      rules: summarizeCriticalEvidence(criticalCases.map(({ rules }) => rules)),
+      assisted: model ? summarizeCriticalEvidence(criticalCases.flatMap(({ assisted }) => assisted ? [assisted] : [])) : null,
+    } } : {}),
     ...(mode === 'support-rules' ? { supplementalEvidence: {
       selected: extraEvidence.length,
       relevant: extraEvidence.filter(({ relevant }) => relevant).length,

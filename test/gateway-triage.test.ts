@@ -146,3 +146,22 @@ test('evidence selection cannot replace the rule action or add unknown reference
   assert.deepEqual((await review('retrieve-delivery', citations)).agent, { status: 'ready', model: 'test-model',
     recommendation: { ...input.rules, citations } });
 });
+
+test('critical evidence replay scores added facts without leaking labels to the model', async () => {
+  let calls = 0;
+  const model: typeof fetch = async (_url, init) => {
+    calls++;
+    const { messages } = JSON.parse(String(init?.body));
+    assert.doesNotMatch(messages[1].content, /criticalEvidence/);
+    const { allowed } = JSON.parse(messages[1].content);
+    const { action, requiredCitations } = allowed[0];
+    const extra = calls === 1 ? ['seller-delivery'] : calls === 2 ? ['polling'] : [];
+    return Response.json({ message: { content: JSON.stringify({ action, citations: [...requiredCitations, ...extra] }) } });
+  };
+  const result = await evaluateGatewayTriage('test-model', model, 'gateway-critical-evidence-v1', 'support-rules');
+  assert.equal(result.rules.correctActions, 6);
+  assert.deepEqual(result.criticalEvidence, {
+    rules: { expected: 3, hits: 0, recall: 0, unrelated: 0 },
+    assisted: { expected: 3, hits: 1, recall: 1 / 3, unrelated: 1 },
+  });
+});

@@ -9,6 +9,7 @@ export type GatewayTriageCase = {
   expectedAction: TriageAction;
   requiredCitations: string[];
   optionalCitations?: string[];
+  criticalEvidence?: string[];
 };
 
 const unresolved: Purchase = {
@@ -164,8 +165,44 @@ const gatewayIncidentCases: GatewayTriageCase[] = [
   },
 ];
 
+const gatewayCriticalEvidenceCases: GatewayTriageCase[] = [
+  {
+    name: 'Response lost and seller trace saved before charge is known',
+    purchase: { ...unresolved, sellerHasDelivery: true },
+    observations: [{ id: '1', evidence: { status: 'unknown' } }],
+    expectedAction: 'check-gateway', requiredCitations: ['observation-1'],
+    optionalCitations: ['budget'], criticalEvidence: ['seller-delivery'],
+  }, {
+    name: 'Response lost with no trace saved and no Gateway match',
+    purchase: unresolved, observations: [{ id: '1', evidence: { status: 'unknown' } }],
+    expectedAction: 'check-gateway', requiredCitations: ['observation-1'], criticalEvidence: [],
+  }, {
+    name: 'Confirmed payment needs trace recovery and the local journal is missing',
+    purchase: { ...unresolved, sellerHasDelivery: true }, observations: [{ id: '1', evidence: { status: 'charged' } }],
+    expectedAction: 'retrieve-delivery', requiredCitations: ['observation-1', 'buyer-delivery', 'seller-delivery'],
+    optionalCitations: ['budget'], criticalEvidence: ['journal-missing'],
+  }, {
+    name: 'Confirmed payment already has both the buyer trace and a local journal',
+    purchase: { ...settled, buyerHasDelivery: true, sellerHasDelivery: true },
+    observations: [{ id: '1', evidence: { status: 'charged' } }],
+    expectedAction: 'close-case', requiredCitations: ['observation-1', 'buyer-delivery', 'journal'], criticalEvidence: [],
+  }, {
+    name: 'Conflicting Gateway evidence arrives after a local journal was posted',
+    purchase: { ...settled, buyerHasDelivery: true, sellerHasDelivery: true },
+    observations: [{ id: '2', evidence: { status: 'conflict', reason: 'accounting-mismatch' } },
+      { id: '1', evidence: { status: 'charged' } }],
+    expectedAction: 'review-conflict', requiredCitations: ['observation-2'],
+    optionalCitations: ['observation-1'], criticalEvidence: ['journal'],
+  }, {
+    name: 'Gateway transfer mismatch found before any charge or journal was recorded',
+    purchase: unresolved, observations: [{ id: '1', evidence: { status: 'conflict', reason: 'transfer-mismatch' } }],
+    expectedAction: 'review-conflict', requiredCitations: ['observation-1'], criticalEvidence: [],
+  },
+];
+
 export const gatewayTriageDatasets = {
   'gateway-triage-v1': gatewayTriageCases,
   'arc-recovery-v1': arcRecoveryCases,
   'gateway-incidents-v1': gatewayIncidentCases,
+  'gateway-critical-evidence-v1': gatewayCriticalEvidenceCases,
 };
