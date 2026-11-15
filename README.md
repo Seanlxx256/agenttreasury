@@ -1,6 +1,6 @@
 # AgentTreasury
 
-AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The TypeScript, Fastify, and PostgreSQL backend includes an Arc testnet purchase flow using Circle Gateway Nanopayments and a Base Sepolia payment flow using direct USDC settlement.
+AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The TypeScript, Fastify, and PostgreSQL backend is built around an Arc testnet purchase flow using Circle Gateway Nanopayments, with budget reservations, idempotent recovery, a balanced payment ledger, and an evidence-backed operations agent. An earlier Base Sepolia direct-settlement flow is retained as legacy reference material.
 
 ## Buyer-side payment recovery
 
@@ -168,6 +168,10 @@ The report pins both boundary block hashes and reads the Gateway contract's tota
 The live window above matched two batches of 0.001 test USDC each. The Gateway total moved from 0.500 to 0.498 test USDC with zero difference in both calculations.
 
 See [Circle Agent Stack](https://www.circle.com/agent-stack), [Agent Nanopayments](https://developers.circle.com/agent-stack/agent-nanopayments), [Circle Agent Stack overview](https://help.circle.com/support/en/circle-agent-stack-overview?id=kb_article_view&sysparm_article=KB0011122), and [Gateway seller reconciliation](https://developers.circle.com/gateway-nanopayments/howtos/x402-seller-reconciliation).
+
+---
+
+> **Legacy — Base Sepolia direct settlement.** The remainder of this document describes an earlier payment flow built directly on EIP-3009 with a self-operated relayer and merchant. It is retained for reference and is no longer the project's focus; the Gateway Nanopayments flow above is the active implementation. This includes the Base-specific refund and reconciliation commands. The finance console's Gateway review queue and triage remain current.
 
 ## Local setup for the existing payment backend
 
