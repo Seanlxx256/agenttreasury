@@ -67,6 +67,16 @@ The command reports pending, failed, or conflicting payments separately. A confi
 
 Run `npm run worker:gateway` in a third terminal with the same `DATABASE_URL` to reconcile reserved payments in the background. The worker leases one purchase at a time for 30 seconds and retries unresolved lookups with backoff. It pauses on conflicting evidence or after 12 unresolved checks, keeps the budget reserved, and flags the purchase for review in the finance console. **Check Gateway** remains available for manual follow-up. A reservation older than two minutes can be released if it still has no submission marker. A process that resumes signing after release cannot submit that authorization.
 
+### Verify an Arc testnet purchase
+
+Use the original request ID after submitting a purchase. The verifier reads the buyer and seller delivery records and local accounting, looks up the nonce in Circle Gateway, and checks the batch receipt on Arc. A passing report requires matching delivery records, spent budget, balanced journal lines, and a successful batch receipt. Gateway supplies the link between the individual nonce and the batch hash.
+
+```sh
+npm run --silent verify:gateway -- "$REQUEST_ID"
+```
+
+Use the same `DATABASE_URL` as the buyer. The verifier uses the public Arc testnet RPC by default. Override it with `ARC_TESTNET_RPC_URL` if needed. It exits with 2 when evidence is pending and 3 when records disagree or the purchase failed. Connection and configuration errors exit with 1. Run it again with the same ID as evidence arrives.
+
 ### Inspect Circle Gateway payment evidence
 
 Build the project, then pass the authorization nonce, payer, recipient, and expected amount in integer USDC base units:

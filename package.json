@@ -25,6 +25,7 @@
     "research": "node dist/src/research.js",
     "preflight": "node dist/src/preflight.js",
     "verify:purchase": "node dist/src/verify-purchase.js",
+    "verify:gateway": "node dist/src/verify-gateway-purchase.js",
     "wallets:init": "node scripts/init-wallets.mjs",
     "refund:send": "node dist/src/refund-send.js",
     "finance:local": "npm run build && node --env-file-if-exists=.env scripts/finance-local.mjs",

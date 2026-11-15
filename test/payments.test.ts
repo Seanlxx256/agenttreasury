@@ -12,6 +12,7 @@ import { recoverTypedDataAddress } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { buildGatewayMerchant } from '../src/gateway-merchant.js';
 import { purchaseGatewayTrace } from '../src/gateway-purchase.js';
+import { collectGatewayPurchaseEvidence } from '../src/gateway-purchase-evidence.js';
 import { processGatewayReconciliation } from '../src/gateway-reconciliation-worker.js';
 import { reserveAmount } from '../src/budget.js';
 import { transaction } from '../src/db.js';
@@ -325,6 +326,19 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       assert.deepEqual((await purchaseGatewayTrace(pool, interrupted, sign, send)).delivery, recovered.delivery);
       assert.equal((await finance.inject({ url: financeUrl, headers })).json().buyerHasDelivery, true);
       assert.ok((await reviewQueue()).every(({ id }) => id !== interrupted.requestId));
+      const batchHash = `0x${'b'.repeat(64)}`;
+      const verified = await collectGatewayPurchaseEvidence(pool, interrupted.requestId, async (hash) => {
+        assert.equal(hash, batchHash);
+        return { status: 'success', blockNumber: 42n };
+      }, gateway);
+      assert.equal(verified.status, 'PASSED');
+      assert.deepEqual(verified.delivery, { buyerSaved: true, sellerSaved: true });
+      assert.equal(verified.batch?.blockNumber, '42');
+      assert.doesNotMatch(JSON.stringify(verified), /retrieval_token|execution reverted/);
+      assert.equal((await collectGatewayPurchaseEvidence(pool, interrupted.requestId, async () => null, gateway)).status,
+        'PENDING');
+      assert.equal((await collectGatewayPurchaseEvidence(pool, interrupted.requestId, async () =>
+        ({ status: 'reverted', blockNumber: 42n }), gateway)).status, 'FAILED');
       assert.equal(submissions, 2);
       assert.equal(signatures, 2);
 
