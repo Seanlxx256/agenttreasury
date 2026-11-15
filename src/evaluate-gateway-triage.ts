@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
-import { gatewayTriageCases, type GatewayTriageCase } from './gateway-triage-cases.js';
+import { parseArgs } from 'node:util';
+import { gatewayTriageDatasets, type GatewayTriageCase } from './gateway-triage-cases.js';
 import {
   prepareGatewayTriage, reviewGatewayTriage, type TriageRecommendation,
 } from './gateway-triage.js';
@@ -37,9 +38,13 @@ function summarize(results: ReturnType<typeof score>[]) {
   };
 }
 
-export async function evaluateGatewayTriage(model?: string, request: typeof fetch = fetch) {
+type Dataset = keyof typeof gatewayTriageDatasets;
+
+export async function evaluateGatewayTriage(
+  model?: string, request: typeof fetch = fetch, dataset: Dataset = 'gateway-triage-v1',
+) {
   const cases = [];
-  for (const sample of gatewayTriageCases) {
+  for (const sample of gatewayTriageDatasets[dataset]) {
     const started = performance.now();
     const input = prepareGatewayTriage(sample.purchase, sample.observations);
     const rules = score(input.rules, sample, performance.now() - started);
@@ -61,7 +66,7 @@ export async function evaluateGatewayTriage(model?: string, request: typeof fetc
 
   const agentResults = cases.flatMap(({ agent }) => agent ? [agent] : []);
   return {
-    dataset: 'gateway-triage-v1',
+    dataset,
     model: model ?? null,
     rules: summarize(cases.map(({ rules }) => rules)),
     agent: model ? {
@@ -74,13 +79,17 @@ export async function evaluateGatewayTriage(model?: string, request: typeof fetc
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const args = process.argv.slice(2);
-  if (args.length && !(args.length === 1 && args[0] === '--rules-only') &&
-      !(args.length === 2 && args[0] === '--model' && args[1] && !args[1].startsWith('--'))) {
-    throw new Error('Usage: npm run eval:gateway -- [--rules-only | --model MODEL]');
+  const { values } = parseArgs({ options: {
+    'rules-only': { type: 'boolean' }, model: { type: 'string' },
+    dataset: { type: 'string', default: 'gateway-triage-v1' },
+  } });
+  const { dataset } = values;
+  if (!Object.hasOwn(gatewayTriageDatasets, dataset) || values.model === '' ||
+      (values['rules-only'] && values.model !== undefined)) {
+    throw new Error('Usage: npm run eval:gateway -- [--dataset gateway-triage-v1|arc-recovery-v1] [--rules-only | --model MODEL]');
   }
-  const model = args[0] === '--rules-only' ? undefined : (args[1] ?? process.env.GATEWAY_TRIAGE_MODEL) || undefined;
-  const result = await evaluateGatewayTriage(model);
+  const model = values['rules-only'] ? undefined : (values.model ?? process.env.GATEWAY_TRIAGE_MODEL) || undefined;
+  const result = await evaluateGatewayTriage(model, fetch, dataset as Dataset);
   console.log(JSON.stringify(result, null, 2));
   if (result.agent?.recommendations === 0) process.exitCode = 2;
 }

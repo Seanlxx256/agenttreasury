@@ -29,3 +29,24 @@ With the model loaded in a locally running Ollama:
 npm run build
 npm run --silent eval:gateway -- --model qwen2.5:0.5b
 ```
+
+## Arc testnet recovery replay
+
+Dataset `arc-recovery-v1` replays three stages of the [lost paid response drill](../README.md#exercise-recovery-after-a-lost-paid-response). The first stage uses the observed state after the connection closed and before the buyer's first Gateway lookup. The middle stage reconstructs the point between posting the charge and retrieving the seller trace, in the order the successful recovery executed. The final stage uses the observed state after recovery and verification. The replay reduces purchase records to the facts the finance console sends to triage and assigns local IDs to the selected observations.
+
+| Stage | Expected action | Rules | Qwen2.5 0.5B |
+| --- | --- | --- | --- |
+| Paid response lost and payment status unknown | Check the original authorization | Check Gateway | Response rejected |
+| Charge confirmed and buyer trace missing | Retrieve the seller trace | Retrieve delivery | Escalate |
+| Trace recovered and journal posted | Close the case with delivery and journal evidence | Close case, omits journal citation | Close case, omits journal citation |
+
+On 2026-11-15, the rules scored **3/3** for action and **2/3** for a complete citation set. The same local Ollama and Qwen configuration scored **1/3** for action and **1/3** for a complete citation set. It returned one escalation, one closure recommendation, and one rejected response. Mean model generation time was 1.22 s including the first request.
+
+In the retrieval case, the model cited all the labeled evidence but claimed in its explanation that the polling flag established the charge. In the closure case it mentioned the posted journal without citing it, and inferred that the case was already closed. The citation score checks relevant fact IDs and coverage of the required set. These three stages describe one purchase and do not establish accuracy across independent incidents or any reduction in operator time.
+
+```sh
+npm run build
+npm run --silent eval:gateway -- --dataset arc-recovery-v1 --model qwen2.5:0.5b
+```
+
+Use `--rules-only` in place of `--model qwen2.5:0.5b` to run without Ollama. The default dataset remains `gateway-triage-v1`.
