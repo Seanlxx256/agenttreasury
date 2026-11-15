@@ -4,9 +4,8 @@ import { promisify } from 'node:util';
 import { Pool } from 'pg';
 import { getTypesForEIP712Domain, isAddress, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { arcTestnet } from 'viem/chains';
 import { purchaseGatewayTrace } from './gateway-purchase.js';
-import { arcTestnetClient, gatewayDemoConfig, requestIdPattern } from './gateway-x402.js';
+import { arcTestnetClient, gatewayChainConfig, gatewayCircleChain, gatewayDemoConfig, requestIdPattern } from './gateway-x402.js';
 
 const run = promisify(execFile);
 const { DATABASE_URL, GATEWAY_PAYER_ADDRESS, GATEWAY_TASK_ID, AGENT_TOKEN } = process.env;
@@ -32,12 +31,12 @@ try {
     task: GATEWAY_TASK_ID && AGENT_TOKEN ? { taskId: GATEWAY_TASK_ID, agentToken: AGENT_TOKEN } : undefined,
   }, async (typedData) => {
     const chain = arcTestnetClient();
-    if (await chain.getChainId() !== arcTestnet.id) throw new Error('RPC endpoint must serve Arc Testnet');
+    if (await chain.getChainId() !== gatewayChainConfig.id) throw new Error('RPC endpoint must serve the selected Arc network');
     const code = await chain.getCode({ address: payer });
-    if (code && code !== '0x') throw new Error('Gateway batch payments require an Arc testnet EOA as payer.');
+    if (code && code !== '0x') throw new Error('Gateway batch payments require an Arc EOA as payer.');
     if (process.env.GATEWAY_TESTNET_SIGNER_FILE) {
       const key = (await readFile(process.env.GATEWAY_TESTNET_SIGNER_FILE, 'utf8')).trim();
-      if (!/^0x[0-9a-f]{64}$/i.test(key)) throw new Error('Invalid Arc testnet signing key file');
+      if (!/^0x[0-9a-f]{64}$/i.test(key)) throw new Error('Invalid Arc signing key file');
       const account = privateKeyToAccount(key as Hex);
       if (account.address.toLowerCase() !== payer.toLowerCase()) throw new Error('Signing key does not match payer');
       const { message } = typedData;
@@ -54,10 +53,10 @@ try {
     try {
       ({ stdout } = await run('circle', [
         'wallet', 'sign', 'typed-data', data,
-        '--address', payer, '--chain', 'ARC-TESTNET', '--output', 'json',
+        '--address', payer, '--chain', gatewayCircleChain, '--output', 'json',
       ], { timeout: 30000 }));
     } catch {
-      throw new Error('Circle signing failed. Check that Circle CLI can sign from the configured Arc testnet EOA.');
+      throw new Error('Circle signing failed. Check that Circle CLI can sign from the configured Arc EOA.');
     }
     const output = JSON.parse(stdout);
     const signature = output?.data?.signature ?? output?.signature;

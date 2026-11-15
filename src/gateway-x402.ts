@@ -6,6 +6,15 @@ import { CHAIN_CONFIGS } from '@circle-fin/x402-batching/client';
 const gatewayChain = (process.env.GATEWAY_NETWORK === 'arc' ? 'arc' : 'arcTestnet') as 'arc' | 'arcTestnet';
 const gatewayConfig = CHAIN_CONFIGS[gatewayChain];
 
+// The selected viem chain and RPC, so downstream modules switch networks with
+// gateway-x402 instead of importing the testnet chain directly.
+export const gatewayChainConfig = gatewayConfig.chain;
+export const gatewayRpcUrl = gatewayConfig.rpcUrl;
+// Circle CLI names the same network differently from the SDK: ARC vs ARC-TESTNET.
+export const gatewayCircleChain = gatewayChain === 'arc' ? 'ARC' : 'ARC-TESTNET';
+// The Circle CLI session stores mainnet and testnet in separate slots.
+export const gatewaySessionKey = gatewayChain === 'arc' ? 'mainnet' : 'testnet';
+
 export const arcGatewayNetwork = `eip155:${gatewayConfig.chain.id}`;
 // Gateway REST API. Selected by network; override with GATEWAY_API if needed.
 const gatewayApiBase = process.env.GATEWAY_API

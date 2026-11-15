@@ -4,8 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createWalletClient, erc20Abi, http, parseAbi, parseUnits } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
-import { arcTestnet } from 'viem/chains';
-import { arcTestnetClient, arcTestnetUsdc, gatewayDomain } from '../dist/src/gateway-x402.js';
+import { arcTestnetClient, arcTestnetUsdc, gatewayChainConfig, gatewayCircleChain, gatewayDomain, gatewayRpcUrl, gatewaySessionKey } from '../dist/src/gateway-x402.js';
 
 const [mode, amount, ...rest] = process.argv.slice(2);
 const validInspection = (mode === 'init' || mode === 'status') && amount === undefined;
@@ -31,7 +30,7 @@ if (mode === 'status') {
 
   const account = privateKeyToAccount((await readFile(keyFile, 'utf8')).trim());
   if (mode === 'init') {
-    console.log(`Arc testnet payer: ${account.address}`);
+    console.log(`Arc payer: ${account.address}`);
     console.log(`Signing key file: ${fileURLToPath(keyFile)}`);
     console.log('Gateway batch settlement can only be signed by an EOA, so this key stays the payer.');
     console.log('A Circle Agent Wallet can hold funds but cannot sign that batch: npm run gateway:wallet -- status');
@@ -39,8 +38,8 @@ if (mode === 'status') {
     const value = parseUnits(amount, 6);
     if (value <= 0n) throw new Error('Deposit amount must be positive');
     const chain = arcTestnetClient();
-    if (await chain.getChainId() !== arcTestnet.id) throw new Error('RPC endpoint must serve Arc Testnet');
-    const wallet = createWalletClient({ account, chain: arcTestnet, transport: http(process.env.ARC_TESTNET_RPC_URL, {
+    if (await chain.getChainId() !== gatewayChainConfig.id) throw new Error('RPC endpoint must serve the selected Arc network');
+    const wallet = createWalletClient({ account, chain: gatewayChainConfig, transport: http(process.env.ARC_TESTNET_RPC_URL ?? gatewayRpcUrl, {
       timeout: 5000, retryCount: 0,
     }) });
     const gateway = gatewayDomain.verifyingContract;
@@ -100,17 +99,17 @@ async function reportStatus() {
   }
 
   const auth = readCircle(cli, ['wallet', 'status', '--output', 'json']);
-  const session = auth?.data?.testnet;
-  console.log(`Circle CLI testnet session: ${session?.tokenStatus ?? auth.error ?? 'unknown'}${session?.expiresIn ? ` (expires in ${session.expiresIn})` : ''}`);
+  const session = auth?.data?.[gatewaySessionKey];
+  console.log(`Circle CLI ${gatewaySessionKey} session: ${session?.tokenStatus ?? auth.error ?? 'unknown'}${session?.expiresIn ? ` (expires in ${session.expiresIn})` : ''}`);
 
-  const wallets = readCircle(cli, ['wallet', 'list', '--chain', 'ARC-TESTNET', '--type', 'agent', '--output', 'json']);
+  const wallets = readCircle(cli, ['wallet', 'list', '--chain', gatewayCircleChain, '--type', 'agent', '--output', 'json']);
   const agentWallet = wallets?.data?.wallets?.[0] ?? null;
   if (wallets.error) console.log(`  agent wallet: unavailable (${wallets.error})`);
-  else if (!agentWallet) console.log('  agent wallet: none on ARC-TESTNET');
+  else if (!agentWallet) console.log(`  agent wallet: none on ${gatewayCircleChain}`);
   else console.log(`  agent wallet: ${agentWallet.address}`);
 
   const balance = agentWallet
-    ? readCircle(cli, ['gateway', 'balance', '--address', agentWallet.address, '--chain', 'ARC-TESTNET', '--output', 'json'])
+    ? readCircle(cli, ['gateway', 'balance', '--address', agentWallet.address, '--chain', gatewayCircleChain, '--output', 'json'])
     : null;
   if (balance?.data) {
     console.log(`  Gateway balance: ${balance.data.total ?? '0'} ${balance.data.token ?? 'USDC'}`);
@@ -127,7 +126,7 @@ function conclusion(payer, backingEOA) {
   console.log('GATEWAY_PAYER_ADDRESS must be an EOA: Gateway batch settlement is signed locally, not by the wallet API.');
   if (backingEOA && payer && backingEOA.toLowerCase() !== payer.toLowerCase()) {
     console.log(`The agent wallet is funded through backing EOA ${backingEOA}, which is not your local payer key.`);
-    console.log('Fund the payer instead of replacing it: circle gateway deposit --address <payer> --chain ARC-TESTNET --method direct');
+    console.log(`Fund the payer instead of replacing it: circle gateway deposit --address <payer> --chain ${gatewayCircleChain} --method direct`);
   }
   console.log(`export GATEWAY_PAYER_ADDRESS=${payer ?? '<address from init>'}`);
 }

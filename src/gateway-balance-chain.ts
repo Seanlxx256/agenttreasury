@@ -1,7 +1,6 @@
 import { decodeAbiParameters, decodeFunctionData, parseAbi, parseAbiItem, parseAbiParameters,
   TransactionReceiptNotFoundError, type Address, type Hash } from 'viem';
-import { arcTestnet } from 'viem/chains';
-import { arcTestnetClient, arcTestnetUsdc as token, gatewayDomain } from './gateway-x402.js';
+import { arcTestnetClient, arcTestnetUsdc as token, gatewayChainConfig, gatewayDomain } from './gateway-x402.js';
 
 const address = gatewayDomain.verifyingContract;
 const balance = parseAbi(['function totalBalance(address token, address depositor) view returns (uint256)']);
@@ -28,7 +27,7 @@ export interface GatewayBalanceChain {
 
 export async function gatewayBalanceChain(): Promise<GatewayBalanceChain> {
   const client = arcTestnetClient(4);
-  if (await client.getChainId() !== arcTestnet.id) throw new Error('RPC endpoint must serve Arc Testnet');
+  if (await client.getChainId() !== gatewayChainConfig.id) throw new Error('RPC endpoint must serve the selected Arc network');
   return {
     async finalized() {
       return (await client.getBlock({ blockTag: 'finalized' })).number;

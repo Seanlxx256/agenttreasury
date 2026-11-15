@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import type { Pool } from 'pg';
 import { type Hash, isHash } from 'viem';
-import { arcTestnet } from 'viem/chains';
+import { gatewayChainConfig } from './gateway-x402.js';
 import { observeGatewayPayment, type ExpectedGatewayPayment } from './gateway-reconciliation.js';
 
 type Receipt = { status: 'success' | 'reverted'; blockNumber: bigint };
@@ -81,8 +81,8 @@ export async function collectGatewayPurchaseEvidence(
     requestId, nonce, payer, recipient, amountUnits, taskId, budgetStatus,
     gateway, journal: entries,
     delivery: { buyerSaved: buyerDelivery !== null, sellerSaved: sellerDelivery !== null },
-    batch: hash && arcTestnet.blockExplorers ? {
-      hash, explorerUrl: arcTestnet.blockExplorers.default.url + '/tx/' + hash,
+    batch: hash && gatewayChainConfig.blockExplorers ? {
+      hash, explorerUrl: gatewayChainConfig.blockExplorers.default.url + '/tx/' + hash,
       receiptStatus: receipt?.status ?? null,
       blockNumber: receipt?.blockNumber.toString() ?? null,
     } : null,
