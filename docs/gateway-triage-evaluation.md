@@ -50,3 +50,9 @@ npm run --silent eval:gateway -- --dataset arc-recovery-v1 --model qwen2.5:0.5b
 ```
 
 Use `--rules-only` in place of `--model qwen2.5:0.5b` to run without Ollama. The default dataset remains `gateway-triage-v1`.
+
+### Rerun with the journal citation required
+
+The triage policy now requires a journal citation for a delivered purchase when the journal is present. Using the same replay and local model, the rule action score stayed at 3/3 and citation completeness rose from 2/3 to 3/3. Qwen's action score stayed at 1/3 and citation completeness rose from 1/3 to 2/3. The validator still rejected one response.
+
+Manual review found issues with both displayed model explanations. For retrieval, it again treated the polling flag as proof of a charge and recommended escalation. For closure, it selected `close-case` and cited the journal, then said in its explanation that no action could be recommended. The rule explanation for closure cites the posted journal and saved buyer trace. Citation completeness measures the referenced facts, and a human review is still needed to assess free-form explanations.

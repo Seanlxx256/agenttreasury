@@ -49,8 +49,11 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
       citations: [localRef, 'observation-' + ended.id] };
   } else if (purchase.journal || decision?.evidence.status === 'charged') {
     if (purchase.buyerHasDelivery) {
-      rules = { action: 'close-case', rationale: 'A confirmed payment and a saved buyer trace are on record.',
-        citations: [paymentRef, 'buyer-delivery'] };
+      rules = { action: 'close-case',
+        rationale: purchase.journal
+          ? 'The payment journal has been posted and the buyer trace is saved.'
+          : 'A confirmed payment and a saved buyer trace are on record.',
+        citations: [...new Set([paymentRef, 'buyer-delivery', ...(purchase.journal ? ['journal'] : [])])] };
     } else {
       rules = { action: purchase.sellerHasDelivery ? 'retrieve-delivery' : 'contact-merchant',
         rationale: purchase.sellerHasDelivery

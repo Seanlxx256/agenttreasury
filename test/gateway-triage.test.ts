@@ -70,3 +70,18 @@ test('triage evaluation scores missing recommendations against the full dataset'
   assert.equal(result.agent?.unavailable, 10);
   assert.ok(result.cases.every(({ expectedActionAllowed }) => expectedActionAllowed));
 });
+
+test('closing a delivered purchase requires its posted journal citation when available', async () => {
+  const input = prepareGatewayTriage({ ...purchase, buyerHasDelivery: true }, [charged]);
+  const suggestion = { action: 'close-case', rationale: 'The trace is saved and the journal is posted.',
+    citations: ['observation-42', 'buyer-delivery'] };
+  const review = (citations: string[]) => reviewGatewayTriage(input, 'test-model', async () =>
+    Response.json({ message: { content: JSON.stringify({ ...suggestion, citations }) } }));
+
+  assert.ok(input.rules.citations.includes('journal'));
+  assert.equal((await review(suggestion.citations)).agent.status, 'rejected');
+  assert.equal((await review([...suggestion.citations, 'journal'])).agent.status, 'ready');
+
+  const withoutJournal = prepareGatewayTriage({ ...purchase, buyerHasDelivery: true, journal: null }, [charged]);
+  assert.deepEqual(withoutJournal.rules.citations, suggestion.citations);
+});
