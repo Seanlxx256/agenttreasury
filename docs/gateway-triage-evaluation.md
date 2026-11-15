@@ -154,3 +154,9 @@ npm run build
 npm run --silent eval:gateway -- --dataset gateway-critical-evidence-v1 --support-rules --rules-only
 npm run --silent eval:gateway -- --dataset gateway-critical-evidence-v1 --support-rules --model qwen2.5:0.5b
 ```
+
+### Rules for critical follow-up evidence
+
+The rule recommendation now cites a saved seller trace when the buyer still needs to check the original authorization and recover delivery if the charge is confirmed. It cites a missing journal for a confirmed charge on a purchase with a tracked budget. It also cites an existing journal when Gateway reports a conflict.
+
+The six-case rules-only rerun found **3/3 critical facts**, compared with 0/3 before the change. All six actions and citation sets matched their labels, with zero unrelated references and no new references in the three controls. The other three datasets also matched all 21 action and citation labels. These results measure the rules on the replay fixtures.

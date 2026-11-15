@@ -147,7 +147,7 @@ const gatewayIncidentCases: GatewayTriageCase[] = [
     purchase: unresolved,
     observations: [{ id: '2', evidence: { status: 'charged' } }, { id: '1', evidence: { status: 'pending' } }],
     expectedAction: 'contact-merchant', requiredCitations: ['observation-2', 'buyer-delivery', 'seller-delivery'],
-    optionalCitations: ['budget'],
+    optionalCitations: ['budget', 'journal-missing'],
   },
   {
     name: 'Gateway reported failure after the seller saved the trace',

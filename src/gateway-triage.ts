@@ -35,7 +35,8 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
 
   const latest = observations[0];
   const decision = observations.find(({ evidence }) => decisive.has(evidence.status));
-  if (!purchase.journal && decision?.evidence.status === 'charged') {
+  const missingJournal = purchase.budgetStatus !== null && !purchase.journal && decision?.evidence.status === 'charged';
+  if (missingJournal) {
     facts.push({ id: 'journal-missing', description: 'Gateway reports a charge and no local payment journal was found.' });
   }
   const ended = decision?.evidence.status === 'failed' ? decision
@@ -46,6 +47,10 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
   if (decision?.evidence.status === 'conflict') {
     rules = { action: 'review-conflict', rationale: 'Review the conflicting payment evidence and its accounting impact.',
       citations: ['observation-' + decision.id] };
+    if (purchase.journal) {
+      rules.rationale += ' Include the posted journal in the review.';
+      rules.citations.push('journal');
+    }
   } else if (ended && (purchase.journal || purchase.buyerHasDelivery || purchase.sellerHasDelivery)) {
     const localRef = purchase.journal ? 'journal' : purchase.buyerHasDelivery ? 'buyer-delivery' : 'seller-delivery';
     rules = { action: 'review-conflict', rationale: 'The uncharged outcome conflicts with a local payment or delivery record.',
@@ -64,6 +69,10 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
           : 'The charge is confirmed and the seller has no saved copy. Ask the merchant to investigate.',
         citations: [paymentRef, 'buyer-delivery', 'seller-delivery'] };
     }
+    if (missingJournal) {
+      rules.rationale += ' Check the missing local journal before closing the case.';
+      rules.citations.push('journal-missing');
+    }
   } else if (ended) {
     rules = { action: 'close-case', rationale: 'The recorded evidence shows this attempt ended without a charge.',
       citations: ['observation-' + ended.id] };
@@ -76,6 +85,10 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
   } else if (purchase.reviewRequired || latest?.evidence.status !== 'pending') {
     rules = { action: 'check-gateway', rationale: 'Collect a fresh observation for the original authorization.',
       citations: latest && gatewayStatuses.has(latest.evidence.status) ? ['observation-' + latest.id] : ['budget'] };
+    if (purchase.sellerHasDelivery && !purchase.buyerHasDelivery) {
+      rules.rationale += ' The seller has a saved trace to retrieve if Gateway confirms a charge.';
+      rules.citations.push('seller-delivery');
+    }
   } else {
     rules = { action: 'wait-for-gateway', rationale: 'Gateway reports the payment is pending.',
       citations: ['observation-' + latest.id] };

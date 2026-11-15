@@ -37,7 +37,7 @@ test('triage preserves a payment conflict after a Gateway outage', () => {
     charged,
   ]);
   assert.equal(input.rules.action, 'review-conflict');
-  assert.deepEqual(input.rules.citations, ['observation-43']);
+  assert.deepEqual(input.rules.citations, ['observation-43', 'journal']);
 });
 
 test('triage accepts only permitted actions with matching evidence citations', async () => {
@@ -107,7 +107,9 @@ test('closing a delivered purchase requires its posted journal citation when ava
   assert.equal((await review([...suggestion.citations, 'journal'])).agent.status, 'ready');
 
   const withoutJournal = prepareGatewayTriage({ ...purchase, buyerHasDelivery: true, journal: null }, [charged]);
-  assert.deepEqual(withoutJournal.rules.citations, suggestion.citations);
+  assert.deepEqual(withoutJournal.rules.citations, [...suggestion.citations, 'journal-missing']);
+  const untracked = prepareGatewayTriage({ ...purchase, buyerHasDelivery: true, journal: null, budgetStatus: null }, [charged]);
+  assert.deepEqual(untracked.rules.citations, suggestion.citations);
 });
 
 test('triage evaluation separates forced actions and counts unnecessary escalation after fallback', async () => {
@@ -116,7 +118,7 @@ test('triage evaluation separates forced actions and counts unnecessary escalati
     const { allowed } = JSON.parse(body.messages[1].content);
     if (allowed.some(({ action }: { action: string }) => action === 'contact-merchant')) {
       return Response.json({ message: { content: JSON.stringify({ action: 'escalate',
-        citations: ['observation-2', 'buyer-delivery', 'seller-delivery'] }) } });
+        citations: ['observation-2', 'buyer-delivery', 'seller-delivery', 'journal-missing'] }) } });
     }
     return new Response(null, { status: 503 });
   };
@@ -155,13 +157,15 @@ test('critical evidence replay scores added facts without leaking labels to the 
     assert.doesNotMatch(messages[1].content, /criticalEvidence/);
     const { allowed } = JSON.parse(messages[1].content);
     const { action, requiredCitations } = allowed[0];
-    const extra = calls === 1 ? ['seller-delivery'] : calls === 2 ? ['polling'] : [];
+    const extra = calls === 2 ? ['polling'] : [];
     return Response.json({ message: { content: JSON.stringify({ action, citations: [...requiredCitations, ...extra] }) } });
   };
   const result = await evaluateGatewayTriage('test-model', model, 'gateway-critical-evidence-v1', 'support-rules');
   assert.equal(result.rules.correctActions, 6);
+  assert.equal(result.rules.correctCitationSets, 6);
+  assert.ok(result.cases.every(({ criticalEvidence }) => criticalEvidence?.rules.hits === criticalEvidence?.targets.length));
   assert.deepEqual(result.criticalEvidence, {
-    rules: { expected: 3, hits: 0, recall: 0, unrelated: 0 },
-    assisted: { expected: 3, hits: 1, recall: 1 / 3, unrelated: 1 },
+    rules: { expected: 3, hits: 3, recall: 1, unrelated: 0 },
+    assisted: { expected: 3, hits: 3, recall: 1, unrelated: 1 },
   });
 });
