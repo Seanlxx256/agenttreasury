@@ -1,10 +1,11 @@
 import type { PoolClient } from 'pg';
 import { resolveReservation } from './budget.js';
 import { PaymentError, tokenDigest } from './payments.js';
+import type { GatewayNetworkName } from './gateway-x402.js';
 
 export type GatewayTaskCredentials = { taskId: string; agentToken: string };
 export type GatewayPurchaseTerms = {
-  requestId: string; endpoint: string; payer: string; recipient: string;
+  requestId: string; endpoint: string; payer: string; recipient: string; network: GatewayNetworkName;
 };
 
 export async function lockGatewayGrant(
@@ -15,15 +16,16 @@ export async function lockGatewayGrant(
     enabled: boolean; budget: string; daily_limit: string; reserved: string; spent: string;
   }>(`SELECT enabled, budget, daily_limit, reserved, spent
       FROM research_tasks WHERE id = $1 FOR UPDATE`, [taskId]);
-  const { rows: [grant] } = await client.query<{ origin: string; payer: string; recipient: string }>(
-    `SELECT g.origin, g.payer, g.recipient
+  const { rows: [grant] } = await client.query<{ origin: string; payer: string; recipient: string; network: GatewayNetworkName }>(
+    `SELECT g.origin, g.payer, g.recipient, g.network
      FROM research_tasks t JOIN agents a ON a.id = t.agent_id JOIN gateway_task_grants g ON g.task_id = t.id
      WHERE t.id = $1 AND a.token_digest = $2 AND a.enabled FOR SHARE OF a, g`,
     [taskId, tokenDigest(agentToken)],
   );
   if (!task || !grant) throw new PaymentError(403, 'GATEWAY_TASK_NOT_ALLOWED');
   if (terms.endpoint !== `${grant.origin}/trace/${terms.requestId}` ||
-      terms.payer.toLowerCase() !== grant.payer || terms.recipient.toLowerCase() !== grant.recipient) {
+      terms.payer.toLowerCase() !== grant.payer || terms.recipient.toLowerCase() !== grant.recipient ||
+      terms.network !== grant.network) {
     throw new PaymentError(403, 'GATEWAY_PAYMENT_TERMS_NOT_ALLOWED');
   }
   const { rows: [clock] } = await client.query<{ day: string; active: boolean }>(

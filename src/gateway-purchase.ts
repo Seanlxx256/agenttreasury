@@ -147,7 +147,7 @@ export async function purchaseGatewayTrace(
   const retrievalToken = randomBytes(32).toString('hex');
   // Only the process that inserts this row may sign and submit. Never replay an ambiguous POST.
   const claimed = await transaction(pool, async (client) => {
-    const grant = await lockGatewayGrant(client, task, purchase);
+    const grant = await lockGatewayGrant(client, task, { requestId, endpoint, payer, recipient, network });
     const claim = await client.query(
       `INSERT INTO gateway_demo_purchases
         (request_id, endpoint, nonce, payer, recipient, amount_units, network, retrieval_token, task_id, budget_day, budget_status, delivery_commitment)
@@ -179,7 +179,7 @@ export async function purchaseGatewayTrace(
     const recovered = await recoverGatewayPayer(authorization, signature, network);
     if (recovered.toLowerCase() !== payer.toLowerCase()) throw new Error('Unexpected signing address');
     await transaction(pool, async (client) => {
-      await lockGatewayGrant(client, task, purchase);
+      await lockGatewayGrant(client, task, { requestId, endpoint, payer, recipient, network });
       const marked = await client.query(
         `UPDATE gateway_demo_purchases SET submitted_at = now()
          WHERE request_id = $1 AND nonce = $2 AND budget_status = 'reserved' AND submitted_at IS NULL`,
