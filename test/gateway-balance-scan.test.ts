@@ -451,4 +451,22 @@ test('continuous balance scan persists progress, raises work orders, and recover
     assert.equal(events.rows[0].payload.evidence.blockHash,sample.snapshot.closingHash);
   });
 
+  await t.test('real public batch persists idempotently with raw-calldata validation on replay', async () => {
+    const sample=JSON.parse(await readFile(new URL('../../docs/evidence/stage-5-live-batch.json',import.meta.url),'utf8'));
+    const scanId=randomUUID();const client=await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`INSERT INTO gateway_balance_scans(id,network,payer,from_block,to_block,status,result)
+        VALUES($1,'arcTestnet',$2,$3,$4,'discrepancy',$5)`,
+      [scanId,sample.snapshot.payer,sample.snapshot.from,sample.snapshot.to,JSON.stringify(sample.result)]);
+      await persistBalanceEvidence(client,scanId,sample.snapshot);
+      await persistBalanceEvidence(client,scanId,sample.snapshot);
+      await client.query('COMMIT');
+    } catch(error) {await client.query('ROLLBACK');throw error;} finally {client.release();}
+    const replay=await replaySavedBalanceScan(pool,scanId);
+    assert.equal(replay.batchValidation[0]!.status,'verified');
+    assert.equal(replay.report.balance.chainDifference,'0');
+    assert.deepEqual(replay.report,sample.result);
+  });
+
 });

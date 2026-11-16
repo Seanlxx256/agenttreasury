@@ -1,5 +1,8 @@
 # Stage 5 follow-up: live testnet sample and investigation references
 
+Subsequent acceptance: [real batches and project purchase linkage](stage-5-batch-acceptance.md).
+The deposit-only limits below describe this earlier checkpoint.
+
 This step adds an actual public Arc testnet deposit capture, tests persistence
 and replay of that capture in PostgreSQL, and connects saved wallet reconciliation
 evidence to the bounded, read-only investigation workflow. These are distinct

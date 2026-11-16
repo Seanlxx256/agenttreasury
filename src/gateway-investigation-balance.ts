@@ -1,12 +1,11 @@
+import { assessBatchLinkage, type BatchPurchaseTerms, type BatchJournal, type BatchObservation } from './gateway-batch-linkage.js';
 import type { PoolClient } from 'pg';
 import { verifyBalanceEvidence } from './gateway-balance-evidence.js';
 import type { BalanceSnapshot } from './reconcile-gateway-balances.js';
 
 // SELECT-only, called in the collector's repeatable-read transaction. Neither a
 // model-provided scan ID nor a wallet-only match grants access to another task.
-export async function collectPurchaseBalanceEvidence(client: PoolClient, purchase: {
-  id: string; nonce: string; network: string; payer: string;
-}) {
+export async function collectPurchaseBalanceEvidence(client: PoolClient, purchase: BatchPurchaseTerms, journal: BatchJournal, observations: BatchObservation[]) {
   const { rows } = await client.query<{
     scanId: string; capturedAt: Date; snapshot: BalanceSnapshot; digest: string; result: unknown;
   }>(`SELECT e.scan_id AS "scanId",e.captured_at AS "capturedAt",e.snapshot,e.digest,s.result
@@ -25,6 +24,7 @@ export async function collectPurchaseBalanceEvidence(client: PoolClient, purchas
       const batches = replay.report.batches.filter((batch) => batch.requestIds.includes(purchase.id));
       return { ...reference, verification: 'verified' as const, source: replay.source,
         window: replay.report.window, balance: replay.report.balance,
+        linkage: assessBatchLinkage(saved.snapshot,purchase,journal,observations),
         batches: batches.map(({ requestIds, ...batch }) => ({ ...batch, includesRequest: true })),
         missingBatches: replay.report.missingBatches.filter((batch) => batch.requestIds.includes(purchase.id))
           .map(({ requestIds, ...batch }) => ({ ...batch, includesRequest: true })),

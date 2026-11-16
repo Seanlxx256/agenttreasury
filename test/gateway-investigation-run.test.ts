@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -206,6 +206,38 @@ test('investigation executes bounded reads with provenance, freshness and no bus
     const chainOnly = await saveBalanceEvidence(purchase.nonce,'arcTestnet','none');
     const rejected = await collectInvestigationSnapshot(reader!,purchase.id);
     assert.equal(rejected.records.balanceEvidence.find((row)=>row.scanId===chainOnly)?.verification,'failed');
+  });
+
+  await t.test('archived real project batch reaches read-only investigation with missing legacy authorization visible', async () => {
+    const archive=JSON.parse(await readFile(new URL('../../docs/evidence/stage-5-project-batch.json',import.meta.url),'utf8'));
+    const p=archive.purchase;
+    const grant=await seedGateway(pool,{origin:'https://archive-fixture.example',payer:p.payer,recipient:p.recipient});
+    await pool.query(`INSERT INTO gateway_demo_purchases(request_id,endpoint,nonce,payer,recipient,amount_units,
+      task_id,budget_day,budget_status,network) VALUES($1,'https://archive-fixture.example/trace',$2,$3,$4,$5,$6,current_date,'spent','arcTestnet')`,
+    [p.id,p.nonce,p.payer,p.recipient,p.amountUnits,grant.taskId]);
+    await pool.query(`INSERT INTO gateway_payment_journal(request_id,transfer_id,batch_hash,amount) VALUES($1,$2,$3,$4)`,
+    [p.id,archive.journal.transferId,archive.journal.batchHash,archive.journal.amount]);
+    await pool.query(`INSERT INTO gateway_payment_observations(request_id,source,evidence) VALUES($1,'worker',$2)`,
+    [p.id,JSON.stringify(archive.observations[0].evidence)]);
+    const scanId=randomUUID();const client=await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`INSERT INTO gateway_balance_scans(id,network,payer,from_block,to_block,status,result)
+        VALUES($1,'arcTestnet',$2,$3,$4,'matched',$5)`,
+      [scanId,p.payer,archive.snapshot.from,archive.snapshot.to,JSON.stringify(archive.result)]);
+      await persistBalanceEvidence(client,scanId,archive.snapshot);await client.query('COMMIT');
+    } catch(error) {await client.query('ROLLBACK');throw error;} finally {client.release();}
+    const before=await state();const report=await runGatewayInvestigation(reader!,p.id);
+    const check=report.checks.find((row)=>row.kind==='read-balance-evidence');
+    assert.equal(check?.status,'ok');assert.ok(check?.source.includes(scanId));
+    const linked=report.snapshot.records.balanceEvidence[0]!;
+    assert.equal(linked.verification,'verified');
+    if(linked.verification==='verified') {
+      assert.equal(linked.linkage[0]!.status,'incomplete');
+      assert.equal(linked.linkage[0]!.authorizationTerms,'unavailable');
+      assert.equal(linked.linkage[0]!.walletAccounting,'matched');
+    }
+    assert.deepEqual(await state(),before);
   });
 
 });

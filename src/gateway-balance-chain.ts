@@ -1,12 +1,10 @@
+import { decodeGatewayBatch, gatewayBatchEvent } from './gateway-batch-evidence.js';
 import { createHash } from 'node:crypto';
-import { decodeAbiParameters, decodeFunctionData, parseAbi, parseAbiItem, parseAbiParameters,
+import { parseAbi, parseAbiItem,
   TransactionReceiptNotFoundError, type Address, type Hash } from 'viem';
 import { gatewayChainName, gatewayClient, gatewayNetworkConfig, type GatewayNetworkName } from './gateway-x402.js';
 
 const balance = parseAbi(['function totalBalance(address token, address depositor) view returns (uint256)']);
-const batchCall = parseAbi(['function submitBatch(bytes calldataBytes, bytes signature)']);
-const batchFormat = parseAbiParameters('(address depositor, int256 value)[] deltas, bytes32 batchId, uint32 domain, address token, address wallet');
-const batchEvent = parseAbiItem('event BatchProcessed(bytes32 indexed batchId, address indexed signer, address indexed tokenAddress)');
 const depositEvent = parseAbiItem('event Deposited(address indexed token, address indexed depositor, address indexed sender, uint256 value)');
 const withdrawalEvent = parseAbiItem('event WithdrawalCompleted(address indexed token, address indexed depositor, uint256 value)');
 const burnEvent = parseAbiItem('event GatewayBurned(address indexed token, address indexed depositor, bytes32 indexed transferSpecHash, uint32 destinationDomain, bytes32 destinationRecipient, address signer, uint256 value, uint256 fee, uint256 fromAvailable, uint256 fromWithdrawing)');
@@ -35,7 +33,6 @@ export async function gatewayBalanceChain(network: GatewayNetworkName = gatewayC
   const config = gatewayNetworkConfig(network);
   const address = config.domain.verifyingContract.toLowerCase() as Address;
   const token = config.usdc.toLowerCase() as Address;
-  const domainId = config.domainId;
   if (await client.getChainId() !== config.chainConfig.id) throw new Error('RPC endpoint must serve the selected Arc network');
   return {
     network,
@@ -82,7 +79,7 @@ export async function gatewayBalanceChain(network: GatewayNetworkName = gatewayC
         const deposits = await client.getLogs({ ...range, event: depositEvent, args });
         const withdrawals = await client.getLogs({ ...range, event: withdrawalEvent, args });
         const burns = await client.getLogs({ ...range, event: burnEvent, args });
-        const batches = await client.getLogs({ ...range, event: batchEvent, args: { tokenAddress: token } });
+        const batches = await client.getLogs({ ...range, event: gatewayBatchEvent, args: { tokenAddress: token } });
         const add = (target: Movement[], log: { transactionHash: Hash; logIndex: number; blockNumber: bigint; blockHash: Hash; address: Address; topics: readonly Hash[]; data: Hash }, amount: bigint) => {
           if (duplicate(log)) return;
           target.push({ hash: log.transactionHash, logIndex: log.logIndex, amount, evidence: logEvidence(log) });
@@ -97,12 +94,7 @@ export async function gatewayBalanceChain(network: GatewayNetworkName = gatewayC
           if (tx.to?.toLowerCase() !== address || tx.blockHash !== log.blockHash) {
             throw new Error(`Cannot locate direct Gateway batch call for ${log.transactionHash}`);
           }
-          const { args: [data] } = decodeFunctionData({ abi: batchCall, data: tx.input });
-          const [deltas, id, domain, asset, contract] = decodeAbiParameters(batchFormat, data);
-          if (id !== log.args.batchId || domain !== domainId || asset.toLowerCase() !== token ||
-              contract.toLowerCase() !== address || deltas.reduce((sum, entry) => sum + entry.value, 0n) !== 0n) {
-            throw new Error(`Invalid Gateway batch calldata for ${log.transactionHash}`);
-          }
+          const { deltas, id } = decodeGatewayBatch(tx.input, log.args.batchId, network);
           const entries = deltas.filter((entry) => entry.depositor.toLowerCase() === wallet);
           if (entries.length) result.batches.push({ hash: log.transactionHash, id, logIndex: log.logIndex,
             evidence: { ...logEvidence(log), transactionInput: tx.input },

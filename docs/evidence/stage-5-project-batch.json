@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "capturedAt": "2026-11-16T18:19:19.502Z",
+  "scope": "project-journal-read-only",
+  "networkProvenance": "legacy-pre-020-testnet-default",
+  "limitation": "Journal-backed wallet rows only; unjournaled authorizations are outside this capture. Original authorization fields may be absent in legacy rows.",
+  "purchase": {
+    "id": "0c7b7fbc-e93b-4fa4-a297-373ea8852b90",
+    "nonce": "0x36e16e8713302949b94814340a476e236d0d932fe83cb9f9c0dd6aea57219fb0",
+    "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+    "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+    "network": "arcTestnet",
+    "amountUnits": "1000",
+    "authorization": null
+  },
+  "journal": {
+    "batchHash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+    "amount": "1000",
+    "transferId": "8e23024a-b7e3-4d63-8123-325281051ef5"
+  },
+  "observations": [
+    {
+      "id": "live-gateway-1",
+      "evidence": {
+        "status": "charged",
+        "id": "8e23024a-b7e3-4d63-8123-325281051ef5",
+        "txHash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe"
+      }
+    }
+  ],
+  "snapshot": {
+    "version": 1,
+    "ledgerScope": "wallet",
+    "network": "arcTestnet",
+    "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+    "from": "72412969",
+    "to": "72412969",
+    "finalized": "72585273",
+    "openingHash": "0x8be9baf8047da1b94568d1564683b626d280ac9cc0f154c7c00bdbe06f6cc781",
+    "closingHash": "0x53f87bd72cd236561d2db6883f94771c6d83e44651c2280950f957646393e9e1",
+    "opening": "499000",
+    "closing": "498000",
+    "purchases": [
+      {
+        "requestId": "0c7b7fbc-e93b-4fa4-a297-373ea8852b90",
+        "nonce": "0x36e16e8713302949b94814340a476e236d0d932fe83cb9f9c0dd6aea57219fb0",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "budgetStatus": "spent",
+        "batchHash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+        "journalAmount": "1000"
+      },
+      {
+        "requestId": "794d6990-afe6-42b1-9f2f-df9c32535693",
+        "nonce": "0x0c0c403bc69e69692aafa1adbd70384f206d2b631894d9963d24c50442ca4863",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "budgetStatus": "spent",
+        "batchHash": "0x1823231fd53d743db147b8c445b90940e1671f526302921b1423794faf13a6c4",
+        "journalAmount": "1000"
+      }
+    ],
+    "receiptBlocks": {
+      "0x1823231fd53d743db147b8c445b90940e1671f526302921b1423794faf13a6c4": "72411592"
+    },
+    "unsettled": [],
+    "source": {
+      "kind": "rpc",
+      "chainId": 5042002,
+      "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+    },
+    "movements": {
+      "deposits": [],
+      "withdrawals": [],
+      "burns": [],
+      "batches": [
+        {
+          "hash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+          "id": "0xedbd65e4ed9224e569b2a0ad9dd6b6c1249396e232928e458d974e16a66f87d8",
+          "logIndex": 13,
+          "evidence": {
+            "blockNumber": "72412969",
+            "blockHash": "0x53f87bd72cd236561d2db6883f94771c6d83e44651c2280950f957646393e9e1",
+            "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+            "topics": [
+              "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+              "0xedbd65e4ed9224e569b2a0ad9dd6b6c1249396e232928e458d974e16a66f87d8",
+              "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+              "0x0000000000000000000000003600000000000000000000000000000000000000"
+            ],
+            "data": "0x",
+            "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0edbd65e4ed9224e569b2a0ad9dd6b6c1249396e232928e458d974e16a66f87d8000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeb80000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5c0000000000000000000000000000000000000000000000000000000000001472000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42a000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000041e62a507ad8f817270c182128a4b3cfe7434e04fa3159e54d504b8269b71d7021537073f97be1c6a7218221d5626e016c2d59bc9724e81cf5753936059bd844611b00000000000000000000000000000000000000000000000000000000000000"
+          },
+          "delta": "-1000"
+        }
+      ]
+    }
+  },
+  "digest": "627f0e49e26d95d35c8e2df9958a0afc96eaf91a817e6bc774f8c54906bf56bf",
+  "result": {
+    "status": "MATCHED",
+    "network": "eip155:5042002",
+    "token": "0x3600000000000000000000000000000000000000",
+    "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+    "window": {
+      "openingBlock": "72412968",
+      "openingHash": "0x8be9baf8047da1b94568d1564683b626d280ac9cc0f154c7c00bdbe06f6cc781",
+      "from": "72412969",
+      "to": "72412969",
+      "closingHash": "0x53f87bd72cd236561d2db6883f94771c6d83e44651c2280950f957646393e9e1"
+    },
+    "balance": {
+      "opening": "499000",
+      "closing": "498000",
+      "deposits": "0",
+      "withdrawals": "0",
+      "burns": "0",
+      "batchDelta": "-1000",
+      "journalDebits": "1000",
+      "chainClosing": "498000",
+      "journalClosing": "498000",
+      "chainDifference": "0",
+      "journalDifference": "0"
+    },
+    "capitalMovements": {
+      "deposits": [],
+      "withdrawals": [],
+      "burns": []
+    },
+    "batches": [
+      {
+        "hash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+        "id": "0xedbd65e4ed9224e569b2a0ad9dd6b6c1249396e232928e458d974e16a66f87d8",
+        "onchainDelta": "-1000",
+        "journalDelta": "-1000",
+        "requestIds": [
+          "0c7b7fbc-e93b-4fa4-a297-373ea8852b90"
+        ],
+        "status": "MATCHED"
+      }
+    ],
+    "missingBatches": [],
+    "currentAuthorizations": {
+      "pendingAmount": "0",
+      "unresolved": []
+    }
+  },
+  "batchValidation": [
+    {
+      "hash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+      "status": "verified",
+      "batchId": "0xedbd65e4ed9224e569b2a0ad9dd6b6c1249396e232928e458d974e16a66f87d8",
+      "walletDelta": "-1000",
+      "participantEntries": 5,
+      "logIndex": 13,
+      "limitation": "Batch calldata contains net wallet deltas, not individual payment nonces or authorization inclusion proofs."
+    }
+  ],
+  "linkage": [
+    {
+      "batchHash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+      "status": "incomplete",
+      "historicalTerms": "matched",
+      "authorizationTerms": "unavailable",
+      "journalBinding": "matched",
+      "gatewayReference": "matched",
+      "walletAccounting": "matched",
+      "rawBatchConsistency": "verified",
+      "observationIds": [
+        "live-gateway-1"
+      ],
+      "cryptographicAuthorizationInclusion": false,
+      "limitation": "Corroboration uses local authorization fields, local journal and normalized Gateway assertions. Net wallet deltas do not prove inclusion of an individual nonce, validate its signature, or establish payee entitlement."
+    }
+  ],
+  "captureDigest": "1f60dbea3eb34be2efbfa47ae796c28c2f10542265843ba7b108fa26d5c3c2a6"
+}

@@ -44,7 +44,7 @@ export async function collectInvestigationSnapshot(pool: Pool, requestId: string
     const { rows:[merchant] }=await client.query(`SELECT g.merchant_id AS id,g.recipient AS "grantRecipient",
       g.approved_recipient_version AS "grantVersion",m.recipient AS "currentRecipient",m.recipient_change_version AS "currentVersion"
       FROM gateway_task_grants g LEFT JOIN gateway_merchants m ON m.id=g.merchant_id WHERE g.task_id=$1`,[purchase.taskId]);
-    const balanceEvidence = await collectPurchaseBalanceEvidence(client, purchase);
+    const balanceEvidence = await collectPurchaseBalanceEvidence(client, purchase, journal ?? null, observations);
     await client.query('COMMIT');
     const records={ purchase,balanceEvidence,observations,journal:journal ?? null,refund:refund ?? null,merchant:merchant ?? null };
     const prepared=prepareGatewayTriage({...purchase,journal:records.journal},observations);

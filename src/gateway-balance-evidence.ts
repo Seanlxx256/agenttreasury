@@ -1,3 +1,4 @@
+import { validateRecordedBatches } from './gateway-batch-evidence.js';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { Pool, type PoolClient } from 'pg';
@@ -19,6 +20,7 @@ export function evidenceDigest(value: unknown): string {
 // Called inside the scanner transaction after its attempt fencing check.
 export async function persistBalanceEvidence(client: PoolClient, scanId: string, input: BalanceSnapshot) {
   if (input.network !== 'arcTestnet') throw new Error('Balance evidence ingestion is testnet-only');
+  validateRecordedBatches(input);
   const config = gatewayNetworkConfig(input.network);
   const blocks = new Map<string, string>();
   const block = (height: string, hash: string) => {
@@ -75,9 +77,10 @@ export async function replaySavedBalanceScan(pool: Pool, scanId: string) {
 
 export function verifyBalanceEvidence(scanId: string, saved: { snapshot: BalanceSnapshot; digest: string; result: unknown }) {
   if (evidenceDigest(saved.snapshot) !== saved.digest) throw new Error('Balance evidence digest mismatch');
+  const batchValidation = validateRecordedBatches(saved.snapshot);
   const report = replayBalanceSnapshot(saved.snapshot);
   if (evidenceDigest(report) !== evidenceDigest(saved.result)) throw new Error('Replayed report differs from saved result');
-  return { scanId, verified: true, ledgerScope: saved.snapshot.ledgerScope ?? 'wallet', source: saved.snapshot.source, digest: saved.digest, report };
+  return { scanId, verified: true, batchValidation, ledgerScope: saved.snapshot.ledgerScope ?? 'wallet', source: saved.snapshot.source, digest: saved.digest, report };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

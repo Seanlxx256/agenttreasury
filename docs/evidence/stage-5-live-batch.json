@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "capturedAt": "2026-11-16T17:46:27.397Z",
+  "scope": "public-chain-only",
+  "limitation": "No local purchases or journal supplied. Journal differences are not proven business incidents.",
+  "snapshot": {
+    "version": 1,
+    "ledgerScope": "none",
+    "network": "arcTestnet",
+    "payer": "0xec3fc32431aa97d28897b571731975bdaef56e5c",
+    "from": "72581208",
+    "to": "72581208",
+    "finalized": "72582441",
+    "openingHash": "0x324b2e8e518be4604090878e13882cc2aff14ba4c8643a58ff24b116d1bc2712",
+    "closingHash": "0xe071f5687c7d2e2bb1be0a90101006fd1cafdfe1051285001ba5af648feb68ff",
+    "opening": "3289473",
+    "closing": "3289341",
+    "purchases": [],
+    "receiptBlocks": {},
+    "unsettled": [],
+    "source": {
+      "kind": "rpc",
+      "chainId": 5042002,
+      "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+    },
+    "movements": {
+      "deposits": [],
+      "withdrawals": [],
+      "burns": [],
+      "batches": [
+        {
+          "hash": "0x33591d813d82c7d71e01586c6fcc4b1d22d34a37c4f77fa6c83a16080610be33",
+          "id": "0x679c877cd212a1adbc56392b954702d3e4dacc694b2d1694b034c12f7b8d079b",
+          "logIndex": 12,
+          "evidence": {
+            "blockNumber": "72581208",
+            "blockHash": "0xe071f5687c7d2e2bb1be0a90101006fd1cafdfe1051285001ba5af648feb68ff",
+            "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+            "topics": [
+              "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+              "0x679c877cd212a1adbc56392b954702d3e4dacc694b2d1694b034c12f7b8d079b",
+              "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+              "0x0000000000000000000000003600000000000000000000000000000000000000"
+            ],
+            "data": "0x",
+            "transactionInput": "0xc9486c8b000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001e0000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000a0679c877cd212a1adbc56392b954702d3e4dacc694b2d1694b034c12f7b8d079b000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b90000000000000000000000000000000000000000000000000000000000000003000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa7000000000000000000000000000000000000000000000000000000000000261c000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7c000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffda680000000000000000000000000000000000000000000000000000000000000041e4ddb56b0537accea8b7ccb34043cc2281edb032e3f9ec3dbee209f93b1a79fa024eb363b662f3dbb93cc1dc5f3cce59ba4bc0f22474692bb14d354c9228272b1b00000000000000000000000000000000000000000000000000000000000000"
+          },
+          "delta": "-132"
+        }
+      ]
+    }
+  },
+  "digest": "d669ee9667c36add582be421ac58923082c3efa7fd0e56c7f40a5cc641962edc",
+  "result": {
+    "status": "DISCREPANCY",
+    "network": "eip155:5042002",
+    "token": "0x3600000000000000000000000000000000000000",
+    "payer": "0xec3fc32431aa97d28897b571731975bdaef56e5c",
+    "window": {
+      "openingBlock": "72581207",
+      "openingHash": "0x324b2e8e518be4604090878e13882cc2aff14ba4c8643a58ff24b116d1bc2712",
+      "from": "72581208",
+      "to": "72581208",
+      "closingHash": "0xe071f5687c7d2e2bb1be0a90101006fd1cafdfe1051285001ba5af648feb68ff"
+    },
+    "balance": {
+      "opening": "3289473",
+      "closing": "3289341",
+      "deposits": "0",
+      "withdrawals": "0",
+      "burns": "0",
+      "batchDelta": "-132",
+      "journalDebits": "0",
+      "chainClosing": "3289341",
+      "journalClosing": "3289473",
+      "chainDifference": "0",
+      "journalDifference": "-132"
+    },
+    "capitalMovements": {
+      "deposits": [],
+      "withdrawals": [],
+      "burns": []
+    },
+    "batches": [
+      {
+        "hash": "0x33591d813d82c7d71e01586c6fcc4b1d22d34a37c4f77fa6c83a16080610be33",
+        "id": "0x679c877cd212a1adbc56392b954702d3e4dacc694b2d1694b034c12f7b8d079b",
+        "onchainDelta": "-132",
+        "journalDelta": "0",
+        "requestIds": [],
+        "status": "DISCREPANCY"
+      }
+    ],
+    "missingBatches": [],
+    "currentAuthorizations": {
+      "pendingAmount": "0",
+      "unresolved": []
+    }
+  }
+}
