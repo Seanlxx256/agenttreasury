@@ -42,6 +42,12 @@ None of those checkpoints survive inside `pay()`.
 
 `gateway-merchant` inserts the delivery claim (`gateway_demo_deliveries`) **before** calling the Gateway `/settle`, so a settle that fails after the claim cannot be settled twice. `BatchFacilitatorClient.settle()` / `createGatewayMiddleware` hide that ordering inside the middleware lifecycle, where the project cannot interleave its own database claim with the network call.
 
+### Dispute resolution has no SDK surface at all
+
+The sharpest example of the boundary is the delivery dispute. x402 is pay-then-verify — the seller checks the signature and serves the resource, and the protocol has no chargeback or dispute primitive. The SDK's execution layer ends at "payment accepted, resource returned"; it has no concept of a buyer who paid but received wrong content, because the protocol itself does not.
+
+The project's dispute path (`raiseGatewayDeliveryDispute` → `decideGatewayDeliveryDispute` → `recordGatewayRefund`) is therefore not a reimplementation of an SDK feature. It is a governance layer the SDK and the protocol both omit: the buyer's "expected vs received" assertion is stored as structured evidence, the arbitration is human, and a `REFUND` verdict flows back through the same onchain evidence rules as every other refund. This is the boundary in one sentence — the SDK is used for everything that has no observation or arbitration requirement, and the protocol is handwritten everywhere a failure state must be named, checkpointed, or decided.
+
 ## The honest trade-off
 
 For a happy-path merchant that only needs "charge the request and return the resource", the SDK execution layer is the shorter path, and this project would use it. This project is not that merchant: it exists to make the **failure** path observable, recoverable, and reconcilable. The SDK is therefore used for everything that has no observation requirement (chain constants, deposits), and the protocol is handwritten everywhere an intermediate state must be checkpointed or independently verified.
