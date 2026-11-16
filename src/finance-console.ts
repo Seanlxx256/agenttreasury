@@ -38,6 +38,7 @@ export function registerFinanceConsole(
       issuedAt: Date; buyerHasDelivery: boolean; sellerHasDelivery: boolean;
       taskId: string | null; budgetStatus: string | null; journal: unknown;
       reviewRequired: boolean;
+      commitmentSatisfied: boolean | null; commitmentViolations: string[] | null;
       refundStatus: string | null; refundReason: string | null; refundDecidedAt: Date | null;
       refundHash: string | null;
     }>(`
@@ -46,6 +47,8 @@ export function registerFinanceConsole(
              (p.budget_status = 'reserved' AND p.reconcile_review_at IS NOT NULL) IS TRUE AS "reviewRequired",
              p.authorized_at AS "issuedAt", (p.delivery IS NOT NULL) AS "buyerHasDelivery",
              (d.delivery IS NOT NULL) AS "sellerHasDelivery",
+             p.commitment_satisfied AS "commitmentSatisfied",
+             p.commitment_violations AS "commitmentViolations",
              q.status AS "refundStatus", q.reason AS "refundReason", q.decided_at AS "refundDecidedAt",
              r.transaction_hash AS "refundHash",
              CASE WHEN j.request_id IS NOT NULL THEN jsonb_build_object(

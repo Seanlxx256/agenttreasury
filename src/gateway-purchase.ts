@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import type { Pool } from 'pg';
 import type { Address, Hex } from 'viem';
 import { reserveAmount } from './budget.js';
@@ -8,7 +9,7 @@ import {
 } from './gateway-budget.js';
 import { checkGatewayPayment } from './gateway-payment-evidence.js';
 import { PaymentError, tokenDigest } from './payments.js';
-import { verifyDeliveryCommitment } from './delivery-commitment.js';
+import { verifyDeliveryCommitment, type DeliveryCommitment } from './delivery-commitment.js';
 import {
   decodePaymentHeader, encodePaymentHeader, gatewayAuthorizationTypes,
   gatewayChainName, gatewayNetworkConfig, gatewayTracePrice, gatewayValidity,
@@ -32,6 +33,7 @@ type StoredPurchase = {
   retrieval_token: string | null;
   task_id: string | null;
   budget_status: 'reserved' | 'spent' | 'released' | null;
+  delivery_commitment: DeliveryCommitment | null;
   owner: boolean;
 };
 
@@ -78,8 +80,8 @@ export async function purchaseGatewayTrace(
     }
     return row;
   };
-  const saveDelivery = async (delivery: unknown) => {
-    const assessment = verifyDeliveryCommitment(delivery, commitment);
+  const saveDelivery = async (delivery: unknown, against: DeliveryCommitment) => {
+    const assessment = verifyDeliveryCommitment(delivery, against);
     await pool.query(
       `UPDATE gateway_demo_purchases SET delivery = $2, commitment_satisfied = $3, commitment_violations = $4
        WHERE request_id = $1 AND delivery IS NULL`,
@@ -106,7 +108,7 @@ export async function purchaseGatewayTrace(
       } catch {
         return { status: 'charged-delivery-missing', nonce, delivery: null, payment };
       }
-      await saveDelivery(recovered);
+      await saveDelivery(recovered, existing.delivery_commitment ?? commitment);
       return { status: 'delivered', nonce, delivery: recovered, payment };
     }
     const status = {
@@ -135,7 +137,8 @@ export async function purchaseGatewayTrace(
     option.amount === requirements.amount && option.maxTimeoutSeconds === requirements.maxTimeoutSeconds &&
     option.extra?.name === requirements.extra.name && option.extra.version === requirements.extra.version &&
     option.extra.verifyingContract?.toLowerCase() === requirements.extra.verifyingContract.toLowerCase());
-  if (quote?.x402Version !== 2 || quote.resource?.url !== endpoint || !matches) {
+  if (quote?.x402Version !== 2 || quote.resource?.url !== endpoint || !matches ||
+      !isDeepStrictEqual(quote.resource?.deliveryCommitment, commitment)) {
     throw new Error('Gateway quote differs from the approved terms');
   }
 
@@ -204,7 +207,7 @@ export async function purchaseGatewayTrace(
       },
     });
     const delivery = await receiveDelivery(response, requestId, authorization.nonce);
-    await saveDelivery(delivery);
+    await saveDelivery(delivery, commitment);
     return { status: 'delivered', nonce: authorization.nonce, delivery };
   } catch {
     return { status: 'submission-unknown', nonce: authorization.nonce, delivery: null };
