@@ -14,7 +14,7 @@ test('study counterbalances distinct cases and includes model wait in correct de
   }
 
   const actionNumbers = { 'check-gateway': 1, 'wait-for-gateway': 2, 'retrieve-delivery': 3,
-    'contact-merchant': 4, 'review-conflict': 5, escalate: 6, 'close-case': 7 };
+    'contact-merchant': 4, 'review-conflict': 5, escalate: 6, 'close-case': 7, 'raise-dispute': 8 };
   let index = -1;
   let time = 0;
   let calls = 0;

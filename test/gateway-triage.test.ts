@@ -73,7 +73,7 @@ test('triage accepts only permitted actions with matching evidence citations', a
 
 test('triage evaluation scores missing recommendations against the full dataset', async () => {
   const baseline = await evaluateGatewayTriage();
-  assert.equal(baseline.rules.cases, 12);
+  assert.equal(baseline.rules.cases, 13);
   assert.equal(baseline.agent, null);
 
   let calls = 0;
@@ -87,12 +87,12 @@ test('triage evaluation scores missing recommendations against the full dataset'
   };
   const result = await evaluateGatewayTriage('test-model', partialModel);
   assert.equal(result.rules.correctActions, baseline.rules.correctActions);
-  assert.equal(calls, 12);
+  assert.equal(calls, 13);
   assert.equal(result.agent?.recommendations, 1);
-  assert.equal(result.agent?.actionAccuracy, 1 / 12);
+  assert.equal(result.agent?.actionAccuracy, 1 / 13);
   assert.equal(result.agent?.correctCitationSets, 1);
   assert.equal(result.agent?.rejected, 1);
-  assert.equal(result.agent?.unavailable, 10);
+  assert.equal(result.agent?.unavailable, 11);
   assert.ok(result.cases.every(({ expectedActionAllowed }) => expectedActionAllowed));
 });
 
@@ -226,7 +226,7 @@ test('triage evaluation compares several models in one run', async () => {
   };
   const result = await evaluateGatewayTriageAcrossModels(['qwen2.5:0.5b', 'qwen2.5:1.5b'], request);
   assert.deepEqual(Object.keys(result.comparison), ['rules', 'qwen2.5:0.5b', 'qwen2.5:1.5b']);
-  assert.equal(result.rules.cases, 12);
+  assert.equal(result.rules.cases, 13);
   assert.equal(result.models.length, 2);
   assert.equal(result.models[0]?.profile, 'qwen2.5:0.5b');
   assert.equal(result.models[1]?.profile, 'qwen2.5:1.5b');

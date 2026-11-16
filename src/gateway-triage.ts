@@ -8,11 +8,12 @@ type TriagePurchase = {
   buyerHasDelivery: boolean;
   sellerHasDelivery: boolean;
   journal: unknown;
+  commitmentSatisfied?: boolean | null;
 };
 
 type Fact = { id: string; description: string };
 export type TriageAction = 'review-conflict' | 'retrieve-delivery' | 'contact-merchant' |
-  'check-gateway' | 'wait-for-gateway' | 'close-case' | 'escalate';
+  'check-gateway' | 'wait-for-gateway' | 'close-case' | 'escalate' | 'raise-dispute';
 export type TriageRecommendation = { action: TriageAction; rationale: string; citations: string[] };
 
 const decisive = new Set(['charged', 'failed', 'conflict']);
@@ -29,6 +30,9 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
     { id: 'polling', description: purchase.reviewRequired ? 'Automatic checks are paused.' : 'Automatic checks are not marked paused.' },
   ];
   if (purchase.journal) facts.push({ id: 'journal', description: 'A payment journal entry has been posted.' });
+  if (purchase.commitmentSatisfied === false) {
+    facts.push({ id: 'delivery-commitment', description: "The delivery violates the merchant's commitment." });
+  }
   for (const { id, evidence } of observations) {
     if (!gatewayStatuses.has(evidence.status)) continue;
     const reason = evidence.reason && conflictReasons.has(evidence.reason) ? ' (' + evidence.reason + ')' : '';
@@ -59,11 +63,17 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
       citations: [localRef, 'observation-' + ended.id] };
   } else if (purchase.journal || decision?.evidence.status === 'charged') {
     if (purchase.buyerHasDelivery) {
-      rules = { action: 'close-case',
-        rationale: purchase.journal
-          ? 'The payment journal has been posted and the buyer trace is saved.'
-          : 'A confirmed payment and a saved buyer trace are on record.',
-        citations: [...new Set([paymentRef, 'buyer-delivery', ...(purchase.journal ? ['journal'] : [])])] };
+      if (purchase.commitmentSatisfied === false) {
+        rules = { action: 'raise-dispute',
+          rationale: "The buyer has the delivery but it violates the merchant's commitment. Raise a delivery dispute for arbitration.",
+          citations: ['delivery-commitment', 'buyer-delivery', ...(purchase.journal ? ['journal'] : [])] };
+      } else {
+        rules = { action: 'close-case',
+          rationale: purchase.journal
+            ? 'The payment journal has been posted and the buyer trace is saved.'
+            : 'A confirmed payment and a saved buyer trace are on record.',
+          citations: [...new Set([paymentRef, 'buyer-delivery', ...(purchase.journal ? ['journal'] : [])])] };
+      }
     } else {
       rules = { action: purchase.sellerHasDelivery ? 'retrieve-delivery' : 'contact-merchant',
         rationale: purchase.sellerHasDelivery

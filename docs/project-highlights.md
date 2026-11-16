@@ -51,6 +51,10 @@ finance?*
   delivery against it, and the dispute path snapshots the objective mismatch next to the
   buyer's claim. "Expected vs received" becomes reproducible evidence instead of a
   pay-then-verify assertion.
+- **Commitment-aware triage and recipient-change review.** The read-only triage agent
+  recognizes a delivered-but-commitment-violating payment and recommends raising a dispute,
+  and a merchant payout address can never change silently — it is staged and then confirmed
+  by a finance operator, closing the "change the bank account" B2B fraud vector.
 - **Multi-network, multi-merchant, multi-process.** The network is a column on each
   purchase, resolved through a per-network config factory derived from Circle's official
   SDK, so one worker pool spans testnet and mainnet. Merchants are first-class entities
@@ -81,7 +85,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 51/51.
+- `npm test` passes 57/57.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing

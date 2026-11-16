@@ -90,6 +90,14 @@ export const gatewayTriageCases: GatewayTriageCase[] = [
     observations: [{ id: '1', evidence: { status: 'submission-expired' } }],
     expectedAction: 'close-case', requiredCitations: ['observation-1'], optionalCitations: ['budget'],
   },
+  {
+    name: 'Confirmed delivery violates the merchant commitment',
+    purchase: { ...settled, buyerHasDelivery: true, sellerHasDelivery: true, commitmentSatisfied: false },
+    observations: [{ id: '1', evidence: { status: 'charged' } }],
+    expectedAction: 'raise-dispute',
+    requiredCitations: ['delivery-commitment', 'buyer-delivery'],
+    optionalCitations: ['journal', 'budget'],
+  },
 ];
 
 // Input snapshots from the lost-response drill, with normalized observation IDs.
