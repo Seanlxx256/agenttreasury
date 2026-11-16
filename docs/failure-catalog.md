@@ -23,7 +23,7 @@ the test that proves it.
 | 7 | Contradictory transfer evidence | transfer search matching | `conflict` state for review | `gateway-reconciliation.test.ts` |
 | 8 | Failed transfer | transfer `failed` status | `payment-failed`, release the reservation | `payments.test.ts` |
 | 9 | Submission timeout | `reconcile_after` lease + attempts | expire or escalate to human review | `payments.test.ts` |
-| 10 | **Paid but wrong delivery** | — not implemented — | — not implemented — | **gap** |
+| 10 | Paid but wrong delivery | dispute state machine | human arbitration → refund or dismiss | `gateway-delivery-disputes.test.ts` |
 
 ## 1. Lost paid response
 
@@ -146,24 +146,26 @@ A submitted purchase whose outcome stays unknown forever cannot hold budget fore
 - **Proven by.** `Gateway worker reconciles after lease expiry and preserves uncertain
   budgets for review` in `test/payments.test.ts`.
 
-## 10. Paid but wrong delivery — the honest gap
+## 10. Paid but wrong delivery — dispute arbitration
 
-This is the one failure mode this project does **not** yet govern, and it is the gap
-that matters most in the agentic-payments story.
+x402 is *pay-then-verify*: the seller checks the signature and serves the resource,
+and there is no chargeback or dispute primitive in the protocol. `receiveDelivery` can
+verify that a delivery is well-formed (right `request_id`, `nonce`, `gatewayReference`,
+fixture origin), but not that its content is what the buyer paid for.
 
-x402 is *pay-then-verify*: the seller checks the signature and serves the resource, and
-there is no chargeback or dispute primitive in the protocol. `receiveDelivery` verifies
-that the payload has the right `request_id`, `nonce`, `gatewayReference`, and that its
-trace originates from the fixture — but it does not, and cannot, verify that the trace's
-*content* is what the buyer paid for. A seller that returns a well-formed but wrong or
-empty result is indistinguishable, at this layer, from a correct one.
-
-This is intentionally unaddressed in the current scope and belongs to the next work
-item: a **dispute loop** — buyer raises a dispute, both sides present payment and
-delivery evidence, and a decision (human-approved, matching the project's read-only
-triage stance) either records a refund or closes the dispute. The append-only audit
-table and onchain evidence verification already built here are exactly the substrate
-that loop needs.
+- **Detection.** `raiseGatewayDeliveryDispute` accepts a dispute only when the payment
+  is charged **and** a delivery exists — the "money moved, content is wrong" state. A
+  missing delivery is routed to the refund request instead
+  (`DELIVERY_MISSING_USE_REFUND`), so the two failure modes stay separate.
+- **Recovery.** The dispute is a three-state machine (`OPEN` → `REFUNDED` / `DISMISSED`)
+  arbitrated by a human operator, not the machine. A `REFUND` verdict authorizes a
+  refund but does not move money; the onchain return is executed through
+  `recordGatewayRefund`, so the evidence rules stay in one place. The buyer's
+  "expected vs received" assertion is stored as structured evidence for the audit
+  trail.
+- **Proven by.** `gateway-delivery-disputes.test.ts`, which rejects uncharged or
+  undelivered disputes, proves idempotent raising, proves one-time arbitration, and
+  runs a `REFUND` verdict through the existing onchain evidence path.
 
 ## Design stance
 
@@ -176,5 +178,5 @@ live. Two positions follow from it:
    not the happy path, is the source of truth.
 2. **Humans decide the irreversible steps.** Recovery that just re-reads state is
    automated; anything that moves money back or changes a decision is operator-gated,
-   and the triage agent is advisory. The failure path is where autonomy must be
-   bounded.
+   and the triage agent is advisory. The delivery dispute is arbitrated by an operator,
+   never by the model. The failure path is where autonomy must be bounded.
