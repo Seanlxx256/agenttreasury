@@ -29,11 +29,14 @@ export async function resolveRefundTransaction(
     throw new GatewayRefundCommandError('Resume with the original refund reason');
   }
   if (!saved) {
-    const { rowCount } = await client.query(
-      "SELECT 1 FROM gateway_refund_requests WHERE request_id = $1 AND status = 'APPROVED' AND reason = $2",
+    const { rows: [approval] } = await client.query<{ approved: boolean }>(
+      `SELECT (
+         EXISTS (SELECT 1 FROM gateway_refund_requests WHERE request_id = $1 AND status = 'APPROVED' AND reason = $2)
+         OR EXISTS (SELECT 1 FROM gateway_delivery_disputes WHERE request_id = $1 AND status = 'REFUNDED' AND reason = $2)
+       ) AS approved`,
       [requestId, reason],
     );
-    if (rowCount !== 1) {
+    if (!approval?.approved) {
       throw new GatewayRefundCommandError('Finance approval with the same reason is required before refunding');
     }
     // Persist the intent before the broadcast; a retry now sees it and never re-broadcasts.
