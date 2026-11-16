@@ -22,7 +22,7 @@ export async function processGatewayReconciliation(pool: Pool, request: typeof f
     UPDATE gateway_demo_purchases p SET reconcile_after = now() + interval '30 seconds'
     FROM candidate WHERE p.request_id = candidate.request_id
     RETURNING p.request_id AS "requestId", p.task_id AS "taskId", p.nonce, p.payer, p.recipient,
-              p.amount_units::text AS "amountUnits", p.submitted_at IS NOT NULL AS submitted,
+              p.amount_units::text AS "amountUnits", p.network, p.submitted_at IS NOT NULL AS submitted,
               p.reconcile_after::text AS "leaseUntil", p.reconcile_attempts AS attempts
   `);
   if (!claim) return false;

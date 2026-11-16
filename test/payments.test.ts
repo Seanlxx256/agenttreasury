@@ -153,11 +153,74 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
     assert.deepEqual(review.rows[0], { reconcile_attempts: 12, review: true });
     assert.deepEqual(await counters(), { reserved: '1000', spent: '1000' });
 
+    // Concurrent workers must claim distinct purchases without double handling.
+    {
+      const payer2 = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+      const recipient2 = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+      const seeded2 = await seedGateway(pool, { origin, payer: payer2, recipient: recipient2 }, 10000, 10000);
+      const taskId2 = seeded2.taskId;
+      const makeSubmitted = async () => {
+        const id = randomUUID();
+        const nonce = `0x${randomBytes(32).toString('hex')}`;
+        await transaction(pool, async (client) => {
+          await reserveAmount(client, taskId2, '2026-01-01', '1000');
+          await client.query(`
+            INSERT INTO gateway_demo_purchases
+              (request_id, endpoint, nonce, payer, recipient, amount_units, task_id, budget_day,
+               budget_status, authorized_at, submitted_at, reconcile_after)
+            VALUES ($1, $2, $3, $4, $5, 1000, $6, '2026-01-01',
+              'reserved', now() - interval '3 minutes', now(), now() - interval '1 second')
+          `, [id, `${origin}/trace/${id}`, nonce, payer2, recipient2, taskId2]);
+        });
+        return { id, nonce };
+      };
+      const p1 = await makeSubmitted();
+      const p2 = await makeSubmitted();
+      const purchases = [p1, p2];
+      let lookups = 0;
+      const seen = new Set<string>();
+      const gateway: typeof fetch = async (url) => {
+        const nonce = new URL(String(url)).searchParams.get('nonce');
+        if (nonce) seen.add(nonce);
+        ++lookups;
+        return Response.json({ transfers: [{
+          id: randomUUID(), status: 'confirmed', nonce, fromAddress: payer2, toAddress: recipient2,
+          token: 'USDC', sendingNetwork: arcGatewayNetwork, recipientNetwork: arcGatewayNetwork,
+          amount: '1000', txHash: `0x${'c'.repeat(64)}`,
+        }] });
+      };
+      // Two worker invocations race for two due purchases: SKIP LOCKED plus the
+      // reconcile_after lease must ensure each purchase is claimed exactly once.
+      const work = await Promise.all(Array.from({ length: 2 }, () => processGatewayReconciliation(pool, gateway)));
+      assert.equal(work.filter(Boolean).length, 2);
+      assert.equal(lookups, 2);
+      assert.equal(seen.size, 2);
+      const journal = await pool.query(
+        'SELECT COUNT(*)::int AS n FROM gateway_payment_journal j JOIN gateway_demo_purchases p USING (request_id) WHERE p.payer = $1',
+        [payer2],
+      );
+      assert.equal(journal.rows[0]?.n, 2);
+      assert.deepEqual(new Set(purchases.map((p) => p.nonce)), seen);
+
+      // Two merchants coexist: each keeps its own payout address and network.
+      const merchants = await pool.query(
+        'SELECT recipient, network FROM gateway_merchants ORDER BY created_at',
+      );
+      assert.equal(merchants.rowCount, 2);
+      assert.deepEqual(merchants.rows.map((r) => r.recipient).sort(), [recipient, recipient2].sort());
+      assert.ok(merchants.rows.every((r) => r.network === 'arcTestnet'));
+      const grantMerchant = await pool.query(
+        'SELECT merchant_id FROM gateway_task_grants WHERE task_id = $1', [taskId2],
+      );
+      assert.ok(grantMerchant.rows[0]?.merchant_id);
+    }
+
     const batchHash = `0x${'b'.repeat(64)}` as const;
     const depositHash = `0x${'d'.repeat(64)}` as const;
     const batchId = `0x${'a'.repeat(64)}` as const;
     let delta = -1000n;
     const chain: GatewayBalanceChain = {
+      network: 'arcTestnet',
       finalized: async () => 12n,
       blockHash: async () => batchId,
       totalBalance: async (_wallet, block) => block === 9n ? 5000n : 8000n + delta,

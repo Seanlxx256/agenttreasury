@@ -38,13 +38,25 @@ export async function seed(pool: Pool, budget = 3000, dailyLimit = 3000, merchan
 }
 
 export async function seedGateway(
-  pool: Pool, grant: { origin: string; payer: string; recipient: string }, budget = 3000, dailyLimit = 3000,
+  pool: Pool, grant: { origin: string; payer: string; recipient: string; network?: 'arc' | 'arcTestnet' },
+  budget = 3000, dailyLimit = 3000,
 ) {
+  const network = grant.network ?? 'arcTestnet';
   return transaction(pool, async (client) => {
     const task = await createDemoTask(client, budget, dailyLimit);
-    await client.query('INSERT INTO gateway_task_grants VALUES ($1, $2, $3, $4)',
-      [task.taskId, grant.origin, grant.payer.toLowerCase(), grant.recipient.toLowerCase()]);
-    return task;
+    const merchant = await client.query<{ id: string }>(
+      `INSERT INTO gateway_merchants (id, recipient, endpoint_origin, network)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (recipient, network) DO UPDATE SET endpoint_origin = EXCLUDED.endpoint_origin
+       RETURNING id`,
+      [randomUUID(), grant.recipient.toLowerCase(), grant.origin, network],
+    );
+    const merchantId = merchant.rows[0]!.id;
+    await client.query(
+      'INSERT INTO gateway_task_grants (task_id, origin, payer, recipient, network, merchant_id) VALUES ($1, $2, $3, $4, $5, $6)',
+      [task.taskId, grant.origin, grant.payer.toLowerCase(), grant.recipient.toLowerCase(), network, merchantId],
+    );
+    return { ...task, merchantId };
   });
 }
 

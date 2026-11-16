@@ -41,7 +41,7 @@ export function registerFinanceConsole(
       refundStatus: string | null; refundReason: string | null; refundDecidedAt: Date | null;
       refundHash: string | null;
     }>(`
-      SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
+      SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits", p.network,
              p.task_id AS "taskId", p.budget_status AS "budgetStatus",
              (p.budget_status = 'reserved' AND p.reconcile_review_at IS NOT NULL) IS TRUE AS "reviewRequired",
              p.authorized_at AS "issuedAt", (p.delivery IS NOT NULL) AS "buyerHasDelivery",

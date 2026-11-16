@@ -1,8 +1,7 @@
 import { decodeAbiParameters, decodeFunctionData, parseAbi, parseAbiItem, parseAbiParameters,
   TransactionReceiptNotFoundError, type Address, type Hash } from 'viem';
-import { arcTestnetClient, arcTestnetUsdc as token, gatewayChainConfig, gatewayDomain } from './gateway-x402.js';
+import { gatewayChainName, gatewayClient, gatewayNetworkConfig, type GatewayNetworkName } from './gateway-x402.js';
 
-const address = gatewayDomain.verifyingContract;
 const balance = parseAbi(['function totalBalance(address token, address depositor) view returns (uint256)']);
 const batchCall = parseAbi(['function submitBatch(bytes calldataBytes, bytes signature)']);
 const batchFormat = parseAbiParameters('(address depositor, int256 value)[] deltas, bytes32 batchId, uint32 domain, address token, address wallet');
@@ -10,12 +9,12 @@ const batchEvent = parseAbiItem('event BatchProcessed(bytes32 indexed batchId, a
 const depositEvent = parseAbiItem('event Deposited(address indexed token, address indexed depositor, address indexed sender, uint256 value)');
 const withdrawalEvent = parseAbiItem('event WithdrawalCompleted(address indexed token, address indexed depositor, uint256 value)');
 const burnEvent = parseAbiItem('event GatewayBurned(address indexed token, address indexed depositor, bytes32 indexed transferSpecHash, uint32 destinationDomain, bytes32 destinationRecipient, address signer, uint256 value, uint256 fee, uint256 fromAvailable, uint256 fromWithdrawing)');
-const arcDomain = 26;
 
 type Movement = { hash: Hash; logIndex: number; amount: bigint };
 type Batch = { hash: Hash; id: Hash; delta: bigint };
 
 export interface GatewayBalanceChain {
+  network: GatewayNetworkName;
   finalized(): Promise<bigint>;
   blockHash(block: bigint): Promise<Hash>;
   totalBalance(wallet: Address, block: bigint): Promise<bigint>;
@@ -25,10 +24,15 @@ export interface GatewayBalanceChain {
   }>;
 }
 
-export async function gatewayBalanceChain(): Promise<GatewayBalanceChain> {
-  const client = arcTestnetClient(4);
-  if (await client.getChainId() !== gatewayChainConfig.id) throw new Error('RPC endpoint must serve the selected Arc network');
+export async function gatewayBalanceChain(network: GatewayNetworkName = gatewayChainName): Promise<GatewayBalanceChain> {
+  const config = gatewayNetworkConfig(network);
+  const client = gatewayClient(network, 4);
+  const address = config.domain.verifyingContract;
+  const token = config.usdc;
+  const domainId = config.domainId;
+  if (await client.getChainId() !== config.chainConfig.id) throw new Error('RPC endpoint must serve the selected Arc network');
   return {
+    network,
     async finalized() {
       return (await client.getBlock({ blockTag: 'finalized' })).number;
     },
@@ -79,7 +83,7 @@ export async function gatewayBalanceChain(): Promise<GatewayBalanceChain> {
           }
           const { args: [data] } = decodeFunctionData({ abi: batchCall, data: tx.input });
           const [deltas, id, domain, asset, contract] = decodeAbiParameters(batchFormat, data);
-          if (id !== log.args.batchId || domain !== arcDomain || asset.toLowerCase() !== token ||
+          if (id !== log.args.batchId || domain !== domainId || asset.toLowerCase() !== token ||
               contract.toLowerCase() !== address || deltas.reduce((sum, entry) => sum + entry.value, 0n) !== 0n) {
             throw new Error(`Invalid Gateway batch calldata for ${log.transactionHash}`);
           }

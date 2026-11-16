@@ -2,33 +2,78 @@ import { createPublicClient, http, isAddress, recoverTypedDataAddress, type Addr
 import { CHAIN_CONFIGS } from '@circle-fin/x402-batching/client';
 
 // Arc network selection. Testnet by default; set GATEWAY_NETWORK=arc for mainnet.
-// Chain ID, USDC address, and Gateway contract come from Circle's official SDK config.
-const gatewayChain = (process.env.GATEWAY_NETWORK === 'arc' ? 'arc' : 'arcTestnet') as 'arc' | 'arcTestnet';
-export const gatewayChainName = gatewayChain;
-const gatewayConfig = CHAIN_CONFIGS[gatewayChain];
+// The single-environment configuration below is kept for backward compatibility,
+// while `gatewayNetworkConfig` provides a per-network factory so a purchase,
+// reconciliation pass, or refund can target several networks in one process.
+export type GatewayNetworkName = 'arc' | 'arcTestnet';
 
-// The selected viem chain and RPC, so downstream modules switch networks with
-// gateway-x402 instead of importing the testnet chain directly.
-export const gatewayChainConfig = gatewayConfig.chain;
-export const gatewayRpcUrl = gatewayConfig.rpcUrl;
+function resolveNetwork(name?: string): GatewayNetworkName {
+  return name === 'arc' ? 'arc' : 'arcTestnet';
+}
+
+export interface GatewayNetworkConfig {
+  /** eip155 chain id, e.g. eip155:5042 */
+  network: string;
+  chainName: GatewayNetworkName;
+  chainConfig: (typeof CHAIN_CONFIGS)[GatewayNetworkName]['chain'];
+  rpcUrl: string;
+  usdc: Address;
+  domain: { name: string; version: string; chainId: number; verifyingContract: Address };
+  /** CCTP-style domain id used in Gateway batch calldata. */
+  domainId: number;
+  api: string;
+  circleChain: 'ARC' | 'ARC-TESTNET';
+  sessionKey: 'mainnet' | 'testnet';
+}
+
+// Per-network factory: every network-specific value (chain, RPC, USDC, Gateway
+// contract, REST API, Circle CLI name) is derived from the official SDK config
+// for that network, so callers never hardcode a single chain again.
+export function gatewayNetworkConfig(name: GatewayNetworkName, apiOverride?: string): GatewayNetworkConfig {
+  const chain = resolveNetwork(name);
+  const config = CHAIN_CONFIGS[chain];
+  const isMainnet = chain === 'arc';
+  const api = apiOverride ?? (isMainnet
+    ? 'https://gateway-api.circle.com/v1/x402'
+    : 'https://gateway-api-testnet.circle.com/v1/x402');
+  return {
+    network: `eip155:${config.chain.id}`,
+    chainName: chain,
+    chainConfig: config.chain,
+    rpcUrl: config.rpcUrl!,
+    usdc: config.tokens.USDC!.address as Address,
+    domain: {
+      name: 'GatewayWalletBatched',
+      version: '1',
+      chainId: config.chain.id,
+      verifyingContract: config.gatewayWallet as Address,
+    },
+    domainId: config.domain,
+    api,
+    circleChain: isMainnet ? 'ARC' : 'ARC-TESTNET',
+    sessionKey: isMainnet ? 'mainnet' : 'testnet',
+  };
+}
+
+// Backward-compatible singleton for the process default network. Downstream
+// modules that only ever touch one network keep importing these; multi-network
+// call paths should use `gatewayNetworkConfig` instead.
+const defaultNetwork = resolveNetwork(process.env.GATEWAY_NETWORK);
+const defaultConfig = gatewayNetworkConfig(defaultNetwork, process.env.GATEWAY_API);
+
+export const gatewayChainName = defaultConfig.chainName;
+export const gatewayChainConfig = defaultConfig.chainConfig;
+export const gatewayRpcUrl = defaultConfig.rpcUrl;
 // Circle CLI names the same network differently from the SDK: ARC vs ARC-TESTNET.
-export const gatewayCircleChain = gatewayChain === 'arc' ? 'ARC' : 'ARC-TESTNET';
+export const gatewayCircleChain = defaultConfig.circleChain;
 // The Circle CLI session stores mainnet and testnet in separate slots.
-export const gatewaySessionKey = gatewayChain === 'arc' ? 'mainnet' : 'testnet';
+export const gatewaySessionKey = defaultConfig.sessionKey;
 
-export const arcGatewayNetwork = `eip155:${gatewayConfig.chain.id}`;
-// Gateway REST API. Selected by network; override with GATEWAY_API if needed.
-const gatewayApiBase = process.env.GATEWAY_API
-  ?? (gatewayChain === 'arc' ? 'https://gateway-api.circle.com/v1/x402' : 'https://gateway-api-testnet.circle.com/v1/x402');
-export const gatewayApi = gatewayApiBase;
+export const arcGatewayNetwork = defaultConfig.network;
+export const gatewayApi = defaultConfig.api;
 export const gatewayTracePrice = '1000';
-export const arcTestnetUsdc = gatewayConfig.tokens.USDC!.address as Address;
-export const gatewayDomain = {
-  name: 'GatewayWalletBatched',
-  version: '1',
-  chainId: gatewayConfig.chain.id,
-  verifyingContract: gatewayConfig.gatewayWallet as Address,
-} as const;
+export const arcTestnetUsdc = defaultConfig.usdc;
+export const gatewayDomain = defaultConfig.domain;
 export const gatewayAuthorizationTypes = {
   TransferWithAuthorization: [
     { name: 'from', type: 'address' },
@@ -44,9 +89,14 @@ export type GatewayAuthorization = {
   from: Address; to: Address; value: string; validAfter: string; validBefore: string; nonce: Hex;
 };
 
-export function recoverGatewayPayer(authorization: GatewayAuthorization, signature: Hex) {
+export function recoverGatewayPayer(
+  authorization: GatewayAuthorization,
+  signature: Hex,
+  network: GatewayNetworkName = defaultNetwork,
+) {
+  const config = gatewayNetworkConfig(network);
   return recoverTypedDataAddress({
-    domain: gatewayDomain, types: gatewayAuthorizationTypes, primaryType: 'TransferWithAuthorization',
+    domain: config.domain, types: gatewayAuthorizationTypes, primaryType: 'TransferWithAuthorization',
     message: {
       ...authorization, value: BigInt(authorization.value),
       validAfter: BigInt(authorization.validAfter), validBefore: BigInt(authorization.validBefore),
@@ -59,30 +109,40 @@ export function recoverGatewayPayer(authorization: GatewayAuthorization, signatu
 export const gatewayValidity = 7 * 24 * 60 * 60 + 100;
 export const requestIdPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 
-export function arcTestnetClient(retryCount = 0) {
+export function gatewayClient(network: GatewayNetworkName = defaultNetwork, retryCount = 0) {
+  const config = gatewayNetworkConfig(network);
+  const rpcUrl = network === 'arcTestnet' ? (process.env.ARC_TESTNET_RPC_URL ?? config.rpcUrl) : config.rpcUrl;
   return createPublicClient({
-    chain: gatewayConfig.chain,
-    transport: http(process.env.ARC_TESTNET_RPC_URL ?? gatewayConfig.rpcUrl, {
-      timeout: 5000, retryCount,
-    }),
+    chain: config.chainConfig,
+    transport: http(rpcUrl, { timeout: 5000, retryCount }),
   });
 }
 
-export function traceOffer(endpoint: string, recipient: string) {
+// Backward-compatible alias for the testnet-only client.
+export function arcTestnetClient(retryCount = 0) {
+  return gatewayClient('arcTestnet', retryCount);
+}
+
+export function traceOffer(
+  endpoint: string,
+  recipient: string,
+  network: GatewayNetworkName = defaultNetwork,
+) {
+  const config = gatewayNetworkConfig(network);
   return {
     x402Version: 2,
     resource: { url: endpoint, description: 'Sample transaction trace', mimeType: 'application/json' },
     accepts: [{
       scheme: 'exact',
-      network: arcGatewayNetwork,
-      asset: arcTestnetUsdc,
+      network: config.network,
+      asset: config.usdc,
       amount: gatewayTracePrice,
       payTo: recipient.toLowerCase(),
       maxTimeoutSeconds: gatewayValidity,
       extra: {
-        name: gatewayDomain.name,
-        version: gatewayDomain.version,
-        verifyingContract: gatewayDomain.verifyingContract,
+        name: config.domain.name,
+        version: config.domain.version,
+        verifyingContract: config.domain.verifyingContract,
       },
     }],
   } as const;

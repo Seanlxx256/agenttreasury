@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import { isAddress, type Address, type Hash } from 'viem';
 import { gatewayBalanceChain, type GatewayBalanceChain } from './gateway-balance-chain.js';
 import { observeGatewayPayment, type ExpectedGatewayPayment } from './gateway-reconciliation.js';
-import { arcGatewayNetwork, arcTestnetUsdc } from './gateway-x402.js';
+import { gatewayNetworkConfig } from './gateway-x402.js';
 
 type Purchase = ExpectedGatewayPayment & {
   requestId: string;
@@ -17,13 +17,14 @@ export async function reconcileGatewayBalances(
 ) {
   if (from < 1n || to < from || to - from >= 2000n) throw new Error('Specify an inclusive range of 1 to 2000 blocks after deployment');
   if (to > await chain.finalized()) throw new Error('Gateway balance reconciliation requires a finalized end block');
+  const networkConfig = gatewayNetworkConfig(chain.network);
   const wallet = payer.toLowerCase() as Address;
   const openingBlock = from - 1n;
   const [openingHash, closingHash] = await Promise.all([chain.blockHash(openingBlock), chain.blockHash(to)]);
   const [{ rows: purchases }, opening, closing] = await Promise.all([
     pool.query<Purchase>(`
       SELECT p.request_id AS "requestId", p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
-        p.budget_status AS "budgetStatus", j.batch_hash AS "batchHash", j.amount::text AS "journalAmount"
+        p.network, p.budget_status AS "budgetStatus", j.batch_hash AS "batchHash", j.amount::text AS "journalAmount"
       FROM gateway_demo_purchases p LEFT JOIN gateway_payment_journal j USING (request_id)
       WHERE p.payer = $1 AND (p.submitted_at IS NOT NULL OR j.request_id IS NOT NULL)
       ORDER BY p.request_id
@@ -91,7 +92,7 @@ export async function reconcileGatewayBalances(
   const serializeMovements = (rows: typeof chainMoves.deposits) =>
     rows.map((row) => ({ ...row, amount: String(row.amount) }));
   return {
-    status, network: arcGatewayNetwork, token: arcTestnetUsdc, payer: wallet,
+    status, network: networkConfig.network, token: networkConfig.usdc, payer: wallet,
     window: { openingBlock: String(openingBlock), openingHash, from: String(from), to: String(to), closingHash },
     balance: { opening: String(opening), closing: String(closing), deposits: String(deposits),
       withdrawals: String(withdrawals), burns: String(burns), batchDelta: String(batchDelta),

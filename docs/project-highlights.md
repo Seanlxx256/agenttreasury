@@ -37,6 +37,12 @@ finance?*
 - **Append-only audit and operator-gated refunds on both rails.** State transitions are
   recorded, refunds need a human decision, and the Gateway rail closes the loop for a
   charged-but-undelivered payment: approval, seller-initiated return, onchain evidence.
+- **Multi-network, multi-merchant, multi-process.** The network is a column on each
+  purchase, resolved through a per-network config factory derived from Circle's official
+  SDK, so one worker pool spans testnet and mainnet. Merchants are first-class entities
+  keyed on `(recipient, network)`. Concurrent workers claim work with `SKIP LOCKED` plus
+  a lease, so several processes settle the same due queue exactly once. Documented in
+  [distributed-multi-network.md](distributed-multi-network.md).
 
 ## Warts found and fixed
 
@@ -56,14 +62,20 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 32/32.
-- Triage evaluation is honest about model limits: the rule baseline scores near-perfect
-  while a local Qwen2.5 0.5B scores well below it, so rules remain the default and the
-  model is constrained, not trusted.
+- `npm test` passes 36/36.
+- Triage evaluation is honest about model limits: the rule baseline is exact, and a
+  per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
+  escalations — measured, not assumed, with the failures (a principles prompt collapsing
+  1.5B to all-escalate) recorded in the evaluation doc.
 
 ## Not done (and why)
 
-- **Mainnet acceptance run.** Requires real mainnet USDC and Circle mainnet policies; the
-  code path and config switch exist, but it has not been exercised with real funds.
+- **Mainnet acceptance run.** The code path and config switch exist (`GATEWAY_NETWORK=arc`
+  resolves the mainnet chain, RPC, contract, and API), but real funds are intentionally
+  out of scope — validation stays on testnet.
+- **Multi-writer scale-out.** The concurrency model is correct across processes that share
+  one PostgreSQL instance (`SKIP LOCKED` + leases + advisory locks). It is not yet
+  sharded across databases or backed by a message queue; those are the next production
+  milestones, in that order.
 - **Operator-time measurement.** The triage evaluation measures decision correctness and
   evidence, not the time saved in production.

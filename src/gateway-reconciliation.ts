@@ -1,12 +1,11 @@
-import { arcGatewayNetwork as network, gatewayApi } from './gateway-x402.js';
-
-const endpoint = `${gatewayApi}/transfers`;
+import { gatewayNetworkConfig, type GatewayNetworkName } from './gateway-x402.js';
 
 export interface ExpectedGatewayPayment {
   nonce: string;
   payer: string;
   recipient: string;
   amountUnits: string;
+  network: GatewayNetworkName;
 }
 
 type TransferEvidence = { id: string; txHash: string | null };
@@ -22,8 +21,9 @@ export async function observeGatewayPayment(
   expected: ExpectedGatewayPayment,
   request: typeof fetch = fetch,
 ): Promise<GatewayObservation> {
-  const url = new URL(endpoint);
-  url.search = new URLSearchParams({ nonce: expected.nonce, network, pageSize: '2' }).toString();
+  const config = gatewayNetworkConfig(expected.network);
+  const url = new URL(`${config.api}/transfers`);
+  url.search = new URLSearchParams({ nonce: expected.nonce, network: config.network, pageSize: '2' }).toString();
   const response = await request(url, { signal: AbortSignal.timeout(5000), redirect: 'error' });
   if (!response.ok) throw new Error(`Gateway transfer lookup returned HTTP ${response.status}`);
 
@@ -42,8 +42,8 @@ export async function observeGatewayPayment(
   if (!matchesHex(transfer.nonce, expected.nonce) ||
       !matchesHex(transfer.fromAddress, expected.payer) ||
       !matchesHex(transfer.toAddress, expected.recipient) ||
-      transfer.token !== 'USDC' || transfer.sendingNetwork !== network ||
-      transfer.recipientNetwork !== network || transfer.amount !== expected.amountUnits) {
+      transfer.token !== 'USDC' || transfer.sendingNetwork !== config.network ||
+      transfer.recipientNetwork !== config.network || transfer.amount !== expected.amountUnits) {
     return { status: 'conflict', reason: 'transfer-mismatch' };
   }
 

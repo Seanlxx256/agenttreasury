@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import type { Pool } from 'pg';
 import { type Hash, isHash } from 'viem';
-import { gatewayChainConfig } from './gateway-x402.js';
+import { gatewayNetworkConfig } from './gateway-x402.js';
 import { observeGatewayPayment, type ExpectedGatewayPayment } from './gateway-reconciliation.js';
 
 type Receipt = { status: 'success' | 'reverted'; blockNumber: bigint };
@@ -30,7 +30,7 @@ export async function collectGatewayPurchaseEvidence(
   request: typeof fetch = fetch,
 ) {
   const { rows: [purchase] } = await pool.query<PurchaseRecord>(`
-    SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
+    SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits", p.network,
            p.task_id AS "taskId", p.budget_status AS "budgetStatus", p.submitted_at IS NOT NULL AS submitted,
            p.delivery AS "buyerDelivery", d.delivery AS "sellerDelivery",
            (SELECT jsonb_agg(jsonb_build_object(
@@ -43,9 +43,9 @@ export async function collectGatewayPurchaseEvidence(
   `, [requestId]);
   if (!purchase) throw new Error('Gateway purchase not found');
 
-  const { nonce, payer, recipient, amountUnits, taskId, budgetStatus, submitted,
+  const { nonce, payer, recipient, amountUnits, network, taskId, budgetStatus, submitted,
     buyerDelivery, sellerDelivery, entries } = purchase;
-  const gateway = await observeGatewayPayment({ nonce, payer, recipient, amountUnits }, request);
+  const gateway = await observeGatewayPayment({ nonce, payer, recipient, amountUnits, network }, request);
   const hash = gateway.status === 'charged' && isHash(gateway.txHash) ? gateway.txHash : null;
   const receipt = hash ? await readReceipt(hash) : null;
   const problems: string[] = [];
@@ -76,13 +76,14 @@ export async function collectGatewayPurchaseEvidence(
   if (receipt?.status === 'reverted') problems.push('The Arc batch transaction reverted.');
   if (hash && !receipt) pending.push('Arc batch receipt is not available yet.');
 
+  const chainConfig = gatewayNetworkConfig(network).chainConfig;
   return {
     status: problems.length ? 'FAILED' : pending.length ? 'PENDING' : 'PASSED',
     requestId, nonce, payer, recipient, amountUnits, taskId, budgetStatus,
     gateway, journal: entries,
     delivery: { buyerSaved: buyerDelivery !== null, sellerSaved: sellerDelivery !== null },
-    batch: hash && gatewayChainConfig.blockExplorers ? {
-      hash, explorerUrl: gatewayChainConfig.blockExplorers.default.url + '/tx/' + hash,
+    batch: hash && chainConfig.blockExplorers ? {
+      hash, explorerUrl: chainConfig.blockExplorers.default.url + '/tx/' + hash,
       receiptStatus: receipt?.status ?? null,
       blockNumber: receipt?.blockNumber.toString() ?? null,
     } : null,

@@ -10,21 +10,24 @@ import { checkGatewayPayment } from './gateway-payment-evidence.js';
 import { PaymentError, tokenDigest } from './payments.js';
 import {
   decodePaymentHeader, encodePaymentHeader, gatewayAuthorizationTypes,
-  gatewayDomain, gatewayTracePrice, gatewayValidity, recoverGatewayPayer, traceOffer, type GatewayAuthorization,
+  gatewayChainName, gatewayNetworkConfig, gatewayTracePrice, gatewayValidity,
+  recoverGatewayPayer, traceOffer, type GatewayAuthorization, type GatewayNetworkName,
 } from './gateway-x402.js';
 
 type SigningRequest = {
-  domain: typeof gatewayDomain;
+  domain: ReturnType<typeof gatewayNetworkConfig>['domain'];
   types: typeof gatewayAuthorizationTypes;
   primaryType: 'TransferWithAuthorization';
   message: GatewayAuthorization;
 };
 
 type Purchase = {
-  requestId: string; endpoint: string; payer: Address; recipient: Address; task?: GatewayTaskCredentials;
+  requestId: string; endpoint: string; payer: Address; recipient: Address; network?: GatewayNetworkName;
+  task?: GatewayTaskCredentials;
 };
 type StoredPurchase = {
   endpoint: string; payer: string; recipient: string; nonce: Hex; amount_units: string; delivery: unknown;
+  network: GatewayNetworkName;
   retrieval_token: string | null;
   task_id: string | null;
   budget_status: 'reserved' | 'spent' | 'released' | null;
@@ -52,7 +55,8 @@ export async function purchaseGatewayTrace(
   request: typeof fetch = fetch,
   gatewayRequest: typeof fetch = fetch,
 ) {
-  const { requestId, endpoint, payer, recipient, task } = purchase;
+  const { requestId, endpoint, payer, recipient, network = gatewayChainName, task } = purchase;
+  const config = gatewayNetworkConfig(network);
   const findExisting = async () => {
     const { rows: [row] } = await pool.query<StoredPurchase>(
       `SELECT p.*, EXISTS (
@@ -66,7 +70,8 @@ export async function purchaseGatewayTrace(
       throw new PaymentError(403, 'GATEWAY_TASK_NOT_ALLOWED');
     }
     if (row.endpoint !== endpoint || row.payer !== payer.toLowerCase() ||
-        row.recipient !== recipient.toLowerCase() || row.amount_units !== gatewayTracePrice) {
+        row.recipient !== recipient.toLowerCase() || row.amount_units !== gatewayTracePrice ||
+        row.network !== network) {
       throw new Error('Request ID already belongs to different payment terms');
     }
     return row;
@@ -80,7 +85,8 @@ export async function purchaseGatewayTrace(
     const { nonce, delivery } = existing;
     if (delivery !== null && existing.budget_status !== 'reserved') return { status: 'delivered', nonce, delivery };
     const payment = await checkGatewayPayment(pool, requestId, {
-      nonce, payer: existing.payer, recipient: existing.recipient, amountUnits: existing.amount_units,
+      nonce, payer: existing.payer, recipient: existing.recipient,
+      amountUnits: existing.amount_units, network: existing.network,
     }, 'buyer', gatewayRequest);
     if (delivery !== null) return { status: 'delivered', nonce, delivery, payment };
     if (payment.status === 'charged' && existing.retrieval_token) {
@@ -109,7 +115,7 @@ export async function purchaseGatewayTrace(
   }
 
   if (!task) throw new PaymentError(403, 'GATEWAY_TASK_REQUIRED');
-  const offer = traceOffer(endpoint, recipient);
+  const offer = traceOffer(endpoint, recipient, network);
   const requirements = offer.accepts[0];
   const quoteResponse = await request(endpoint, {
     method: 'POST', redirect: 'error', signal: AbortSignal.timeout(5000),
@@ -138,10 +144,10 @@ export async function purchaseGatewayTrace(
     const grant = await lockGatewayGrant(client, task, purchase);
     const claim = await client.query(
       `INSERT INTO gateway_demo_purchases
-        (request_id, endpoint, nonce, payer, recipient, amount_units, retrieval_token, task_id, budget_day, budget_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'reserved') ON CONFLICT (request_id) DO NOTHING`,
+        (request_id, endpoint, nonce, payer, recipient, amount_units, network, retrieval_token, task_id, budget_day, budget_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'reserved') ON CONFLICT (request_id) DO NOTHING`,
       [requestId, endpoint, authorization.nonce, payer.toLowerCase(), recipient.toLowerCase(),
-        requirements.amount, retrievalToken, task.taskId, grant.day],
+        requirements.amount, network, retrievalToken, task.taskId, grant.day],
     );
     if (claim.rowCount === 0) return false;
     await checkGatewayBudget(client, task.taskId, grant, requirements.amount);
@@ -158,13 +164,13 @@ export async function purchaseGatewayTrace(
   }
 
   const typedData = {
-    domain: gatewayDomain, types: gatewayAuthorizationTypes,
+    domain: config.domain, types: gatewayAuthorizationTypes,
     primaryType: 'TransferWithAuthorization', message: authorization,
   } as const;
   let signature: Hex;
   try {
     signature = await sign(typedData);
-    const recovered = await recoverGatewayPayer(authorization, signature);
+    const recovered = await recoverGatewayPayer(authorization, signature, network);
     if (recovered.toLowerCase() !== payer.toLowerCase()) throw new Error('Unexpected signing address');
     await transaction(pool, async (client) => {
       await lockGatewayGrant(client, task, purchase);

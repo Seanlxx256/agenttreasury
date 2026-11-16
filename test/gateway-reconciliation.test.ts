@@ -7,6 +7,7 @@ const expected = {
   payer: `0x${'1'.repeat(40)}`,
   recipient: `0x${'2'.repeat(40)}`,
   amountUnits: '1000',
+  network: 'arcTestnet' as const,
 };
 const batchHash = `0x${'b'.repeat(64)}`;
 const transfer = {
