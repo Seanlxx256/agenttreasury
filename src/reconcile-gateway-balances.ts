@@ -26,9 +26,9 @@ export async function reconcileGatewayBalances(
       SELECT p.request_id AS "requestId", p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
         p.network, p.budget_status AS "budgetStatus", j.batch_hash AS "batchHash", j.amount::text AS "journalAmount"
       FROM gateway_demo_purchases p LEFT JOIN gateway_payment_journal j USING (request_id)
-      WHERE p.payer = $1 AND (p.submitted_at IS NOT NULL OR j.request_id IS NOT NULL)
+      WHERE p.payer = $1 AND p.network = $2 AND (p.submitted_at IS NOT NULL OR j.request_id IS NOT NULL)
       ORDER BY p.request_id
-    `, [wallet]),
+    `, [wallet, chain.network]),
     chain.totalBalance(wallet, openingBlock),
     chain.totalBalance(wallet, to),
   ]);

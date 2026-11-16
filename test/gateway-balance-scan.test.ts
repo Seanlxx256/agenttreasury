@@ -10,6 +10,7 @@ import { Pool } from 'pg';
 import { type Address, type Hash } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { gatewayBalanceScanMetrics, runGatewayBalanceScan } from '../src/gateway-balance-scanner.js';
+import { reconcileGatewayBalances } from '../src/reconcile-gateway-balances.js';
 import type { GatewayBalanceChain } from '../src/gateway-balance-chain.js';
 import { migrate } from '../src/migrate.js';
 
@@ -149,5 +150,96 @@ test('continuous balance scan persists progress, raises work orders, and recover
       'SELECT status, attempts FROM gateway_balance_scans WHERE id = $1', [scanId]);
     assert.equal(scan.status, 'matched');
     assert.ok(scan.attempts >= 1);
+  });
+
+  await t.test('a failed scan is retried instead of reported already-scanned', async () => {
+    const account = payer();
+    let calls = 0;
+    const flaky = fakeChain({
+      async movements() {
+        calls += 1;
+        if (calls === 1) throw new Error('RPC unavailable');
+        return { deposits: [], withdrawals: [], burns: [], batches: [] };
+      },
+    });
+
+    await assert.rejects(runGatewayBalanceScan(pool, flaky, account), /RPC unavailable/);
+    const { rows: [failed] } = await pool.query(
+      'SELECT status, attempts FROM gateway_balance_scans WHERE payer = $1', [account.toLowerCase()]);
+    assert.equal(failed.status, 'failed');
+
+    const retried = await runGatewayBalanceScan(pool, fakeChain(), account);
+    assert.equal(retried.status, 'matched');
+    const { rows: [done] } = await pool.query(
+      'SELECT status, attempts FROM gateway_balance_scans WHERE payer = $1', [account.toLowerCase()]);
+    assert.equal(done.status, 'matched');
+    assert.equal(done.attempts, failed.attempts + 1);
+  });
+
+  await t.test('an active lease is reported already-running, not reclaimed', async () => {
+    const account = payer();
+    const scanId = randomUUID();
+    await pool.query(`
+      INSERT INTO gateway_balance_scans (id, network, payer, from_block, to_block, status, lease_until, started_at)
+      VALUES ($1, 'arcTestnet', $2, 1, 100, 'running', now() + interval '10 minutes', now())
+    `, [scanId, account.toLowerCase()]);
+
+    const outcome = await runGatewayBalanceScan(pool, fakeChain(), account);
+    assert.equal(outcome.status, 'already-running');
+    const { rows: [scan] } = await pool.query(
+      'SELECT attempts FROM gateway_balance_scans WHERE id = $1', [scanId]);
+    assert.equal(scan.attempts, 0);
+  });
+
+  await t.test('a discrepancy scan advances the cursor together with its work orders', async () => {
+    const account = payer();
+    const outcome = await runGatewayBalanceScan(pool, mismatchChain(), account);
+    assert.equal(outcome.status, 'discrepancy');
+
+    const { rows: [cursor] } = await pool.query(
+      'SELECT next_block::text AS "nextBlock" FROM gateway_balance_cursors WHERE network = $1 AND payer = $2',
+      ['arcTestnet', account.toLowerCase()]);
+    assert.equal(cursor.nextBlock, '101');
+  });
+
+  await t.test('reconciliation filters purchases by network', async () => {
+    const account = payer();
+    const recipient = privateKeyToAccount(generatePrivateKey()).address as Address;
+    const nonceA = `0x${'a'.repeat(64)}`;
+    const nonceB = `0x${'b'.repeat(64)}`;
+    const batchA = `0x${'1'.repeat(64)}` as Hash;
+    const batchB = `0x${'2'.repeat(64)}`;
+
+    const requestA = randomUUID();
+    await pool.query(`
+      INSERT INTO gateway_demo_purchases (request_id, endpoint, nonce, payer, recipient, amount_units, network)
+      VALUES ($1, $2, $3, $4, $5, $6, 'arcTestnet')
+    `, [requestA, 'https://api.example/a', nonceA, account.toLowerCase(), recipient, 1000]);
+    await pool.query(`
+      INSERT INTO gateway_payment_journal (request_id, transfer_id, batch_hash, amount)
+      VALUES ($1, $2, $3, $4)
+    `, [requestA, 'transfer-a', batchA, 1000]);
+
+    const requestB = randomUUID();
+    await pool.query(`
+      INSERT INTO gateway_demo_purchases (request_id, endpoint, nonce, payer, recipient, amount_units, network)
+      VALUES ($1, $2, $3, $4, $5, $6, 'arc')
+    `, [requestB, 'https://api.example/b', nonceB, account.toLowerCase(), recipient, 1000]);
+    await pool.query(`
+      INSERT INTO gateway_payment_journal (request_id, transfer_id, batch_hash, amount)
+      VALUES ($1, $2, $3, $4)
+    `, [requestB, 'transfer-b', batchB, 1000]);
+
+    const chain = fakeChain({
+      async movements() {
+        return { deposits: [], withdrawals: [], burns: [],
+          batches: [{ hash: batchA, id: batchA, delta: -1000n }] };
+      },
+    });
+
+    const report = await reconcileGatewayBalances(pool, chain, account, 1n, 100n);
+    assert.equal(report.missingBatches.length, 0);
+    assert.equal(report.batches.length, 1);
+    assert.equal(report.batches[0]!.hash, batchA);
   });
 });

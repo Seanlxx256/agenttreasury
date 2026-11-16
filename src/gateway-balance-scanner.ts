@@ -17,6 +17,11 @@ export type GatewayBalanceScanOutcome =
   | { status: ScanStatus; scanId: string; network: string; payer: Address; window: { from: string; to: string };
       discrepancies: number };
 
+type Claim =
+  | { status: 'claimed'; scanId: string; attempts: number }
+  | { status: 'already-running'; scanId: string; window: { from: string; to: string } }
+  | { status: 'already-scanned'; scanId: string; window: { from: string; to: string } };
+
 export async function runGatewayBalanceScan(
   pool: Pool, chain: GatewayBalanceChain, payer: Address, request: typeof fetch = fetch,
 ): Promise<GatewayBalanceScanOutcome> {
@@ -36,57 +41,114 @@ export async function runGatewayBalanceScan(
   const toBlock = finalized < fromBlock + windowSize - 1n ? finalized : fromBlock + windowSize - 1n;
   const window = { from: String(fromBlock), to: String(toBlock) };
 
-  const scanId = randomUUID();
-  const inserted = await pool.query<{ id: string }>(`
-    INSERT INTO gateway_balance_scans (id, network, payer, from_block, to_block, status, lease_until)
-    VALUES ($1, $2, $3, $4, $5, 'running', now() + $6 * interval '1 second')
-    ON CONFLICT (network, payer, from_block, to_block) DO NOTHING
-    RETURNING id
-  `, [scanId, network, wallet, fromBlock, toBlock, leaseSeconds]);
-
-  let claimedId: string;
-  if (inserted.rows[0]?.id) {
-    claimedId = inserted.rows[0].id;
-  } else {
-    const { rows } = await pool.query<{ id: string; status: string; lease_until: Date }>(`
-      SELECT id, status, lease_until FROM gateway_balance_scans
-      WHERE network = $1 AND payer = $2 AND from_block = $3 AND to_block = $4
-    `, [network, wallet, fromBlock, toBlock]);
-    const existing = rows[0];
-    if (!existing) throw new Error('Concurrent balance scan row disappeared');
-    if (existing.status !== 'running' || existing.lease_until > new Date()) {
-      return existing.status === 'running'
-        ? { status: 'already-running', scanId: existing.id, network, payer: wallet, window }
-        : { status: 'already-scanned', scanId: existing.id, network, payer: wallet, window };
-    }
-    await pool.query(`
-      UPDATE gateway_balance_scans
-      SET attempts = attempts + 1, lease_until = now() + $4 * interval '1 second', status = 'running'
-      WHERE id = $1 AND status = 'running' AND lease_until <= now() AND network = $2 AND payer = $3
-    `, [existing.id, network, wallet, leaseSeconds]);
-    claimedId = existing.id;
+  const claim = await claimScan(pool, network, wallet, fromBlock, toBlock, leaseSeconds);
+  if (claim.status === 'already-running' || claim.status === 'already-scanned') {
+    return { status: claim.status, scanId: claim.scanId, network, payer: wallet, window: claim.window };
   }
+  const { scanId, attempts } = claim;
 
   let report: Awaited<ReturnType<typeof reconcileGatewayBalances>>;
   try {
     report = await reconcileGatewayBalances(pool, chain, payer, fromBlock, toBlock, request);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await pool.query(
-      `UPDATE gateway_balance_scans SET status = 'failed', error = $2, finished_at = now(), lease_until = now()
-       WHERE id = $1`, [claimedId, message]);
+    await markScanFailed(pool, scanId, attempts, message);
     throw error;
   }
 
-  const discrepancies = await persistScanResult(pool, claimedId, report, network, wallet);
+  const discrepancies = await persistScanResult(pool, scanId, attempts, report, network, wallet);
   return {
     status: report.status === 'MATCHED' ? 'matched' : 'discrepancy',
-    scanId: claimedId, network, payer: wallet, window, discrepancies,
+    scanId, network, payer: wallet, window, discrepancies,
   };
 }
 
+// Claim the (network, payer) execution right inside a transaction serialized by
+// an advisory lock keyed on (network, payer). The lock makes the active-window
+// check and the insert/claim atomic, so two processes cannot start overlapping
+// windows for the same wallet even when the finalized height changes the window
+// bounds between runs.
+async function claimScan(
+  pool: Pool, network: string, payer: Address, fromBlock: bigint, toBlock: bigint, leaseSeconds: number,
+): Promise<Claim> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', [network, payer]);
+
+    const { rows: [active] } = await client.query<{ id: string; from_block: string; to_block: string }>(`
+      SELECT id, from_block::text AS from_block, to_block::text AS to_block
+      FROM gateway_balance_scans
+      WHERE network = $1 AND payer = $2 AND status = 'running' AND lease_until > now()
+      ORDER BY started_at DESC LIMIT 1
+    `, [network, payer]);
+    if (active) {
+      await client.query('COMMIT');
+      return { status: 'already-running', scanId: active.id,
+        window: { from: active.from_block, to: active.to_block } };
+    }
+
+    const { rows } = await client.query<{ id: string; status: string }>(`
+      SELECT id, status FROM gateway_balance_scans
+      WHERE network = $1 AND payer = $2 AND from_block = $3 AND to_block = $4
+    `, [network, payer, fromBlock, toBlock]);
+    const existing = rows[0];
+
+    let scanId: string;
+    let attempts: number;
+    if (!existing) {
+      scanId = randomUUID();
+      attempts = 0;
+      await client.query(`
+        INSERT INTO gateway_balance_scans (id, network, payer, from_block, to_block, status, lease_until)
+        VALUES ($1, $2, $3, $4, $5, 'running', now() + $6 * interval '1 second')
+      `, [scanId, network, payer, fromBlock, toBlock, leaseSeconds]);
+    } else if (existing.status === 'failed' || existing.status === 'running') {
+      // A failed scan is retryable; a running scan is reclaimable only after its
+      // lease expired. The UPDATE ... RETURNING decides the single winner, so a
+      // losing process never proceeds.
+      const { rows: [claimed] } = await client.query<{ id: string; attempts: number }>(`
+        UPDATE gateway_balance_scans
+        SET attempts = attempts + 1, status = 'running', error = NULL,
+            lease_until = now() + $2 * interval '1 second', started_at = now()
+        WHERE id = $1 AND (status = 'failed' OR (status = 'running' AND lease_until <= now()))
+        RETURNING id, attempts
+      `, [existing.id, leaseSeconds]);
+      if (!claimed) {
+        await client.query('COMMIT');
+        return { status: 'already-running', scanId: existing.id,
+          window: { from: String(fromBlock), to: String(toBlock) } };
+      }
+      scanId = claimed.id;
+      attempts = claimed.attempts;
+    } else {
+      await client.query('COMMIT');
+      return { status: 'already-scanned', scanId: existing.id,
+        window: { from: String(fromBlock), to: String(toBlock) } };
+    }
+
+    await client.query('COMMIT');
+    return { status: 'claimed', scanId, attempts };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function markScanFailed(pool: Pool, scanId: string, attempts: number, message: string) {
+  // `attempts` is the execution token: if the row was reclaimed, the old runner
+  // must not mark the new runner's work as failed.
+  await pool.query(`
+    UPDATE gateway_balance_scans
+    SET status = 'failed', error = $2, finished_at = now(), lease_until = now()
+    WHERE id = $1 AND attempts = $3
+  `, [scanId, message, attempts]);
+}
+
 async function persistScanResult(
-  pool: Pool, scanId: string, report: Awaited<ReturnType<typeof reconcileGatewayBalances>>,
+  pool: Pool, scanId: string, attempts: number, report: Awaited<ReturnType<typeof reconcileGatewayBalances>>,
   network: string, payer: Address,
 ) {
   const discrepancies: Array<{ kind: string; detail: unknown }> = [];
@@ -107,22 +169,40 @@ async function persistScanResult(
     discrepancies.push({ kind: 'unresolved-authorization', detail: unresolved });
   }
 
-  await pool.query(
-    `UPDATE gateway_balance_scans SET status = $2, result = $3, finished_at = now(), lease_until = now() WHERE id = $1`,
-    [scanId, report.status === 'MATCHED' ? 'matched' : 'discrepancy', JSON.stringify(report)],
-  );
-  for (const { kind, detail } of discrepancies) {
-    await pool.query(`
-      INSERT INTO gateway_balance_discrepancies (id, scan_id, kind, detail)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (scan_id, kind, detail) DO NOTHING
-    `, [randomUUID(), scanId, kind, JSON.stringify(detail)]);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Persist the scan status, its work orders, and the cursor advance in one
+    // transaction. The attempts guard rejects a runner whose row was reclaimed,
+    // so a stale runner can never leave a half-finished scan behind.
+    const updated = await client.query(`
+      UPDATE gateway_balance_scans
+      SET status = $3, result = $4, finished_at = now(), lease_until = now()
+      WHERE id = $1 AND attempts = $2
+    `, [scanId, attempts, report.status === 'MATCHED' ? 'matched' : 'discrepancy', JSON.stringify(report)]);
+    if (updated.rowCount !== 1) {
+      await client.query('ROLLBACK');
+      throw new Error('Balance scan was reclaimed before its result could be persisted');
+    }
+    for (const { kind, detail } of discrepancies) {
+      await client.query(`
+        INSERT INTO gateway_balance_discrepancies (id, scan_id, kind, detail)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (scan_id, kind, detail) DO NOTHING
+      `, [randomUUID(), scanId, kind, JSON.stringify(detail)]);
+    }
+    await client.query(`
+      INSERT INTO gateway_balance_cursors (network, payer, next_block)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (network, payer) DO UPDATE SET next_block = EXCLUDED.next_block, updated_at = now()
+    `, [network, payer, String(BigInt(report.window.to) + 1n)]);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-  await pool.query(`
-    INSERT INTO gateway_balance_cursors (network, payer, next_block)
-    VALUES ($1, $2, $3)
-    ON CONFLICT (network, payer) DO UPDATE SET next_block = EXCLUDED.next_block, updated_at = now()
-  `, [network, payer, String(BigInt(report.window.to) + 1n)]);
 
   return discrepancies.length;
 }
