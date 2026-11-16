@@ -43,6 +43,11 @@ finance?*
   keyed on `(recipient, network)`. Concurrent workers claim work with `SKIP LOCKED` plus
   a lease, so several processes settle the same due queue exactly once. Documented in
   [distributed-multi-network.md](distributed-multi-network.md).
+- **A failure catalog, not just scattered fixes.** Every failure mode — lost response,
+  double charge, reorg, reverted batch, wrong refund, contradictory transfer evidence —
+  has a detection path, a recovery path, and a regression test that injects the failure
+  and asserts the recovery. [failure-catalog.md](failure-catalog.md) is the map, with
+  the one honest gap (paid-but-wrong-delivery dispute) marked.
 
 ## Warts found and fixed
 
