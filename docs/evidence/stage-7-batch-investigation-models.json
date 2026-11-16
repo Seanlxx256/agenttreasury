@@ -1,0 +1,1140 @@
+{
+  "protocol": "batch-investigation-eval-v1",
+  "runAt": "2026-11-16T19:11:13.679Z",
+  "node": "v25.2.1",
+  "ollama": {
+    "version": "0.40.16"
+  },
+  "manifestDigest": "0af93f8aa7be18912f5dcef0d2c0dfc2b96ebc71a96a79ff52e3394c302245ac",
+  "models": [
+    {
+      "name": "qwen2.5:1.5b",
+      "digest": "65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b",
+      "size": 986061892,
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+          "qwen2"
+        ],
+        "parameter_size": "1.5B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 32768,
+        "embedding_length": 1536,
+        "runner": "ggml"
+      }
+    },
+    {
+      "name": "qwen2.5:3b",
+      "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+      "size": 1929912432,
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+          "qwen2"
+        ],
+        "parameter_size": "3.1B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 32768,
+        "embedding_length": 2048,
+        "runner": "ggml"
+      }
+    }
+  ],
+  "rules": {
+    "summary": {
+      "cases": 12,
+      "correct": 12,
+      "statusAccuracy": 1,
+      "requiredCheckRecall": 1,
+      "annotatedPathRecall": 1,
+      "annotatedPathPrecision": 1,
+      "strictSuccesses": 12,
+      "falseCorroborations": 0,
+      "meanDurationMs": 0.46176399999999757
+    },
+    "cases": [
+      {
+        "id": "case-01",
+        "decision": {
+          "status": "corroborated",
+          "checks": [
+            "read-balance-evidence"
+          ],
+          "citations": [
+            "/purchase/authorization",
+            "/journal",
+            "/observations",
+            "/snapshot/movements/batches"
+          ]
+        },
+        "durationMs": 3.5253750000000537,
+        "statusCorrect": true,
+        "requiredCheckMatches": 1,
+        "requiredCheckCount": 1,
+        "annotatedPathMatches": 4,
+        "annotatedPathCount": 4,
+        "citations": 4,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-02",
+        "decision": {
+          "status": "incomplete",
+          "checks": [
+            "read-original-authorization"
+          ],
+          "citations": [
+            "/purchase/authorization"
+          ]
+        },
+        "durationMs": 0.3182920000000422,
+        "statusCorrect": true,
+        "requiredCheckMatches": 1,
+        "requiredCheckCount": 1,
+        "annotatedPathMatches": 1,
+        "annotatedPathCount": 1,
+        "citations": 1,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-03",
+        "decision": {
+          "status": "incomplete",
+          "checks": [
+            "read-gateway-status"
+          ],
+          "citations": [
+            "/observations"
+          ]
+        },
+        "durationMs": 0.20812499999999545,
+        "statusCorrect": true,
+        "requiredCheckMatches": 1,
+        "requiredCheckCount": 1,
+        "annotatedPathMatches": 1,
+        "annotatedPathCount": 1,
+        "citations": 1,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-04",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-local-journal",
+            "compare-transfer-terms"
+          ],
+          "citations": [
+            "/journal/amount",
+            "/purchase/amountUnits"
+          ]
+        },
+        "durationMs": 0.20129099999996924,
+        "statusCorrect": true,
+        "requiredCheckMatches": 2,
+        "requiredCheckCount": 2,
+        "annotatedPathMatches": 2,
+        "annotatedPathCount": 2,
+        "citations": 2,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-05",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-original-authorization",
+            "compare-transfer-terms"
+          ],
+          "citations": [
+            "/purchase/authorization/nonce",
+            "/purchase/nonce"
+          ]
+        },
+        "durationMs": 0.20841699999994034,
+        "statusCorrect": true,
+        "requiredCheckMatches": 2,
+        "requiredCheckCount": 2,
+        "annotatedPathMatches": 2,
+        "annotatedPathCount": 2,
+        "citations": 2,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-06",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-original-authorization",
+            "compare-transfer-terms"
+          ],
+          "citations": [
+            "/purchase/authorization/to",
+            "/purchase/recipient"
+          ]
+        },
+        "durationMs": 0.20554200000003675,
+        "statusCorrect": true,
+        "requiredCheckMatches": 2,
+        "requiredCheckCount": 2,
+        "annotatedPathMatches": 2,
+        "annotatedPathCount": 2,
+        "citations": 2,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-07",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-chain-receipt",
+            "compare-transfer-terms"
+          ],
+          "citations": [
+            "/observations/0/evidence/txHash",
+            "/journal/batchHash"
+          ]
+        },
+        "durationMs": 0.2080829999999878,
+        "statusCorrect": true,
+        "requiredCheckMatches": 2,
+        "requiredCheckCount": 2,
+        "annotatedPathMatches": 2,
+        "annotatedPathCount": 2,
+        "citations": 2,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-08",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-batch-calldata",
+            "read-balance-evidence"
+          ],
+          "citations": [
+            "/snapshot/movements/batches/0/delta",
+            "/snapshot/movements/batches/0/evidence/transactionInput"
+          ]
+        },
+        "durationMs": 0.18079199999999673,
+        "statusCorrect": true,
+        "requiredCheckMatches": 2,
+        "requiredCheckCount": 2,
+        "annotatedPathMatches": 2,
+        "annotatedPathCount": 2,
+        "citations": 2,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-09",
+        "decision": {
+          "status": "incomplete",
+          "checks": [
+            "read-batch-calldata"
+          ],
+          "citations": [
+            "/snapshot/movements/batches/0"
+          ]
+        },
+        "durationMs": 0.05058400000007168,
+        "statusCorrect": true,
+        "requiredCheckMatches": 1,
+        "requiredCheckCount": 1,
+        "annotatedPathMatches": 1,
+        "annotatedPathCount": 1,
+        "citations": 1,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-10",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-gateway-status",
+            "read-local-journal"
+          ],
+          "citations": [
+            "/observations",
+            "/journal"
+          ]
+        },
+        "durationMs": 0.16791699999998855,
+        "statusCorrect": true,
+        "requiredCheckMatches": 2,
+        "requiredCheckCount": 2,
+        "annotatedPathMatches": 2,
+        "annotatedPathCount": 2,
+        "citations": 2,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-11",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-local-journal"
+          ],
+          "citations": [
+            "/snapshot/purchases"
+          ]
+        },
+        "durationMs": 0.1515829999999596,
+        "statusCorrect": true,
+        "requiredCheckMatches": 1,
+        "requiredCheckCount": 1,
+        "annotatedPathMatches": 1,
+        "annotatedPathCount": 1,
+        "citations": 1,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "case-12",
+        "decision": {
+          "status": "incomplete",
+          "checks": [
+            "read-original-authorization"
+          ],
+          "citations": [
+            "/purchase/authorization"
+          ]
+        },
+        "durationMs": 0.11516699999992852,
+        "statusCorrect": true,
+        "requiredCheckMatches": 1,
+        "requiredCheckCount": 1,
+        "annotatedPathMatches": 1,
+        "annotatedPathCount": 1,
+        "citations": 1,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      }
+    ]
+  },
+  "results": [
+    {
+      "model": "qwen2.5:1.5b",
+      "summary": {
+        "cases": 12,
+        "correct": 4,
+        "statusAccuracy": 0.3333333333333333,
+        "requiredCheckRecall": 0.2222222222222222,
+        "annotatedPathRecall": 0.14285714285714285,
+        "annotatedPathPrecision": 0.037037037037037035,
+        "strictSuccesses": 1,
+        "falseCorroborations": 1,
+        "ready": 11,
+        "rejected": 1,
+        "unavailable": 0,
+        "meanDurationMs": 6184.240875166666,
+        "promptTokens": 42094,
+        "outputTokens": 1171,
+        "usageMissing": 0
+      },
+      "cases": [
+        {
+          "id": "case-01",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/purchase/authorization/nonce",
+              "/snapshot/purchases/0/batchHash",
+              "/snapshot/purchases/0/journalAmount",
+              "/snapshot/purchases/0/amountUnits",
+              "/snapshot/movements/batches/0/delta"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 9695.963917,
+          "promptTokens": 3672,
+          "outputTokens": 108,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 4,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-02",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 6585.958958000001,
+          "promptTokens": 3933,
+          "outputTokens": 39,
+          "doneReason": "stop",
+          "statusCorrect": true,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 1,
+          "annotatedPathCount": 1,
+          "citations": 1,
+          "falseCorroboration": false,
+          "strictSuccess": true
+        },
+        {
+          "id": "case-03",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/purchase/authorization/nonce",
+              "/snapshot/purchases/0/budgetStatus",
+              "/snapshot/purchases/0/journalAmount",
+              "/snapshot/purchases/0/amountUnits",
+              "/snapshot/purchases/0/batchHash"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 7029.392958,
+          "promptTokens": 3527,
+          "outputTokens": 106,
+          "doneReason": "stop",
+          "statusCorrect": true,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-04",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/purchase/authorization/nonce",
+              "/snapshot/purchases/0/batchHash",
+              "/snapshot/purchases/0/journalAmount",
+              "/snapshot/purchases/0/amountUnits",
+              "/snapshot/purchases/0/budgetStatus"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 6715.185083999997,
+          "promptTokens": 3672,
+          "outputTokens": 106,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-05",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/purchase/authorization/nonce",
+              "/snapshot/purchases/0/batchHash",
+              "/snapshot/purchases/0/journalAmount",
+              "/snapshot/purchases/0/amountUnits",
+              "/snapshot/movements/batches/0/delta"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 6903.664125000003,
+          "promptTokens": 3632,
+          "outputTokens": 108,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 1,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-06",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/purchase/authorization/nonce",
+              "/snapshot/purchases/0/batchHash",
+              "/snapshot/purchases/0/journalAmount",
+              "/snapshot/purchases/0/amountUnits",
+              "/snapshot/movements/batches/0/delta"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 6992.546500000004,
+          "promptTokens": 3647,
+          "outputTokens": 108,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 1,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-07",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/purchase/authorization/nonce",
+              "/snapshot/purchases/0/batchHash",
+              "/snapshot/purchases/0/journalAmount",
+              "/snapshot/purchases/0/amountUnits",
+              "/snapshot/movements/batches/0/delta"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 6959.920624999999,
+          "promptTokens": 3628,
+          "outputTokens": 108,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-08",
+          "status": "ready",
+          "decision": {
+            "status": "conflict",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization",
+              "/purchase/nonce",
+              "/purchase/payer",
+              "/purchase/recipient",
+              "/purchase/amountUnits",
+              "/journal",
+              "/journal/amount",
+              "/journal/batchHash"
+            ]
+          },
+          "candidateStatus": "conflict",
+          "durationMs": 2108.2049590000024,
+          "promptTokens": 3513,
+          "outputTokens": 81,
+          "doneReason": "stop",
+          "statusCorrect": true,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-09",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-chain-receipt"
+            ],
+            "citations": [
+              "/purchase/authorization",
+              "/purchase/nonce",
+              "/purchase/payer",
+              "/purchase/recipient",
+              "/purchase/amountUnits",
+              "/journal",
+              "/journal/amount",
+              "/journal/batchHash"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 2216.324999999997,
+          "promptTokens": 1899,
+          "outputTokens": 97,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-10",
+          "status": "rejected",
+          "decision": null,
+          "candidateStatus": "incomplete",
+          "durationMs": 6252.888791999998,
+          "promptTokens": 3695,
+          "outputTokens": 91,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 2,
+          "citations": 0,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-11",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/purchase/authorization/nonce",
+              "/snapshot/purchases/0/batchHash",
+              "/snapshot/purchases/0/journalAmount",
+              "/snapshot/purchases/0/amountUnits",
+              "/snapshot/movements/batches/0/delta"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 5879.333041999998,
+          "promptTokens": 3672,
+          "outputTokens": 108,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-12",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/snapshot/purchases/0/batchHash",
+              "/snapshot/purchases/0/journalAmount",
+              "/snapshot/purchases/0/amountUnits",
+              "/snapshot/purchases/0/budgetStatus",
+              "/snapshot/movements/batches/0/delta"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 6871.506541999988,
+          "promptTokens": 3604,
+          "outputTokens": 111,
+          "doneReason": "stop",
+          "statusCorrect": true,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        }
+      ]
+    },
+    {
+      "model": "qwen2.5:3b",
+      "summary": {
+        "cases": 12,
+        "correct": 2,
+        "statusAccuracy": 0.16666666666666666,
+        "requiredCheckRecall": 0.3333333333333333,
+        "annotatedPathRecall": 0.2857142857142857,
+        "annotatedPathPrecision": 0.075,
+        "strictSuccesses": 0,
+        "falseCorroborations": 9,
+        "ready": 10,
+        "rejected": 2,
+        "unavailable": 0,
+        "meanDurationMs": 12076.563704999999,
+        "promptTokens": 42094,
+        "outputTokens": 1245,
+        "usageMissing": 0
+      },
+      "cases": [
+        {
+          "id": "case-01",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/authorization",
+              "/purchase/nonce",
+              "/purchase/payer",
+              "/purchase/recipient",
+              "/purchase/amountUnits",
+              "/journal",
+              "/journal/amount",
+              "/journal/batchHash"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 16762.63133399999,
+          "promptTokens": 3672,
+          "outputTokens": 98,
+          "doneReason": "stop",
+          "statusCorrect": true,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 2,
+          "annotatedPathCount": 4,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-02",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/amountUnits",
+              "/journal/amount",
+              "/journal/batchHash",
+              "/journal/transferId",
+              "/observations/0/evidence/status",
+              "/observations/0/evidence/id",
+              "/observations/0/evidence/txHash",
+              "/snapshot/purchases/0/budgetStatus"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 15327.432249999998,
+          "promptTokens": 3933,
+          "outputTokens": 117,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-03",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/authorization",
+              "/purchase/nonce",
+              "/purchase/payer",
+              "/purchase/recipient",
+              "/purchase/amountUnits",
+              "/journal",
+              "/journal/amount",
+              "/journal/batchHash"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 13358.938582999996,
+          "promptTokens": 3527,
+          "outputTokens": 98,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-04",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/authorization",
+              "/purchase/nonce",
+              "/purchase/payer",
+              "/purchase/recipient",
+              "/purchase/amountUnits",
+              "/journal",
+              "/journal/amount",
+              "/journal/batchHash"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 12640.675167000009,
+          "promptTokens": 3672,
+          "outputTokens": 98,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 2,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-05",
+          "status": "rejected",
+          "decision": null,
+          "candidateStatus": "corroborated",
+          "durationMs": 13373.693957999989,
+          "promptTokens": 3632,
+          "outputTokens": 108,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 2,
+          "citations": 0,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-06",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/purchase/authorization/nonce",
+              "/journal/amount",
+              "/journal/batchHash",
+              "/journal/transferId",
+              "/snapshot/purchases/0/budgetStatus"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 13924.165750000015,
+          "promptTokens": 3647,
+          "outputTokens": 110,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 1,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-07",
+          "status": "rejected",
+          "decision": null,
+          "candidateStatus": "corroborated",
+          "durationMs": 13457.727416999987,
+          "promptTokens": 3628,
+          "outputTokens": 106,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 2,
+          "citations": 0,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-08",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-chain-receipt"
+            ],
+            "citations": [
+              "/purchase/authorization",
+              "/purchase/nonce",
+              "/purchase/payer",
+              "/purchase/recipient",
+              "/purchase/amountUnits",
+              "/journal",
+              "/journal/amount",
+              "/journal/batchHash"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 4162.773917000013,
+          "promptTokens": 3513,
+          "outputTokens": 95,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-09",
+          "status": "ready",
+          "decision": {
+            "status": "incomplete",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/nonce",
+              "/purchase/authorization/value",
+              "/journal/amount",
+              "/journal/batchHash",
+              "/journal/transferId",
+              "/observations/0/evidence/status"
+            ]
+          },
+          "candidateStatus": "incomplete",
+          "durationMs": 4287.245708000002,
+          "promptTokens": 1899,
+          "outputTokens": 106,
+          "doneReason": "stop",
+          "statusCorrect": true,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": false,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-10",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/authorization",
+              "/purchase/nonce",
+              "/purchase/payer",
+              "/purchase/recipient",
+              "/purchase/amountUnits",
+              "/journal",
+              "/journal/amount",
+              "/journal/batchHash"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 12331.114166999992,
+          "promptTokens": 3695,
+          "outputTokens": 98,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 2,
+          "annotatedPathMatches": 1,
+          "annotatedPathCount": 2,
+          "citations": 8,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-11",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/authorization",
+              "/purchase/nonce",
+              "/purchase/payer",
+              "/purchase/recipient",
+              "/purchase/amountUnits",
+              "/journal",
+              "/journal/amount",
+              "/journal/batchHash"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 11357.243916999985,
+          "promptTokens": 3672,
+          "outputTokens": 98,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 0,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        },
+        {
+          "id": "case-12",
+          "status": "ready",
+          "decision": {
+            "status": "corroborated",
+            "checks": [
+              "read-original-authorization",
+              "read-gateway-status",
+              "read-batch-calldata"
+            ],
+            "citations": [
+              "/purchase/authorization/from",
+              "/purchase/authorization/to",
+              "/purchase/authorization/value",
+              "/journal/amount",
+              "/journal/batchHash",
+              "/journal/transferId",
+              "/snapshot/purchases/0/budgetStatus",
+              "/snapshot/purchases/0/journalAmount"
+            ]
+          },
+          "candidateStatus": "corroborated",
+          "durationMs": 13935.122291999985,
+          "promptTokens": 3604,
+          "outputTokens": 113,
+          "doneReason": "stop",
+          "statusCorrect": false,
+          "requiredCheckMatches": 1,
+          "requiredCheckCount": 1,
+          "annotatedPathMatches": 0,
+          "annotatedPathCount": 1,
+          "citations": 8,
+          "falseCorroboration": true,
+          "strictSuccess": false
+        }
+      ]
+    }
+  ],
+  "independentReview": false,
+  "promotionEligible": false,
+  "limitation": "Exploratory single-pass comparison on known correlated cases with single-author labels. Path agreement is not semantic evidence accuracy. No fallback credit, financial actions, production promotion or operator ROI claim."
+}

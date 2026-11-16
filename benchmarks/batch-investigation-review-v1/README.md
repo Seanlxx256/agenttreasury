@@ -28,7 +28,10 @@ labels or scenario-construction notes:
 node scripts/export-batch-investigation-review.mjs > /tmp/batch-review.json
 ```
 
-Independent review is pending. No model has been evaluated on this packet.
+Independent review is pending. No model had been evaluated when this packet was
+created; the immutable manifest records that checkpoint. A subsequent
+[exploratory protocol](../batch-investigation-eval-v1/README.md) records model runs
+separately without rewriting the original packet or its creation metadata.
 Regression tests check proposed conclusion consistency and evidence-path
 existence; their agreement is not agent accuracy, an independent gold standard
 or measured business ROI. Do not use the repeated variants as independent

@@ -1,5 +1,10 @@
 # Stage 6: complete modern signing acceptance and review packet
 
+Follow-up: [Stage 7 exploratory comparison](stage-7-batch-evaluation.md) evaluates
+the review packet under a separately frozen protocol. The evidence and claims
+below describe the Stage 6 checkpoint.
+
+
 A new Arc testnet order has exercised the separate signer, actual buyer
 executable, project-operated merchant, Gateway acceptance, batch settlement,
 local journal and offline evidence replay. This closes the missing original

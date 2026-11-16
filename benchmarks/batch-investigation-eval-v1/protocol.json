@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "dataset": "batch-investigation-review-v1",
+  "task": "Read-only disposition, next checks and source-path selection after evidence collection",
+  "purpose": "Exploratory comparison, not blind or independent validation",
+  "annotationReview": "Internal consistency review only; independent human adjudication pending",
+  "models": ["qwen2.5:1.5b", "qwen2.5:3b"],
+  "passesPerModel": 1,
+  "order": "Models in listed order; cases in frozen input order",
+  "options": {"temperature": 0, "seed": 42, "num_predict": 512, "num_ctx": 8192},
+  "timeoutMs": 45000,
+  "informationParity": "Both methods receive original case evidence and may use the same deterministic raw-batch validator. No gold labels, case IDs, provenance notes or mutation rationales are sent to the model.",
+  "baseline": "Existing linkage logic plus explicit read/citation mappings written with knowledge of the review packet; not an independently held-out baseline.",
+  "output": {"status": "corroborated | incomplete | conflict", "checks": "1-3 unique permitted read-only checks", "citations": "1-8 unique existing permitted JSON pointers"},
+  "metrics": {
+    "statusAccuracy": "Correct accepted dispositions divided by all 12 cases; rejected/unavailable output earns zero.",
+    "requiredCheckRecall": "Unique proposed mandatory checks matched, divided by all annotated mandatory checks. No precision claim because other checks may be reasonable.",
+    "annotatedPathPrecision": "Exact matches to annotated paths divided by unique returned paths from accepted outputs; null if none. This is annotation agreement, not semantic support accuracy.",
+    "annotatedPathRecall": "Exact matches to annotated paths divided by all annotated paths; unavailable/rejected output earns zero.",
+    "strictSuccess": "Accepted output, correct status, all mandatory checks, and exactly the annotated path set.",
+    "falseCorroborations": "Parsed corroborated claims on incomplete/conflict cases, including schema-rejected claims where the status is parseable.",
+    "latency": "End-to-end duration per case, including cold loads, generation, parsing and validation; order and caching can affect it.",
+    "tokens": "Reported prompt/output token totals; missing usage is counted separately. No dollar-cost claim."
+  },
+  "failureHandling": "No model fallback credit or retries; errors, rejected output and valid-but-wrong conclusions are reported separately.",
+  "interpretationLimits": "Two captured cases and ten correlated synthetic variants; single-author labels, one pass, no confidence interval or production/operator ROI inference.",
+  "promotion": "No automatic production promotion; existing payment controls and default agent behavior stay unchanged."
+}
