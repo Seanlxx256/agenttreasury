@@ -13,6 +13,7 @@ import { migrate } from '../src/migrate.js';
 import { seedGateway } from '../src/seed.js';
 import { decideGatewayDeliveryDispute, raiseGatewayDeliveryDispute } from '../src/gateway-delivery-disputes.js';
 import { recordGatewayRefund, type GatewayRefundChain } from '../src/gateway-refunds.js';
+import { traceDeliveryCommitment } from '../src/delivery-commitment.js';
 import { arcTestnetUsdc } from '../src/gateway-x402.js';
 
 async function availablePort() {
@@ -62,17 +63,24 @@ test('Gateway delivery dispute is arbitrated by a human and refunds through the 
   const recipient = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
   const seeded = await seedGateway(pool, { origin: 'http://127.0.0.1:3002', payer, recipient });
 
-  const makePurchase = async (options?: { charged?: boolean; delivered?: boolean }) => {
+  const makePurchase = async (options?: {
+    charged?: boolean; delivered?: boolean;
+    commitment?: { deliveryCommitment: unknown; satisfied: boolean; violations: string[] };
+  }) => {
     const requestId = randomUUID();
     const nonce = `0x${randomBytes(32).toString('hex')}`;
     const batchHash = `0x${randomBytes(32).toString('hex')}`;
+    const commitment = options?.commitment;
     await pool.query(`
       INSERT INTO gateway_demo_purchases
         (request_id, endpoint, nonce, payer, recipient, amount_units, task_id, budget_day,
-         budget_status, submitted_at, delivery)
-      VALUES ($1, $2, $3, $4, $5, 1000, $6, '2026-01-01', 'spent', now(), $7)
+         budget_status, submitted_at, delivery, delivery_commitment, commitment_satisfied, commitment_violations)
+      VALUES ($1, $2, $3, $4, $5, 1000, $6, '2026-01-01', 'spent', now(), $7, $8, $9, $10)
     `, [requestId, `http://127.0.0.1:3002/trace/${requestId}`, nonce, payer, recipient, seeded.taskId,
-        options?.delivered ? JSON.stringify({ requestId, nonce, gatewayReference: 'ref-1', trace: { source: 'fixture' } }) : null]);
+        options?.delivered ? JSON.stringify({ requestId, nonce, gatewayReference: 'ref-1', trace: { source: 'fixture' } }) : null,
+        commitment ? JSON.stringify(commitment.deliveryCommitment) : null,
+        commitment ? commitment.satisfied : null,
+        commitment ? JSON.stringify(commitment.violations) : null]);
     if (options?.charged) {
       await pool.query(`
         INSERT INTO gateway_payment_journal (request_id, transfer_id, batch_hash, amount)
@@ -161,5 +169,22 @@ test('Gateway delivery dispute is arbitrated by a human and refunds through the 
     assert.equal(recorded.requestId, purchase.requestId);
     assert.equal(recorded.transactionHash, refundHash);
     assert.equal(recorded.reason, 'dispute upheld');
+  });
+
+  await t.test('raise snapshots the objective delivery commitment assessment', async () => {
+    const purchase = await makePurchase({
+      charged: true, delivered: true,
+      commitment: {
+        deliveryCommitment: traceDeliveryCommitment,
+        satisfied: false,
+        violations: ['trace.calls[0] errored: execution reverted'],
+      },
+    });
+    const raised = await raiseGatewayDeliveryDispute(pool, purchase.requestId, seeded.agentId, 'bad content', evidence);
+    assert.equal(raised.deliveryAssessment?.satisfied, false);
+    assert.deepEqual(raised.deliveryAssessment?.violations, ['trace.calls[0] errored: execution reverted']);
+    assert.deepEqual(raised.deliveryAssessment?.commitment, traceDeliveryCommitment);
+    // The buyer's subjective claim stays untouched; the objective assessment sits alongside it.
+    assert.deepEqual(raised.evidence, evidence);
   });
 });

@@ -5,7 +5,8 @@ import { transaction } from './db.js';
 import { PaymentError } from './payments.js';
 
 const disputeColumns = `request_id AS "requestId", reason, evidence, status,
-  raised_by AS "raisedBy", raised_at AS "raisedAt", decided_by AS "decidedBy", decided_at AS "decidedAt"`;
+  raised_by AS "raisedBy", raised_at AS "raisedAt", decided_by AS "decidedBy", decided_at AS "decidedAt",
+  delivery_assessment AS "deliveryAssessment"`;
 
 interface GatewayDeliveryDispute {
   requestId: string;
@@ -16,6 +17,11 @@ interface GatewayDeliveryDispute {
   raisedAt: Date;
   decidedBy: string | null;
   decidedAt: Date | null;
+  deliveryAssessment: {
+    commitment: Record<string, unknown>;
+    satisfied: boolean;
+    violations: string[];
+  } | null;
 }
 
 async function readDispute(client: PoolClient | Pool, requestId: string) {
@@ -67,10 +73,23 @@ export async function raiseGatewayDeliveryDispute(
     if (state.refunded) throw new PaymentError(409, 'PAYMENT_REFUNDED');
     if (!state.delivered) throw new PaymentError(409, 'DELIVERY_MISSING_USE_REFUND');
 
+    const { rows: [assessment] } = await client.query<{
+      commitment: Record<string, unknown>; satisfied: boolean | null; violations: string[] | null;
+    }>(
+      `SELECT delivery_commitment AS "commitment", commitment_satisfied AS "satisfied",
+              commitment_violations AS "violations"
+       FROM gateway_demo_purchases WHERE request_id = $1`, [requestId],
+    );
+    const deliveryAssessment = assessment?.commitment ? {
+      commitment: assessment.commitment,
+      satisfied: assessment.satisfied ?? false,
+      violations: assessment.violations ?? [],
+    } : null;
+
     const { rows: [dispute] } = await client.query<GatewayDeliveryDispute>(
-      `INSERT INTO gateway_delivery_disputes (request_id, reason, evidence, raised_by)
-       VALUES ($1, $2, $3, $4) RETURNING ${disputeColumns}`,
-      [requestId, reason, JSON.stringify(evidence), agentId],
+      `INSERT INTO gateway_delivery_disputes (request_id, reason, evidence, raised_by, delivery_assessment)
+       VALUES ($1, $2, $3, $4, $5) RETURNING ${disputeColumns}`,
+      [requestId, reason, JSON.stringify(evidence), agentId, deliveryAssessment ? JSON.stringify(deliveryAssessment) : null],
     );
     await recordAudit(client, {
       actor: agentId, action: 'gateway.dispute.raised', entity: `gateway_delivery_dispute:${requestId}`, stateAfter: 'OPEN',

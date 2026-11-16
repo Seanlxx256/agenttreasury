@@ -46,6 +46,11 @@ finance?*
   result can be raised as a dispute, kept separate from the missing-delivery refund path,
   and arbitrated by an operator into a refund — executed through the same onchain evidence
   rules — or a dismissal. The buyer's expected-vs-received claim stays in the audit trail.
+- **Delivery commitment binding.** The merchant's offer declares what a valid delivery must
+  look like, the buyer stores that commitment at purchase time and checks the received
+  delivery against it, and the dispute path snapshots the objective mismatch next to the
+  buyer's claim. "Expected vs received" becomes reproducible evidence instead of a
+  pay-then-verify assertion.
 - **Multi-network, multi-merchant, multi-process.** The network is a column on each
   purchase, resolved through a per-network config factory derived from Circle's official
   SDK, so one worker pool spans testnet and mainnet. Merchants are first-class entities
@@ -76,7 +81,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 46/46.
+- `npm test` passes 51/51.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing

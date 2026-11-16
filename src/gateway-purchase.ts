@@ -8,6 +8,7 @@ import {
 } from './gateway-budget.js';
 import { checkGatewayPayment } from './gateway-payment-evidence.js';
 import { PaymentError, tokenDigest } from './payments.js';
+import { verifyDeliveryCommitment } from './delivery-commitment.js';
 import {
   decodePaymentHeader, encodePaymentHeader, gatewayAuthorizationTypes,
   gatewayChainName, gatewayNetworkConfig, gatewayTracePrice, gatewayValidity,
@@ -57,6 +58,7 @@ export async function purchaseGatewayTrace(
 ) {
   const { requestId, endpoint, payer, recipient, network = gatewayChainName, task } = purchase;
   const config = gatewayNetworkConfig(network);
+  const commitment = traceOffer(endpoint, recipient, network).resource.deliveryCommitment;
   const findExisting = async () => {
     const { rows: [row] } = await pool.query<StoredPurchase>(
       `SELECT p.*, EXISTS (
@@ -77,8 +79,12 @@ export async function purchaseGatewayTrace(
     return row;
   };
   const saveDelivery = async (delivery: unknown) => {
-    await pool.query('UPDATE gateway_demo_purchases SET delivery = $2 WHERE request_id = $1 AND delivery IS NULL',
-      [requestId, JSON.stringify(delivery)]);
+    const assessment = verifyDeliveryCommitment(delivery, commitment);
+    await pool.query(
+      `UPDATE gateway_demo_purchases SET delivery = $2, commitment_satisfied = $3, commitment_violations = $4
+       WHERE request_id = $1 AND delivery IS NULL`,
+      [requestId, JSON.stringify(delivery), assessment.satisfied, JSON.stringify(assessment.violations)],
+    );
   };
   const existing = await findExisting();
   if (existing) {
@@ -144,10 +150,10 @@ export async function purchaseGatewayTrace(
     const grant = await lockGatewayGrant(client, task, purchase);
     const claim = await client.query(
       `INSERT INTO gateway_demo_purchases
-        (request_id, endpoint, nonce, payer, recipient, amount_units, network, retrieval_token, task_id, budget_day, budget_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'reserved') ON CONFLICT (request_id) DO NOTHING`,
+        (request_id, endpoint, nonce, payer, recipient, amount_units, network, retrieval_token, task_id, budget_day, budget_status, delivery_commitment)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'reserved', $11) ON CONFLICT (request_id) DO NOTHING`,
       [requestId, endpoint, authorization.nonce, payer.toLowerCase(), recipient.toLowerCase(),
-        requirements.amount, network, retrievalToken, task.taskId, grant.day],
+        requirements.amount, network, retrievalToken, task.taskId, grant.day, JSON.stringify(commitment)],
     );
     if (claim.rowCount === 0) return false;
     await checkGatewayBudget(client, task.taskId, grant, requirements.amount);

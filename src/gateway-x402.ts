@@ -1,5 +1,6 @@
 import { createPublicClient, http, isAddress, recoverTypedDataAddress, type Address, type Hex } from 'viem';
 import { CHAIN_CONFIGS } from '@circle-fin/x402-batching/client';
+import { traceDeliveryCommitment } from './delivery-commitment.js';
 
 // Arc network selection. Testnet by default; set GATEWAY_NETWORK=arc for mainnet.
 // The single-environment configuration below is kept for backward compatibility,
@@ -131,7 +132,12 @@ export function traceOffer(
   const config = gatewayNetworkConfig(network);
   return {
     x402Version: 2,
-    resource: { url: endpoint, description: 'Sample transaction trace', mimeType: 'application/json' },
+    resource: {
+      url: endpoint,
+      description: 'Sample transaction trace',
+      mimeType: 'application/json',
+      deliveryCommitment: traceDeliveryCommitment,
+    },
     accepts: [{
       scheme: 'exact',
       network: config.network,
