@@ -199,3 +199,21 @@ npm run --silent eval:gateway -- --dataset gateway-triage-v1 --models qwen2.5:0.
 
 The output reports the rule baseline and a `comparison` table with action accuracy, complete citation sets, citation precision, recommendation coverage, unnecessary escalation rate, and mean generation time per model. Models are evaluated serially so a local Ollama never loads several weights at once.
 
+## Held-out verification of the agent's increment
+
+The prompt profiles were tuned against `gateway-triage-v1`. To check whether the model's score survives outside that tuning sample, the two datasets authored from separate material — `arc-recovery-v1` (three stages of the real lost-response drill) and `gateway-incidents-v1` (six separately authored incidents) — are treated as a held-out set of nine independent cases. No prompt was edited against them.
+
+Measured on 2026-11-16 on an Apple Silicon Mac with Ollama, temperature zero:
+
+| Held-out dataset | Rules | Qwen2.5 0.5B | Qwen2.5 1.5B | Qwen2.5 3B |
+| --- | ---: | ---: | ---: | ---: |
+| `arc-recovery-v1` (3 cases) | 3/3 | 3/3 | 2/3 | 3/3 |
+| `gateway-incidents-v1` (6 cases) | 6/6 | 6/6 | 6/6 | 6/6 |
+| **Combined (9 cases)** | **9/9** | **9/9** | **8/9** | **9/9** |
+
+Complete citation sets matched actions on every case for rules and for every model that chose the right action. The 1.5B model's single miss was an unnecessary escalation, matching its known escalation bias.
+
+The honest conclusion from the held-out set: **the agent shows no positive increment over the rules.** The rules already score 100% on both held-out datasets, and the model's action choices are constrained to the candidates the rules generate, so the best a model can do is tie. 1.5B regresses below the rules. The models also add a local generation delay (roughly 280 ms to 2.3 s per case) where the rules take microseconds.
+
+What the model does *not* get a chance to do under this architecture is the part that would matter: read unstructured supplier responses, error logs, or ticket text and surface evidence the rules never encoded. Until that path exists, the agent's value proposition is "a slower way to reach the same answer," not "reduces operator work." This is the reason to hold off on expanding the AI surface until a non-structured-input extraction task is built and measured on fresh incidents.
+

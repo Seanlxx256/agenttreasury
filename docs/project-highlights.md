@@ -21,14 +21,16 @@ finance?*
   [sdk-adoption-boundary.md](sdk-adoption-boundary.md).
 - **Buyer-side recovery.** A six-state machine covers submission-unknown →
   charged-delivery-missing → delivered, keyed by request ID and authorization nonce so a
-  retry can never double-charge.
+  retry replays idempotently instead of double-charging.
 - **Dual-ledger reconciliation.** The local journal and Circle Gateway transfers are
   compared on both sides, and conflicts are surfaced for review instead of silently
   closed.
-- **Dual-layer governance.** Fine-grained task budgets and payment-term allowlists in the
-  application, backed by Circle Agent Wallet transfer limits and recipient policies as an
-  unbroadcastable floor. Documented in
-  [agent-wallet-governance-boundary.md](agent-wallet-governance-boundary.md).
+- **Application-layer spend governance.** Fine-grained task budgets and payment-term
+  allowlists in the application, plus operator-gated refunds. Circle Agent Wallet transfer
+  limits and recipient policies are documented as a deployment recommendation for mainnet
+  wallets only — enforcement is not verified here, because the self-custodied EOA that
+  signs Gateway batch settlement is not proven to pass through the wallet's policy layer.
+  Documented in [agent-wallet-governance-boundary.md](agent-wallet-governance-boundary.md).
 - **Read-only triage agent with a swappable model.** A locally-run LLM picks an action
   and cites evidence, but the explanation is supplied by the server and the
   recommendation is advisory — the backend validates before acting. Models resolve
@@ -37,11 +39,16 @@ finance?*
 - **Append-only audit and operator-gated refunds on both rails.** State transitions are
   recorded, refunds need a human decision, and the Gateway rail closes the loop for a
   charged-but-undelivered payment: approval, seller-initiated return, onchain evidence.
-- **Tamper-evident audit chain.** Every audit row hashes its own fields plus the previous
-  row's hash, so editing or reordering the log breaks the chain and is detectable offline
-  without trusting the database operator — the application-layer answer to x402's missing
-  self-contained receipt. `verifyAuditChain()` recomputes the chain end to end, and
-  concurrent writers are serialized by an advisory lock so the chain can never fork.
+  The onchain return is at-most-once by construction, not exactly-once: a submission intent
+  is persisted before broadcasting, and an unresolved broadcast is never re-sent
+  automatically — an operator verifies the transfer and resumes.
+- **Tamper-evident audit chain (within its limits).** Every audit row hashes its own fields
+  plus the previous row's hash, so editing a row or reordering the log breaks the chain and
+  is detectable offline without trusting the database operator — the application-layer answer
+  to x402's missing self-contained receipt. `verifyAuditChain()` recomputes the chain end to
+  end, and concurrent writers are serialized by an advisory lock so the chain can never fork.
+  The chain has no external anchor, so it cannot detect a truncated tail, a fully rewritten
+  chain, or the removal of all hashes; those still trust the database operator.
 - **Delivery disputes for pay-then-verify.** A charged payment with a delivered-but-wrong
   result can be raised as a dispute, kept separate from the missing-delivery refund path,
   and arbitrated by an operator into a refund — executed through the same onchain evidence
@@ -59,7 +66,7 @@ finance?*
   purchase, resolved through a per-network config factory derived from Circle's official
   SDK, so one worker pool spans testnet and mainnet. Merchants are first-class entities
   keyed on `(recipient, network)`. Concurrent workers claim work with `SKIP LOCKED` plus
-  a lease, so several processes settle the same due queue exactly once. Documented in
+  a lease, so several processes can settle the same due queue without double-claiming work. Documented in
   [distributed-multi-network.md](distributed-multi-network.md).
 - **A failure catalog, not just scattered fixes.** Every failure mode — lost response,
   double charge, reorg, reverted batch, wrong refund, contradictory transfer evidence,
@@ -89,7 +96,11 @@ actually ran the thing:
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
-  1.5B to all-escalate) recorded in the evaluation doc.
+  1.5B to all-escalate) recorded in the evaluation doc. A held-out set of nine independent
+  cases confirms the rules stay at 9/9, but no model beats them (0.5B 9/9, 1.5B 8/9,
+  3B 9/9), and each model adds hundreds of milliseconds of latency. The agent therefore
+  shows no positive increment over the rules yet — any real value would come from reading
+  unstructured evidence the rules never encoded, which is not built.
 
 ## Not done (and why)
 
