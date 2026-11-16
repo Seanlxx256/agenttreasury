@@ -1,0 +1,410 @@
+[
+  {
+    "id": "ex-001",
+    "stratum": "direct",
+    "expected": [
+      "nonce-reused"
+    ],
+    "support": [
+      {
+        "signal": "nonce-reused",
+        "start": 33,
+        "end": 55
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-002",
+    "stratum": "direct",
+    "expected": [
+      "insufficient-funds"
+    ],
+    "support": [
+      {
+        "signal": "insufficient-funds",
+        "start": 37,
+        "end": 55
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-003",
+    "stratum": "direct",
+    "expected": [
+      "recipient-not-whitelisted"
+    ],
+    "support": [
+      {
+        "signal": "recipient-not-whitelisted",
+        "start": 4,
+        "end": 30
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-004",
+    "stratum": "direct",
+    "expected": [
+      "invalid-signature"
+    ],
+    "support": [
+      {
+        "signal": "invalid-signature",
+        "start": 14,
+        "end": 43
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-005",
+    "stratum": "direct",
+    "expected": [
+      "batch-already-processed"
+    ],
+    "support": [
+      {
+        "signal": "batch-already-processed",
+        "start": 5,
+        "end": 29
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-006",
+    "stratum": "direct",
+    "expected": [
+      "authorization-expired"
+    ],
+    "support": [
+      {
+        "signal": "authorization-expired",
+        "start": 4,
+        "end": 25
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-007",
+    "stratum": "direct",
+    "expected": [
+      "rpc-unavailable"
+    ],
+    "support": [
+      {
+        "signal": "rpc-unavailable",
+        "start": 31,
+        "end": 49
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-008",
+    "stratum": "paraphrase",
+    "expected": [
+      "nonce-reused"
+    ],
+    "support": [
+      {
+        "signal": "nonce-reused",
+        "start": 64,
+        "end": 111
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-009",
+    "stratum": "paraphrase",
+    "expected": [
+      "insufficient-funds"
+    ],
+    "support": [
+      {
+        "signal": "insufficient-funds",
+        "start": 10,
+        "end": 58
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-010",
+    "stratum": "paraphrase",
+    "expected": [
+      "recipient-not-whitelisted"
+    ],
+    "support": [
+      {
+        "signal": "recipient-not-whitelisted",
+        "start": 57,
+        "end": 106
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-011",
+    "stratum": "paraphrase",
+    "expected": [
+      "invalid-signature"
+    ],
+    "support": [
+      {
+        "signal": "invalid-signature",
+        "start": 4,
+        "end": 70
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-012",
+    "stratum": "paraphrase",
+    "expected": [
+      "batch-already-processed"
+    ],
+    "support": [
+      {
+        "signal": "batch-already-processed",
+        "start": 4,
+        "end": 57
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-013",
+    "stratum": "paraphrase",
+    "expected": [
+      "authorization-expired"
+    ],
+    "support": [
+      {
+        "signal": "authorization-expired",
+        "start": 19,
+        "end": 72
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-014",
+    "stratum": "paraphrase",
+    "expected": [
+      "rpc-unavailable"
+    ],
+    "support": [
+      {
+        "signal": "rpc-unavailable",
+        "start": 44,
+        "end": 100
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-015",
+    "stratum": "negation",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-016",
+    "stratum": "negation",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-017",
+    "stratum": "negation",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-018",
+    "stratum": "negation",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-019",
+    "stratum": "negation",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-020",
+    "stratum": "negation",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-021",
+    "stratum": "negation",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-022",
+    "stratum": "resolved",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-023",
+    "stratum": "resolved",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-024",
+    "stratum": "resolved",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-025",
+    "stratum": "resolved",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-026",
+    "stratum": "instruction",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-027",
+    "stratum": "instruction",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-028",
+    "stratum": "instruction",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-029",
+    "stratum": "ambiguous",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-030",
+    "stratum": "ambiguous",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-031",
+    "stratum": "ambiguous",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-032",
+    "stratum": "ambiguous",
+    "expected": [],
+    "support": [],
+    "rationale": "No currently asserted concrete failure in the seven-signal taxonomy; abstain."
+  },
+  {
+    "id": "ex-033",
+    "stratum": "mixed",
+    "expected": [
+      "recipient-not-whitelisted"
+    ],
+    "support": [
+      {
+        "signal": "recipient-not-whitelisted",
+        "start": 63,
+        "end": 88
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-034",
+    "stratum": "mixed",
+    "expected": [
+      "rpc-unavailable"
+    ],
+    "support": [
+      {
+        "signal": "rpc-unavailable",
+        "start": 63,
+        "end": 81
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-035",
+    "stratum": "multiple",
+    "expected": [
+      "insufficient-funds",
+      "rpc-unavailable"
+    ],
+    "support": [
+      {
+        "signal": "insufficient-funds",
+        "start": 38,
+        "end": 56
+      },
+      {
+        "signal": "rpc-unavailable",
+        "start": 76,
+        "end": 87
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  },
+  {
+    "id": "ex-036",
+    "stratum": "multiple",
+    "expected": [
+      "authorization-expired",
+      "insufficient-funds"
+    ],
+    "support": [
+      {
+        "signal": "authorization-expired",
+        "start": 0,
+        "end": 21
+      },
+      {
+        "signal": "insufficient-funds",
+        "start": 68,
+        "end": 86
+      }
+    ],
+    "rationale": "Only currently asserted failures are labeled; other passages are distractors."
+  }
+]

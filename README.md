@@ -1,6 +1,6 @@
 # AgentTreasury
 
-For durable reconciliation cases, operations metrics, deployment and recovery drills, see [Stage 1 operations](docs/stage-1-operations.md). For the constrained, separate-process Gateway signer, see [Stage 2 signing boundary](docs/stage-2-signing-boundary.md). For bounded evidence collection and the measured rules/model comparison, see [Stage 3 investigation](docs/stage-3-investigation.md).
+For durable reconciliation cases, operations metrics, deployment and recovery drills, see [Stage 1 operations](docs/stage-1-operations.md). For the constrained, separate-process Gateway signer, see [Stage 2 signing boundary](docs/stage-2-signing-boundary.md). For bounded evidence collection and the measured rules/model comparison, see [Stage 3 investigation](docs/stage-3-investigation.md). For the frozen contextual exception benchmark, see [Stage 4 evaluation](docs/stage-4-exception-evaluation.md).
 
 > For a hiring-focused two-minute summary, see [project highlights](docs/project-highlights.md). For how the agent's value over the rules is designed and measured, see [the agent increment findings](docs/agent-increment-findings.md).
 

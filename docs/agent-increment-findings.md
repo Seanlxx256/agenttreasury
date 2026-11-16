@@ -1,5 +1,8 @@
 # Designing and validating the agent's increment
 
+The newer [Stage 4 exception benchmark](stage-4-exception-evaluation.md) adds contextual negative cases and a stronger rule control. Neither measured model passes its candidate gates. Earlier development-set gains below are not evidence of production or current-incident generalization.
+
+
 For the 2026-11-17 bounded execution implementation, stricter citation validation and new local model measurements, see [Stage 3 investigation](stage-3-investigation.md). The historical measurements below use their original evaluation protocol.
 
 

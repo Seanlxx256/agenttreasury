@@ -1,0 +1,5630 @@
+{
+  "dataset": "evidence-exceptions-v2",
+  "task": "currently asserted concrete failure signals",
+  "unknownErrorIsAbstention": true,
+  "ruleFallback": false,
+  "gates": {
+    "minimumRecallGain": 0.1,
+    "minimumPrecision": 0.95,
+    "maximumNegativeFalsePositiveRate": 0.05,
+    "minimumAvailability": 0.95,
+    "maximumMeanLatencyMs": 3000
+  },
+  "baselines": {
+    "keyword": {
+      "summary": {
+        "cases": 36,
+        "ready": 36,
+        "rejected": 0,
+        "unavailable": 0,
+        "truePositives": 13,
+        "falsePositives": 14,
+        "falseNegatives": 7,
+        "precision": 0.48148148148148145,
+        "recall": 0.65,
+        "exactCaseRate": 0.4166666666666667,
+        "negativeCases": 18,
+        "negativeFalsePositiveCases": 13,
+        "negativeFalsePositiveRate": 0.7222222222222222,
+        "negativeSuccessRate": 0.2777777777777778,
+        "abstentions": 12,
+        "mixedAbstentionCases": 0,
+        "verbatimQuoteRate": 1,
+        "supportedQuoteRate": 0.4444444444444444,
+        "annotatedSpanCoverage": 0.6,
+        "latencyMs": {
+          "mean": 0.02164824999999995,
+          "p95": 0.2433329999999927
+        },
+        "tokens": {
+          "input": null,
+          "output": null
+        }
+      },
+      "byStratum": {
+        "direct": {
+          "cases": 7,
+          "ready": 7,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 7,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": 1,
+          "recall": 1,
+          "exactCaseRate": 1,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 1,
+          "annotatedSpanCoverage": 1,
+          "latencyMs": {
+            "mean": 0.10297599999999818,
+            "p95": 0.4532080000000036
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "paraphrase": {
+          "cases": 7,
+          "ready": 7,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 7,
+          "precision": null,
+          "recall": 0,
+          "exactCaseRate": 0,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 7,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": null,
+          "supportedQuoteRate": null,
+          "annotatedSpanCoverage": 0,
+          "latencyMs": {
+            "mean": 0.0019225714285693943,
+            "p95": 0.0026670000000024174
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "negation": {
+          "cases": 7,
+          "ready": 7,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 6,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0.14285714285714285,
+          "negativeCases": 7,
+          "negativeFalsePositiveCases": 6,
+          "negativeFalsePositiveRate": 0.8571428571428571,
+          "negativeSuccessRate": 0.14285714285714285,
+          "abstentions": 1,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 0.0020478571428575215,
+            "p95": 0.0038330000000001974
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "resolved": {
+          "cases": 4,
+          "ready": 4,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 4,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0,
+          "negativeCases": 4,
+          "negativeFalsePositiveCases": 4,
+          "negativeFalsePositiveRate": 1,
+          "negativeSuccessRate": 0,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 0.0018857499999995753,
+            "p95": 0.00216700000000003
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "instruction": {
+          "cases": 3,
+          "ready": 3,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 3,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0,
+          "negativeCases": 3,
+          "negativeFalsePositiveCases": 3,
+          "negativeFalsePositiveRate": 1,
+          "negativeSuccessRate": 0,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 0.002069666666670855,
+            "p95": 0.002209000000007677
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "ambiguous": {
+          "cases": 4,
+          "ready": 4,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": null,
+          "recall": null,
+          "exactCaseRate": 1,
+          "negativeCases": 4,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": 0,
+          "negativeSuccessRate": 1,
+          "abstentions": 4,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": null,
+          "supportedQuoteRate": null,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 0.0017605000000031623,
+            "p95": 0.002334000000004721
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "mixed": {
+          "cases": 2,
+          "ready": 2,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 2,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "precision": 0.6666666666666666,
+          "recall": 1,
+          "exactCaseRate": 0.5,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0.6666666666666666,
+          "annotatedSpanCoverage": 1,
+          "latencyMs": {
+            "mean": 0.00216700000000003,
+            "p95": 0.002334000000004721
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "multiple": {
+          "cases": 2,
+          "ready": 2,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 4,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": 1,
+          "recall": 1,
+          "exactCaseRate": 1,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0.75,
+          "annotatedSpanCoverage": 0.75,
+          "latencyMs": {
+            "mean": 0.0027919999999994616,
+            "p95": 0.0035419999999959373
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        }
+      },
+      "cases": [
+        {
+          "id": "ex-001",
+          "stratum": "direct",
+          "expected": [
+            "nonce-reused"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "nonce already consumed"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.4532080000000036,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-002",
+          "stratum": "direct",
+          "expected": [
+            "insufficient-funds"
+          ],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "insufficient funds in the payer balance"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.2433329999999927,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-003",
+          "stratum": "direct",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "recipient is not permitted"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.010624999999990337,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-004",
+          "stratum": "direct",
+          "expected": [
+            "invalid-signature"
+          ],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "signature verification failed"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.006874999999993747,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-005",
+          "stratum": "direct",
+          "expected": [
+            "batch-already-processed"
+          ],
+          "status": "ready",
+          "predicted": [
+            "batch-already-processed"
+          ],
+          "quotes": [
+            {
+              "signal": "batch-already-processed",
+              "quote": "batch is already settled, so the duplicate"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.0027499999999918145,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-006",
+          "stratum": "direct",
+          "expected": [
+            "authorization-expired"
+          ],
+          "status": "ready",
+          "predicted": [
+            "authorization-expired"
+          ],
+          "quotes": [
+            {
+              "signal": "authorization-expired",
+              "quote": "authorization expired"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.002250000000003638,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-007",
+          "stratum": "direct",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "rpc-unavailable",
+              "quote": "connection refused"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.0017910000000114223,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-008",
+          "stratum": "paraphrase",
+          "expected": [
+            "nonce-reused"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0020409999999912998,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-009",
+          "stratum": "paraphrase",
+          "expected": [
+            "insufficient-funds"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0017500000000012506,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-010",
+          "stratum": "paraphrase",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0026670000000024174,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-011",
+          "stratum": "paraphrase",
+          "expected": [
+            "invalid-signature"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0019580000000019027,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-012",
+          "stratum": "paraphrase",
+          "expected": [
+            "batch-already-processed"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.001958999999999378,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-013",
+          "stratum": "paraphrase",
+          "expected": [
+            "authorization-expired"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0014999999999929514,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-014",
+          "stratum": "paraphrase",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0015829999999965594,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-015",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "nonce already used"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.002291999999997074,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-016",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "insufficient funds"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0038330000000001974,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-017",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "recipient not whitelisted"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0016670000000118534,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-018",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0016669999999976426,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-019",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "batch-already-processed"
+          ],
+          "quotes": [
+            {
+              "signal": "batch-already-processed",
+              "quote": "batch was not already processed"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0017919999999946867,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-020",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "authorization-expired"
+          ],
+          "quotes": [
+            {
+              "signal": "authorization-expired",
+              "quote": "authorization has not expired"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0017500000000012506,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-021",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "rpc-unavailable",
+              "quote": "RPC"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0013339999999999463,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-022",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "insufficient funds"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.00216700000000003,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-023",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "rpc-unavailable",
+              "quote": "RPC"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0015839999999940346,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-024",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "signature verification failed"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.002042000000002986,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-025",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "recipient not whitelisted"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0017500000000012506,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-026",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "nonce already used"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.002125000000006594,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-027",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "authorization-expired"
+          ],
+          "quotes": [
+            {
+              "signal": "authorization-expired",
+              "quote": "authorization expired"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0018749999999982947,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-028",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "insufficient-funds with quote \"insufficient funds"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.002209000000007677,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-029",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0012919999999922993,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-030",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.002334000000004721,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-031",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0015410000000031232,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-032",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0018750000000125056,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-033",
+          "stratum": "mixed",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "recipient not whitelisted"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.002334000000004721,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-034",
+          "stratum": "mixed",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused",
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "nonce already used"
+            },
+            {
+              "signal": "rpc-unavailable",
+              "quote": "connection refused"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 2,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 2,
+          "verbatimQuotes": 2,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.001999999999995339,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-035",
+          "stratum": "multiple",
+          "expected": [
+            "insufficient-funds",
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds",
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "insufficient funds"
+            },
+            {
+              "signal": "rpc-unavailable",
+              "quote": "RPC"
+            }
+          ],
+          "truePositives": 2,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 2,
+          "predictedCount": 2,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 2,
+          "verbatimQuotes": 2,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.0035419999999959373,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-036",
+          "stratum": "multiple",
+          "expected": [
+            "authorization-expired",
+            "insufficient-funds"
+          ],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds",
+            "authorization-expired"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "insufficient funds"
+            },
+            {
+              "signal": "authorization-expired",
+              "quote": "Authorization expired"
+            }
+          ],
+          "truePositives": 2,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 2,
+          "predictedCount": 2,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 2,
+          "verbatimQuotes": 2,
+          "supportedQuotes": 2,
+          "supportedSignals": 2,
+          "durationMs": 0.002042000000002986,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        }
+      ]
+    },
+    "context": {
+      "summary": {
+        "cases": 36,
+        "ready": 36,
+        "rejected": 0,
+        "unavailable": 0,
+        "truePositives": 14,
+        "falsePositives": 0,
+        "falseNegatives": 6,
+        "precision": 1,
+        "recall": 0.7,
+        "exactCaseRate": 0.8333333333333334,
+        "negativeCases": 18,
+        "negativeFalsePositiveCases": 0,
+        "negativeFalsePositiveRate": 0,
+        "negativeSuccessRate": 1,
+        "abstentions": 24,
+        "mixedAbstentionCases": 0,
+        "verbatimQuoteRate": 1,
+        "supportedQuoteRate": 1,
+        "annotatedSpanCoverage": 0.7,
+        "latencyMs": {
+          "mean": 0.036905083333332006,
+          "p95": 0.4607499999999902
+        },
+        "tokens": {
+          "input": null,
+          "output": null
+        }
+      },
+      "byStratum": {
+        "direct": {
+          "cases": 7,
+          "ready": 7,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 7,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": 1,
+          "recall": 1,
+          "exactCaseRate": 1,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 1,
+          "annotatedSpanCoverage": 1,
+          "latencyMs": {
+            "mean": 0.16842842857142518,
+            "p95": 0.6643750000000068
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "paraphrase": {
+          "cases": 7,
+          "ready": 7,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 6,
+          "precision": 1,
+          "recall": 0.14285714285714285,
+          "exactCaseRate": 0.14285714285714285,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 6,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 1,
+          "annotatedSpanCoverage": 0.14285714285714285,
+          "latencyMs": {
+            "mean": 0.006755857142857329,
+            "p95": 0.009083000000003949
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "negation": {
+          "cases": 7,
+          "ready": 7,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": null,
+          "recall": null,
+          "exactCaseRate": 1,
+          "negativeCases": 7,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": 0,
+          "negativeSuccessRate": 1,
+          "abstentions": 7,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": null,
+          "supportedQuoteRate": null,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 0.0033691428571387405,
+            "p95": 0.005290999999999713
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "resolved": {
+          "cases": 4,
+          "ready": 4,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": null,
+          "recall": null,
+          "exactCaseRate": 1,
+          "negativeCases": 4,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": 0,
+          "negativeSuccessRate": 1,
+          "abstentions": 4,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": null,
+          "supportedQuoteRate": null,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 0.00403125000000415,
+            "p95": 0.005125000000020918
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "instruction": {
+          "cases": 3,
+          "ready": 3,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": null,
+          "recall": null,
+          "exactCaseRate": 1,
+          "negativeCases": 3,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": 0,
+          "negativeSuccessRate": 1,
+          "abstentions": 3,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": null,
+          "supportedQuoteRate": null,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 0.0033746666666634915,
+            "p95": 0.003916000000003805
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "ambiguous": {
+          "cases": 4,
+          "ready": 4,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": null,
+          "recall": null,
+          "exactCaseRate": 1,
+          "negativeCases": 4,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": 0,
+          "negativeSuccessRate": 1,
+          "abstentions": 4,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": null,
+          "supportedQuoteRate": null,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 0.005458499999996036,
+            "p95": 0.006709000000000742
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "mixed": {
+          "cases": 2,
+          "ready": 2,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 2,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": 1,
+          "recall": 1,
+          "exactCaseRate": 1,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 1,
+          "annotatedSpanCoverage": 1,
+          "latencyMs": {
+            "mean": 0.006917000000001394,
+            "p95": 0.008583999999984826
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        "multiple": {
+          "cases": 2,
+          "ready": 2,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 4,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": 1,
+          "recall": 1,
+          "exactCaseRate": 1,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 1,
+          "annotatedSpanCoverage": 1,
+          "latencyMs": {
+            "mean": 0.008396000000004733,
+            "p95": 0.008875000000017508
+          },
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        }
+      },
+      "cases": [
+        {
+          "id": "ex-001",
+          "stratum": "direct",
+          "expected": [
+            "nonce-reused"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "The gateway rejected submission: nonce already consumed by a previous accepted payment"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.6643750000000068,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-002",
+          "stratum": "direct",
+          "expected": [
+            "insufficient-funds"
+          ],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "Settlement stopped because there are insufficient funds in the payer balance"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.4607499999999902,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-003",
+          "stratum": "direct",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "The recipient is not permitted under this task policy"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.019207999999991898,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-004",
+          "stratum": "direct",
+          "expected": [
+            "invalid-signature"
+          ],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "Authorization signature verification failed for this request"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.0105829999999969,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-005",
+          "stratum": "direct",
+          "expected": [
+            "batch-already-processed"
+          ],
+          "status": "ready",
+          "predicted": [
+            "batch-already-processed"
+          ],
+          "quotes": [
+            {
+              "signal": "batch-already-processed",
+              "quote": "This batch is already settled, so the duplicate attempt was rejected"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.006708000000003267,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-006",
+          "stratum": "direct",
+          "expected": [
+            "authorization-expired"
+          ],
+          "status": "ready",
+          "predicted": [
+            "authorization-expired"
+          ],
+          "quotes": [
+            {
+              "signal": "authorization-expired",
+              "quote": "The authorization expired two minutes before submission reached the gateway"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.008166999999986047,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-007",
+          "stratum": "direct",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "rpc-unavailable",
+              "quote": "The balance lookup failed with connection refused from the RPC host"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.009208000000000993,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-008",
+          "stratum": "paraphrase",
+          "expected": [
+            "nonce-reused"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.005749999999977717,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-009",
+          "stratum": "paraphrase",
+          "expected": [
+            "insufficient-funds"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.006917000000015605,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-010",
+          "stratum": "paraphrase",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.006833000000000311,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-011",
+          "stratum": "paraphrase",
+          "expected": [
+            "invalid-signature"
+          ],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "The recovered signer differs from the payer named in the authorization, so verification rejected the request"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.005875000000003183,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-012",
+          "stratum": "paraphrase",
+          "expected": [
+            "batch-already-processed"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.006957999999997355,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-013",
+          "stratum": "paraphrase",
+          "expected": [
+            "authorization-expired"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.005875000000003183,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-014",
+          "stratum": "paraphrase",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.009083000000003949,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-015",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.005290999999999713,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-016",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0034169999999846823,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-017",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.004500000000007276,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-018",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0034169999999846823,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-019",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.001167000000009466,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-020",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0006669999999928677,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-021",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.005124999999992497,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-022",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.003375000000005457,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-023",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0036249999999995453,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-024",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.005125000000020918,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-025",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.003999999999990678,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-026",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.003916000000003805,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-027",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0030830000000037217,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-028",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.003124999999982947,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-029",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.0035829999999918982,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-030",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.005541999999991276,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-031",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.006000000000000227,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-032",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 0.006709000000000742,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-033",
+          "stratum": "mixed",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "The actual rejection says recipient not whitelisted for this task"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.008583999999984826,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-034",
+          "stratum": "mixed",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "rpc-unavailable",
+              "quote": "The present lookup failed with connection refused from the provider"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 0.0052500000000179625,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-035",
+          "stratum": "multiple",
+          "expected": [
+            "insufficient-funds",
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds",
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "Two independent faults were recorded: insufficient funds blocked the debit"
+            },
+            {
+              "signal": "rpc-unavailable",
+              "quote": "RPC timeout prevented the subsequent status lookup"
+            }
+          ],
+          "truePositives": 2,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 2,
+          "predictedCount": 2,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 2,
+          "verbatimQuotes": 2,
+          "supportedQuotes": 2,
+          "supportedSignals": 2,
+          "durationMs": 0.008875000000017508,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        },
+        {
+          "id": "ex-036",
+          "stratum": "multiple",
+          "expected": [
+            "authorization-expired",
+            "insufficient-funds"
+          ],
+          "status": "ready",
+          "predicted": [
+            "authorization-expired",
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "authorization-expired",
+              "quote": "Authorization expired before dispatch"
+            },
+            {
+              "signal": "insufficient-funds",
+              "quote": "The balance check also found insufficient funds for the debit"
+            }
+          ],
+          "truePositives": 2,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 2,
+          "predictedCount": 2,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 2,
+          "verbatimQuotes": 2,
+          "supportedQuotes": 2,
+          "supportedSignals": 2,
+          "durationMs": 0.007916999999991958,
+          "tokens": {
+            "input": null,
+            "output": null
+          }
+        }
+      ]
+    }
+  },
+  "models": [
+    {
+      "model": "qwen2.5:1.5b",
+      "options": {
+        "temperature": 0,
+        "num_predict": 512
+      },
+      "summary": {
+        "cases": 36,
+        "ready": 12,
+        "rejected": 24,
+        "unavailable": 0,
+        "truePositives": 8,
+        "falsePositives": 4,
+        "falseNegatives": 12,
+        "precision": 0.6666666666666666,
+        "recall": 0.4,
+        "exactCaseRate": 0.19444444444444445,
+        "negativeCases": 18,
+        "negativeFalsePositiveCases": 2,
+        "negativeFalsePositiveRate": 0.1111111111111111,
+        "negativeSuccessRate": 0,
+        "abstentions": 0,
+        "mixedAbstentionCases": 0,
+        "verbatimQuoteRate": 0.9166666666666666,
+        "supportedQuoteRate": 0.5833333333333334,
+        "annotatedSpanCoverage": 0.35,
+        "latencyMs": {
+          "mean": 483.92821772222214,
+          "p95": 1195.838334
+        },
+        "tokens": {
+          "input": 10613,
+          "output": 752
+        }
+      },
+      "byStratum": {
+        "direct": {
+          "cases": 7,
+          "ready": 3,
+          "rejected": 4,
+          "unavailable": 0,
+          "truePositives": 3,
+          "falsePositives": 0,
+          "falseNegatives": 4,
+          "precision": 1,
+          "recall": 0.42857142857142855,
+          "exactCaseRate": 0.42857142857142855,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 1,
+          "annotatedSpanCoverage": 0.42857142857142855,
+          "latencyMs": {
+            "mean": 910.7119704285714,
+            "p95": 2844.346459
+          },
+          "tokens": {
+            "input": 2027,
+            "output": 213
+          }
+        },
+        "paraphrase": {
+          "cases": 7,
+          "ready": 4,
+          "rejected": 3,
+          "unavailable": 0,
+          "truePositives": 3,
+          "falsePositives": 1,
+          "falseNegatives": 4,
+          "precision": 0.75,
+          "recall": 0.42857142857142855,
+          "exactCaseRate": 0.42857142857142855,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 0.75,
+          "supportedQuoteRate": 0.5,
+          "annotatedSpanCoverage": 0.2857142857142857,
+          "latencyMs": {
+            "mean": 485.96654185714306,
+            "p95": 931.0875420000011
+          },
+          "tokens": {
+            "input": 2090,
+            "output": 160
+          }
+        },
+        "negation": {
+          "cases": 7,
+          "ready": 0,
+          "rejected": 7,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": null,
+          "recall": null,
+          "exactCaseRate": 0,
+          "negativeCases": 7,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": 0,
+          "negativeSuccessRate": 0,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": null,
+          "supportedQuoteRate": null,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 183.7825834285712,
+            "p95": 290.9449590000004
+          },
+          "tokens": {
+            "input": 2044,
+            "output": 42
+          }
+        },
+        "resolved": {
+          "cases": 4,
+          "ready": 1,
+          "rejected": 3,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0,
+          "negativeCases": 4,
+          "negativeFalsePositiveCases": 1,
+          "negativeFalsePositiveRate": 0.25,
+          "negativeSuccessRate": 0,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 309.44633324999995,
+            "p95": 532.0366669999985
+          },
+          "tokens": {
+            "input": 1183,
+            "output": 63
+          }
+        },
+        "instruction": {
+          "cases": 3,
+          "ready": 1,
+          "rejected": 2,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0,
+          "negativeCases": 3,
+          "negativeFalsePositiveCases": 1,
+          "negativeFalsePositiveRate": 0.3333333333333333,
+          "negativeSuccessRate": 0,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 265.6336666666666,
+            "p95": 474.26116600000023
+          },
+          "tokens": {
+            "input": 905,
+            "output": 34
+          }
+        },
+        "ambiguous": {
+          "cases": 4,
+          "ready": 0,
+          "rejected": 4,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "precision": null,
+          "recall": null,
+          "exactCaseRate": 0,
+          "negativeCases": 4,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": 0,
+          "negativeSuccessRate": 0,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": null,
+          "supportedQuoteRate": null,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 422.458615,
+            "p95": 1195.838334
+          },
+          "tokens": {
+            "input": 1180,
+            "output": 89
+          }
+        },
+        "mixed": {
+          "cases": 2,
+          "ready": 2,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 1,
+          "falsePositives": 1,
+          "falseNegatives": 1,
+          "precision": 0.5,
+          "recall": 0.5,
+          "exactCaseRate": 0.5,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0.5,
+          "annotatedSpanCoverage": 0.5,
+          "latencyMs": {
+            "mean": 522.031937499999,
+            "p95": 589.7297079999989
+          },
+          "tokens": {
+            "input": 592,
+            "output": 58
+          }
+        },
+        "multiple": {
+          "cases": 2,
+          "ready": 1,
+          "rejected": 1,
+          "unavailable": 0,
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 3,
+          "precision": 1,
+          "recall": 0.25,
+          "exactCaseRate": 0,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 1,
+          "annotatedSpanCoverage": 0.25,
+          "latencyMs": {
+            "mean": 794.8017499999996,
+            "p95": 919.0713749999995
+          },
+          "tokens": {
+            "input": 592,
+            "output": 93
+          }
+        }
+      },
+      "cases": [
+        {
+          "id": "ex-001",
+          "stratum": "direct",
+          "expected": [
+            "nonce-reused"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "nonce already consumed by a previous accepted payment"
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 2844.346459,
+          "tokens": {
+            "input": 292,
+            "output": 26
+          }
+        },
+        {
+          "id": "ex-002",
+          "stratum": "direct",
+          "expected": [
+            "insufficient-funds"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 581.805292,
+          "tokens": {
+            "input": 291,
+            "output": 29
+          }
+        },
+        {
+          "id": "ex-003",
+          "stratum": "direct",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "The recipient is not permitted under this task policy."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 562.4952920000001,
+          "tokens": {
+            "input": 288,
+            "output": 30
+          }
+        },
+        {
+          "id": "ex-004",
+          "stratum": "direct",
+          "expected": [
+            "invalid-signature"
+          ],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "Authorization signature verification failed for this request."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 433.00475000000006,
+          "tokens": {
+            "input": 286,
+            "output": 22
+          }
+        },
+        {
+          "id": "ex-005",
+          "stratum": "direct",
+          "expected": [
+            "batch-already-processed"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 520.5334579999999,
+          "tokens": {
+            "input": 291,
+            "output": 29
+          }
+        },
+        {
+          "id": "ex-006",
+          "stratum": "direct",
+          "expected": [
+            "authorization-expired"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 524.6323339999999,
+          "tokens": {
+            "input": 289,
+            "output": 30
+          }
+        },
+        {
+          "id": "ex-007",
+          "stratum": "direct",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 908.1662079999996,
+          "tokens": {
+            "input": 290,
+            "output": 47
+          }
+        },
+        {
+          "id": "ex-008",
+          "stratum": "paraphrase",
+          "expected": [
+            "nonce-reused"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "The service refused to spend this signed permission because its unique identifier had been redeemed once before."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 722.7631670000001,
+          "tokens": {
+            "input": 296,
+            "output": 36
+          }
+        },
+        {
+          "id": "ex-009",
+          "stratum": "paraphrase",
+          "expected": [
+            "insufficient-funds"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 176.17620799999986,
+          "tokens": {
+            "input": 300,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-010",
+          "stratum": "paraphrase",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "The selected address is absent from that approved set."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 571.4413329999998,
+          "tokens": {
+            "input": 296,
+            "output": 30
+          }
+        },
+        {
+          "id": "ex-011",
+          "stratum": "paraphrase",
+          "expected": [
+            "invalid-signature"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "The recovered signer differs from the payer named in the authorization, so verification rejected the request."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 637.8606250000012,
+          "tokens": {
+            "input": 296,
+            "output": 36
+          }
+        },
+        {
+          "id": "ex-012",
+          "stratum": "paraphrase",
+          "expected": [
+            "batch-already-processed"
+          ],
+          "status": "ready",
+          "predicted": [
+            "batch-already-processed"
+          ],
+          "quotes": [
+            {
+              "signal": "batch-already-processed",
+              "quote": "The settlement identifier already has a completed booking in the contract; accepting it again would repeat that booking."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 931.0875420000011,
+          "tokens": {
+            "input": 298,
+            "output": 40
+          }
+        },
+        {
+          "id": "ex-013",
+          "stratum": "paraphrase",
+          "expected": [
+            "authorization-expired"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 201.8012090000011,
+          "tokens": {
+            "input": 308,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-014",
+          "stratum": "paraphrase",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 160.63570899999831,
+          "tokens": {
+            "input": 296,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-015",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 153.86608399999932,
+          "tokens": {
+            "input": 295,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-016",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 161.39908400000058,
+          "tokens": {
+            "input": 294,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-017",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 163.71924999999828,
+          "tokens": {
+            "input": 293,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-018",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 182.57454099999995,
+          "tokens": {
+            "input": 292,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-019",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 290.9449590000004,
+          "tokens": {
+            "input": 289,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-020",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 167.67170799999985,
+          "tokens": {
+            "input": 290,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-021",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 166.30245800000012,
+          "tokens": {
+            "input": 291,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-022",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 155.5966669999998,
+          "tokens": {
+            "input": 298,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-023",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 157.72708300000158,
+          "tokens": {
+            "input": 296,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-024",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "signature verification failed"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 392.42491599999994,
+          "tokens": {
+            "input": 293,
+            "output": 21
+          }
+        },
+        {
+          "id": "ex-025",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 532.0366669999985,
+          "tokens": {
+            "input": 296,
+            "output": 30
+          }
+        },
+        {
+          "id": "ex-026",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 157.84349999999904,
+          "tokens": {
+            "input": 300,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-027",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 164.79633400000057,
+          "tokens": {
+            "input": 298,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-028",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "insufficient funds"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 474.26116600000023,
+          "tokens": {
+            "input": 307,
+            "output": 22
+          }
+        },
+        {
+          "id": "ex-029",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 156.21270899999945,
+          "tokens": {
+            "input": 293,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-030",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 159.4368340000001,
+          "tokens": {
+            "input": 292,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-031",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1195.838334,
+          "tokens": {
+            "input": 295,
+            "output": 71
+          }
+        },
+        {
+          "id": "ex-032",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 178.34658300000046,
+          "tokens": {
+            "input": 300,
+            "output": 6
+          }
+        },
+        {
+          "id": "ex-033",
+          "stratum": "mixed",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "The actual rejection says recipient not whitelisted for this task."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 589.7297079999989,
+          "tokens": {
+            "input": 296,
+            "output": 33
+          }
+        },
+        {
+          "id": "ex-034",
+          "stratum": "mixed",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "Historical: nonce already used."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 454.33416699999907,
+          "tokens": {
+            "input": 296,
+            "output": 25
+          }
+        },
+        {
+          "id": "ex-035",
+          "stratum": "multiple",
+          "expected": [
+            "insufficient-funds",
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "Two independent faults were recorded: insufficient funds blocked the debit; RPC timeout prevented the subsequent status lookup."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 2,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 670.5321249999997,
+          "tokens": {
+            "input": 298,
+            "output": 39
+          }
+        },
+        {
+          "id": "ex-036",
+          "stratum": "multiple",
+          "expected": [
+            "authorization-expired",
+            "insufficient-funds"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 2,
+          "expectedCount": 2,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 919.0713749999995,
+          "tokens": {
+            "input": 294,
+            "output": 54
+          }
+        }
+      ],
+      "pairedWithContext": {
+        "repaired": [
+          "ex-008",
+          "ex-010",
+          "ex-012"
+        ],
+        "regressed": [
+          "ex-002",
+          "ex-005",
+          "ex-006",
+          "ex-007",
+          "ex-011",
+          "ex-015",
+          "ex-016",
+          "ex-017",
+          "ex-018",
+          "ex-019",
+          "ex-020",
+          "ex-021",
+          "ex-022",
+          "ex-023",
+          "ex-024",
+          "ex-025",
+          "ex-026",
+          "ex-027",
+          "ex-028",
+          "ex-029",
+          "ex-030",
+          "ex-031",
+          "ex-032",
+          "ex-034",
+          "ex-035",
+          "ex-036"
+        ]
+      },
+      "candidateGate": {
+        "candidate": false,
+        "checks": {
+          "recallGain": false,
+          "precision": false,
+          "negativeFalsePositives": false,
+          "availability": false,
+          "outputConsistency": true,
+          "annotatedEvidence": false,
+          "latency": true
+        },
+        "productionApproval": false
+      }
+    },
+    {
+      "model": "qwen2.5:3b",
+      "options": {
+        "temperature": 0,
+        "num_predict": 512
+      },
+      "summary": {
+        "cases": 36,
+        "ready": 25,
+        "rejected": 11,
+        "unavailable": 0,
+        "truePositives": 11,
+        "falsePositives": 12,
+        "falseNegatives": 9,
+        "precision": 0.4782608695652174,
+        "recall": 0.55,
+        "exactCaseRate": 0.3333333333333333,
+        "negativeCases": 18,
+        "negativeFalsePositiveCases": 10,
+        "negativeFalsePositiveRate": 0.5555555555555556,
+        "negativeSuccessRate": 0.16666666666666666,
+        "abstentions": 3,
+        "mixedAbstentionCases": 2,
+        "verbatimQuoteRate": 0.8260869565217391,
+        "supportedQuoteRate": 0.34782608695652173,
+        "annotatedSpanCoverage": 0.4,
+        "latencyMs": {
+          "mean": 1424.2041631111106,
+          "p95": 2133.7371249999997
+        },
+        "tokens": {
+          "input": 10613,
+          "output": 1612
+        }
+      },
+      "byStratum": {
+        "direct": {
+          "cases": 7,
+          "ready": 4,
+          "rejected": 3,
+          "unavailable": 0,
+          "truePositives": 4,
+          "falsePositives": 0,
+          "falseNegatives": 3,
+          "precision": 1,
+          "recall": 0.5714285714285714,
+          "exactCaseRate": 0.5714285714285714,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 0.75,
+          "supportedQuoteRate": 0.75,
+          "annotatedSpanCoverage": 0.42857142857142855,
+          "latencyMs": {
+            "mean": 1740.5172201428566,
+            "p95": 4581.116666000002
+          },
+          "tokens": {
+            "input": 2027,
+            "output": 296
+          }
+        },
+        "paraphrase": {
+          "cases": 7,
+          "ready": 5,
+          "rejected": 2,
+          "unavailable": 0,
+          "truePositives": 4,
+          "falsePositives": 1,
+          "falseNegatives": 3,
+          "precision": 0.8,
+          "recall": 0.5714285714285714,
+          "exactCaseRate": 0.5714285714285714,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 0.6,
+          "supportedQuoteRate": 0.4,
+          "annotatedSpanCoverage": 0.2857142857142857,
+          "latencyMs": {
+            "mean": 1301.7257440000014,
+            "p95": 1715.1122500000056
+          },
+          "tokens": {
+            "input": 2090,
+            "output": 307
+          }
+        },
+        "negation": {
+          "cases": 7,
+          "ready": 5,
+          "rejected": 2,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 4,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0.14285714285714285,
+          "negativeCases": 7,
+          "negativeFalsePositiveCases": 4,
+          "negativeFalsePositiveRate": 0.5714285714285714,
+          "negativeSuccessRate": 0.14285714285714285,
+          "abstentions": 1,
+          "mixedAbstentionCases": 1,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 1261.791333142856,
+            "p95": 2133.7371249999997
+          },
+          "tokens": {
+            "input": 2044,
+            "output": 296
+          }
+        },
+        "resolved": {
+          "cases": 4,
+          "ready": 4,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 4,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0,
+          "negativeCases": 4,
+          "negativeFalsePositiveCases": 4,
+          "negativeFalsePositiveRate": 1,
+          "negativeSuccessRate": 0,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 1203.2402082499975,
+            "p95": 1367.766082999995
+          },
+          "tokens": {
+            "input": 1183,
+            "output": 160
+          }
+        },
+        "instruction": {
+          "cases": 3,
+          "ready": 1,
+          "rejected": 2,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0,
+          "negativeCases": 3,
+          "negativeFalsePositiveCases": 1,
+          "negativeFalsePositiveRate": 0.3333333333333333,
+          "negativeSuccessRate": 0,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 1184.2104449999995,
+            "p95": 1342.432166999999
+          },
+          "tokens": {
+            "input": 905,
+            "output": 113
+          }
+        },
+        "ambiguous": {
+          "cases": 4,
+          "ready": 3,
+          "rejected": 1,
+          "unavailable": 0,
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "precision": 0,
+          "recall": null,
+          "exactCaseRate": 0.5,
+          "negativeCases": 4,
+          "negativeFalsePositiveCases": 1,
+          "negativeFalsePositiveRate": 0.25,
+          "negativeSuccessRate": 0.5,
+          "abstentions": 2,
+          "mixedAbstentionCases": 1,
+          "verbatimQuoteRate": 0,
+          "supportedQuoteRate": 0,
+          "annotatedSpanCoverage": null,
+          "latencyMs": {
+            "mean": 1564.044249749999,
+            "p95": 1911.7593329999945
+          },
+          "tokens": {
+            "input": 1180,
+            "output": 216
+          }
+        },
+        "mixed": {
+          "cases": 2,
+          "ready": 2,
+          "rejected": 0,
+          "unavailable": 0,
+          "truePositives": 2,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "precision": 0.6666666666666666,
+          "recall": 1,
+          "exactCaseRate": 0.5,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 0.6666666666666666,
+          "annotatedSpanCoverage": 1,
+          "latencyMs": {
+            "mean": 1701.155645499999,
+            "p95": 2118.4932499999995
+          },
+          "tokens": {
+            "input": 592,
+            "output": 118
+          }
+        },
+        "multiple": {
+          "cases": 2,
+          "ready": 1,
+          "rejected": 1,
+          "unavailable": 0,
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 3,
+          "precision": 1,
+          "recall": 0.25,
+          "exactCaseRate": 0,
+          "negativeCases": 0,
+          "negativeFalsePositiveCases": 0,
+          "negativeFalsePositiveRate": null,
+          "negativeSuccessRate": null,
+          "abstentions": 0,
+          "mixedAbstentionCases": 0,
+          "verbatimQuoteRate": 1,
+          "supportedQuoteRate": 1,
+          "annotatedSpanCoverage": 0.25,
+          "latencyMs": {
+            "mean": 1559.5146664999993,
+            "p95": 2026.5778749999881
+          },
+          "tokens": {
+            "input": 592,
+            "output": 106
+          }
+        }
+      },
+      "cases": [
+        {
+          "id": "ex-001",
+          "stratum": "direct",
+          "expected": [
+            "nonce-reused"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "the gateway rejected submission: nonce already consumed by a previous accepted payment."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 4581.116666000002,
+          "tokens": {
+            "input": 292,
+            "output": 42
+          }
+        },
+        {
+          "id": "ex-002",
+          "stratum": "direct",
+          "expected": [
+            "insufficient-funds"
+          ],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "Settlement stopped because there are insufficient funds in the payer balance."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 1287.8978749999987,
+          "tokens": {
+            "input": 291,
+            "output": 42
+          }
+        },
+        {
+          "id": "ex-003",
+          "stratum": "direct",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "The recipient is not permitted under this task policy."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 1241.5958329999994,
+          "tokens": {
+            "input": 288,
+            "output": 40
+          }
+        },
+        {
+          "id": "ex-004",
+          "stratum": "direct",
+          "expected": [
+            "invalid-signature"
+          ],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "Authorization signature verification failed for this request."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 1100.8022089999977,
+          "tokens": {
+            "input": 286,
+            "output": 36
+          }
+        },
+        {
+          "id": "ex-005",
+          "stratum": "direct",
+          "expected": [
+            "batch-already-processed"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1183.9738749999997,
+          "tokens": {
+            "input": 291,
+            "output": 39
+          }
+        },
+        {
+          "id": "ex-006",
+          "stratum": "direct",
+          "expected": [
+            "authorization-expired"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1145.5642499999994,
+          "tokens": {
+            "input": 289,
+            "output": 40
+          }
+        },
+        {
+          "id": "ex-007",
+          "stratum": "direct",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1642.669833,
+          "tokens": {
+            "input": 290,
+            "output": 57
+          }
+        },
+        {
+          "id": "ex-008",
+          "stratum": "paraphrase",
+          "expected": [
+            "nonce-reused"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "the service refused to spend this signed permission because its unique identifier had been redeemed once before."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1396.7119999999995,
+          "tokens": {
+            "input": 296,
+            "output": 46
+          }
+        },
+        {
+          "id": "ex-009",
+          "stratum": "paraphrase",
+          "expected": [
+            "insufficient-funds"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1138.1713750000017,
+          "tokens": {
+            "input": 300,
+            "output": 39
+          }
+        },
+        {
+          "id": "ex-010",
+          "stratum": "paraphrase",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "the selected address is absent from that approved set."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 1176.5821250000008,
+          "tokens": {
+            "input": 296,
+            "output": 40
+          }
+        },
+        {
+          "id": "ex-011",
+          "stratum": "paraphrase",
+          "expected": [
+            "invalid-signature"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "The recovered signer differs from the payer named in the authorization, so verification rejected the request."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1351.0345830000006,
+          "tokens": {
+            "input": 296,
+            "output": 46
+          }
+        },
+        {
+          "id": "ex-012",
+          "stratum": "paraphrase",
+          "expected": [
+            "batch-already-processed"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 1,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1175.146667000001,
+          "tokens": {
+            "input": 298,
+            "output": 39
+          }
+        },
+        {
+          "id": "ex-013",
+          "stratum": "paraphrase",
+          "expected": [
+            "authorization-expired"
+          ],
+          "status": "ready",
+          "predicted": [
+            "authorization-expired"
+          ],
+          "quotes": [
+            {
+              "signal": "authorization-expired",
+              "quote": "the permission was usable until 10:00 UTC; it first arrived at 10:03 UTC and cannot be accepted anymore."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1715.1122500000056,
+          "tokens": {
+            "input": 308,
+            "output": 58
+          }
+        },
+        {
+          "id": "ex-014",
+          "stratum": "paraphrase",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "rpc-unavailable",
+              "quote": "exhausted the waiting period without receiving any reply."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 1159.3212080000012,
+          "tokens": {
+            "input": 296,
+            "output": 39
+          }
+        },
+        {
+          "id": "ex-015",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "No evidence of nonce already used was found; this request has a fresh authorization identifier."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1431.970874999999,
+          "tokens": {
+            "input": 295,
+            "output": 45
+          }
+        },
+        {
+          "id": "ex-016",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "The payment failure was not caused by insufficient funds; the payer balance is sufficient."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": true,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 2133.7371249999997,
+          "tokens": {
+            "input": 294,
+            "output": 77
+          }
+        },
+        {
+          "id": "ex-017",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "The check ruled out recipient not whitelisted; this destination is approved."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1372.221540999999,
+          "tokens": {
+            "input": 293,
+            "output": 45
+          }
+        },
+        {
+          "id": "ex-018",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "Signature verification did not fail; the signed message matches the payer key."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1229.1020409999983,
+          "tokens": {
+            "input": 292,
+            "output": 42
+          }
+        },
+        {
+          "id": "ex-019",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1124.621583,
+          "tokens": {
+            "input": 289,
+            "output": 39
+          }
+        },
+        {
+          "id": "ex-020",
+          "stratum": "negation",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 307.3045839999977,
+          "tokens": {
+            "input": 290,
+            "output": 8
+          }
+        },
+        {
+          "id": "ex-021",
+          "stratum": "negation",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1233.5815829999992,
+          "tokens": {
+            "input": 291,
+            "output": 40
+          }
+        },
+        {
+          "id": "ex-022",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "Historical: insufficient funds prevented yesterday's attempt."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1201.9782080000004,
+          "tokens": {
+            "input": 298,
+            "output": 39
+          }
+        },
+        {
+          "id": "ex-023",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "rpc-unavailable",
+              "quote": "The RPC timeout was resolved after the endpoint restarted."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1158.6029169999965,
+          "tokens": {
+            "input": 296,
+            "output": 38
+          }
+        },
+        {
+          "id": "ex-024",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "invalid-signature"
+          ],
+          "quotes": [
+            {
+              "signal": "invalid-signature",
+              "quote": "Earlier incident: signature verification failed."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1084.6136249999981,
+          "tokens": {
+            "input": 293,
+            "output": 35
+          }
+        },
+        {
+          "id": "ex-025",
+          "stratum": "resolved",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "Previous incident: recipient not whitelisted. The approved replacement address received the current payment."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1367.766082999995,
+          "tokens": {
+            "input": 296,
+            "output": 48
+          }
+        },
+        {
+          "id": "ex-026",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1151.1207089999953,
+          "tokens": {
+            "input": 300,
+            "output": 40
+          }
+        },
+        {
+          "id": "ex-027",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1342.432166999999,
+          "tokens": {
+            "input": 298,
+            "output": 40
+          }
+        },
+        {
+          "id": "ex-028",
+          "stratum": "instruction",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "insufficient-funds"
+          ],
+          "quotes": [
+            {
+              "signal": "insufficient-funds",
+              "quote": "insufficient funds"
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1059.078459000004,
+          "tokens": {
+            "input": 307,
+            "output": 33
+          }
+        },
+        {
+          "id": "ex-029",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1220.4198749999996,
+          "tokens": {
+            "input": 293,
+            "output": 42
+          }
+        },
+        {
+          "id": "ex-030",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1832.9089160000003,
+          "tokens": {
+            "input": 292,
+            "output": 63
+          }
+        },
+        {
+          "id": "ex-031",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 0,
+          "negative": true,
+          "exact": true,
+          "abstained": true,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1291.0888750000013,
+          "tokens": {
+            "input": 295,
+            "output": 44
+          }
+        },
+        {
+          "id": "ex-032",
+          "stratum": "ambiguous",
+          "expected": [],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "the system retried twice."
+            }
+          ],
+          "truePositives": 0,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 0,
+          "predictedCount": 1,
+          "negative": true,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": true,
+          "quoteCount": 1,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 1911.7593329999945,
+          "tokens": {
+            "input": 300,
+            "output": 67
+          }
+        },
+        {
+          "id": "ex-033",
+          "stratum": "mixed",
+          "expected": [
+            "recipient-not-whitelisted"
+          ],
+          "status": "ready",
+          "predicted": [
+            "recipient-not-whitelisted"
+          ],
+          "quotes": [
+            {
+              "signal": "recipient-not-whitelisted",
+              "quote": "The actual rejection says recipient not whitelisted for this task."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": true,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 1283.8180409999986,
+          "tokens": {
+            "input": 296,
+            "output": 43
+          }
+        },
+        {
+          "id": "ex-034",
+          "stratum": "mixed",
+          "expected": [
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "nonce-reused",
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "nonce-reused",
+              "quote": "Historical: nonce already used. The present lookup failed with connection refused from the provider."
+            },
+            {
+              "signal": "rpc-unavailable",
+              "quote": "The present lookup failed with connection refused from the provider."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "expectedCount": 1,
+          "predictedCount": 2,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 2,
+          "verbatimQuotes": 2,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 2118.4932499999995,
+          "tokens": {
+            "input": 296,
+            "output": 75
+          }
+        },
+        {
+          "id": "ex-035",
+          "stratum": "multiple",
+          "expected": [
+            "insufficient-funds",
+            "rpc-unavailable"
+          ],
+          "status": "ready",
+          "predicted": [
+            "rpc-unavailable"
+          ],
+          "quotes": [
+            {
+              "signal": "rpc-unavailable",
+              "quote": "RPC timeout prevented the subsequent status lookup."
+            }
+          ],
+          "truePositives": 1,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "expectedCount": 2,
+          "predictedCount": 1,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 1,
+          "verbatimQuotes": 1,
+          "supportedQuotes": 1,
+          "supportedSignals": 1,
+          "durationMs": 1092.4514580000105,
+          "tokens": {
+            "input": 298,
+            "output": 36
+          }
+        },
+        {
+          "id": "ex-036",
+          "stratum": "multiple",
+          "expected": [
+            "authorization-expired",
+            "insufficient-funds"
+          ],
+          "status": "rejected",
+          "predicted": [],
+          "quotes": [],
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 2,
+          "expectedCount": 2,
+          "predictedCount": 0,
+          "negative": false,
+          "exact": false,
+          "abstained": false,
+          "mixedAbstention": false,
+          "quoteCount": 0,
+          "verbatimQuotes": 0,
+          "supportedQuotes": 0,
+          "supportedSignals": 0,
+          "durationMs": 2026.5778749999881,
+          "tokens": {
+            "input": 294,
+            "output": 70
+          }
+        }
+      ],
+      "pairedWithContext": {
+        "repaired": [
+          "ex-008",
+          "ex-010",
+          "ex-013",
+          "ex-014"
+        ],
+        "regressed": [
+          "ex-005",
+          "ex-006",
+          "ex-007",
+          "ex-011",
+          "ex-015",
+          "ex-016",
+          "ex-017",
+          "ex-018",
+          "ex-019",
+          "ex-020",
+          "ex-022",
+          "ex-023",
+          "ex-024",
+          "ex-025",
+          "ex-026",
+          "ex-027",
+          "ex-028",
+          "ex-030",
+          "ex-032",
+          "ex-034",
+          "ex-035",
+          "ex-036"
+        ]
+      },
+      "candidateGate": {
+        "candidate": false,
+        "checks": {
+          "recallGain": false,
+          "precision": false,
+          "negativeFalsePositives": false,
+          "availability": false,
+          "outputConsistency": false,
+          "annotatedEvidence": false,
+          "latency": true
+        },
+        "productionApproval": false
+      }
+    }
+  ],
+  "startedAt": "2026-11-16T17:02:01.900Z",
+  "finishedAt": "2026-11-16T17:03:10.612Z",
+  "runtime": {
+    "version": {
+      "version": "0.40.16"
+    },
+    "models": [
+      {
+        "name": "qwen2.5:1.5b",
+        "digest": "65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b"
+      },
+      {
+        "name": "qwen2.5:3b",
+        "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b"
+      }
+    ]
+  },
+  "manifestHash": "5ca53b77275f50dcedd1ccfa35d195abe7a47f513f61aa0c908a36dd77f31916",
+  "provenance": {
+    "source": "project-authored synthetic stress cases",
+    "annotation": "single-author; no independent human adjudication",
+    "relation": "new strings disjoint from existing development and test texts",
+    "scope": "Current asserted failures only; negated, resolved, hypothetical and instructional text is not an active failure.",
+    "unknownError": "abstention, not a concrete diagnosis",
+    "productionClaims": false
+  }
+}

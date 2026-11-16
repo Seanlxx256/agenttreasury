@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "dataset": "evidence-exceptions-v2",
+  "cases": 36,
+  "frozenAt": "2026-11-16T16:44:45.995Z",
+  "provenance": {
+    "source": "project-authored synthetic stress cases",
+    "annotation": "single-author; no independent human adjudication",
+    "relation": "new strings disjoint from existing development and test texts",
+    "scope": "Current asserted failures only; negated, resolved, hypothetical and instructional text is not an active failure.",
+    "unknownError": "abstention, not a concrete diagnosis",
+    "productionClaims": false
+  },
+  "files": {
+    "benchmarks/evidence-exceptions-v2/inputs.json": "3ac374a995353cd1810314936806cd8b1c97d75b9f3913dad3f8e9fd4b98a550",
+    "benchmarks/evidence-exceptions-v2/labels.json": "7c6d0dafa748fc443c746d256d037ba1412cdbac90ac9cfad3da314169b9d959",
+    "package-lock.json": "491b8fa36167cdd076555385ddf501556c86b34d1ccc8aca1b415a20fb41cd71",
+    "src/gateway-evidence-extraction.ts": "5de135a9c4eb46307b72476e0a2b72227e7d562951a76f749a039efcc5912a96",
+    "dist/src/gateway-evidence-extraction.js": "b4e88f704958cd9f48f33e977721e24af75117c62c40724c759137e2dc3ad570",
+    "src/gateway-evidence-context-rules.ts": "5bebf55bee7f88a09efa9e72100e1eaeb8726a2baac86920fa8c7f37cbb64647",
+    "dist/src/gateway-evidence-context-rules.js": "3cfbefae6bbfb884e6f04bb34909acbfc2e48e1a02704eea4742a8662abdce33",
+    "src/gateway-triage-models.ts": "f663880d2f2c3df1071484e38091d2167425b38a8e87916391cc25d462a3ce73",
+    "dist/src/gateway-triage-models.js": "2d981a60449a1d18155947a74fd5b940add9ef0b7d3dc0364cc1eab199a53502",
+    "src/gateway-exception-scoring.ts": "9c732215bccb3e5dd0cda012684ed34122df85560be753530a376e8f23ea03d2",
+    "dist/src/gateway-exception-scoring.js": "e890b6a9a1e498acdfd2f3e46778d86daa5001f7e509373e96fd94bcc6c3bb97",
+    "src/evaluate-gateway-exceptions.ts": "23250756654a4c968d0d53475482db6e6756a3269b620987c65355d37da29a9d",
+    "dist/src/evaluate-gateway-exceptions.js": "c905d13c62a40b2c7fa0a1d14b35679f4424049beeccb6179c8ac95be23e19b8"
+  }
+}
