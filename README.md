@@ -320,6 +320,18 @@ npm run eval:gateway-evidence -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
 
 On `gateway-evidence-v1` (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with precision 1.00 — it misses every paraphrase. See the [evaluation report](docs/gateway-triage-evaluation.md) for the per-model recall and precision. The signals are also surfaced as triage facts, so a purchase whose saved observation carries a free-text failure reason gets the recovered evidence in the finance console.
 
+### Evaluate read-only investigation suggestions
+
+Propose the next read-only checks for a payment conflict from a closed set of eight investigations, comparing a fixed generic checklist with a local model.
+
+```sh
+npm run build
+npm run eval:gateway-investigation -- --rules-only
+npm run eval:gateway-investigation -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+```
+
+The generic checklist (recall 0.53) is not beaten by the local models (best 0.59); the suggestions stay read-only and auditable with the rules as the default. See the [evaluation report](docs/gateway-triage-evaluation.md).
+
 ### Send a testnet refund from the console
 
 Build, apply migration 010 and restart the API. Start the refund worker against the same database with DATABASE_URL, BASE_SEPOLIA_RPC_URL, MERCHANT_TEST_KEY and PAYMENT_RELAYER_KEY configured. The API and browser do not need wallet keys for this action.

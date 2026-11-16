@@ -92,7 +92,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 84/84.
+- `npm test` passes 87/87.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
@@ -107,6 +107,12 @@ actually ran the thing:
   at a small precision cost. The baseline and split are locked by a unit test, and the
   signals are wired into `prepareGatewayTriage` as citable facts, so the finance console
   surfaces evidence the structured rules never encoded.
+- A second candidate increment — read-only investigation suggestions for conflicts — is
+  measured and recorded as a negative result: the generic checklist (recall 0.53) is not
+  beaten by the local models (best 0.59, 0.5b 0.12), because "what to check next" is a
+  structured fact-to-check mapping the rules could encode, not a semantic task a small
+  model generalizes on. The read-only, auditable suggestion capability is kept with the
+  rules as the default.
 
 ## Not done (and why)
 

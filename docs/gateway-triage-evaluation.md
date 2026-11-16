@@ -246,3 +246,28 @@ npm run --silent eval:gateway-evidence -- --rules-only
 npm run --silent eval:gateway-evidence -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
 ```
 
+## Read-only investigation suggestions: no positive increment
+
+The second candidate increment — propose the next read-only check when the evidence conflicts — is built and measured. The module defines a closed set of eight read-only investigations (`read-original-authorization`, `read-gateway-status`, `read-chain-receipt`, `read-batch-calldata`, `read-local-journal`, `read-refund-status`, `read-merchant-recipient`, `compare-transfer-terms`). The rule baseline is a fixed generic checklist (chain receipt, local journal, transfer-terms comparison), and the model proposes up to three checks with citations against the facts.
+
+`gateway-investigation-v1` has eight conflict scenarios with hand-labeled "first checks to run". Measured on 2026-11-16 on an Apple Silicon Mac with Ollama, temperature zero:
+
+| Method | Recall | Precision |
+| --- | ---: | ---: |
+| Rules (generic checklist) | 0.53 | 0.38 |
+| `qwen2.5:0.5b` | 0.12 | 0.17 |
+| `qwen2.5:1.5b` | 0.59 | 0.43 |
+| `qwen2.5:3b` | 0.59 | 0.42 |
+
+The honest conclusion: **the local models show no positive increment here.** The mid-size models barely beat the generic checklist (0.59 vs 0.53), and 0.5b regresses sharply. Reading the per-case output, `3b` does not actually reason about the conflict — it emits a different fixed checklist with a strong `read-original-authorization` preference, and it misses the targeted check in every case (for example, "Gateway charged but no local journal" should point at `read-local-journal`, and it never does).
+
+This is a useful negative result for the design. The first increment worked because it was a semantic task the keyword table cannot cover (read free text, recover the signal). This second task is the opposite: "what to check next" is a structured `fact -> check` mapping plus causal reasoning about the project's evidence graph, which the rules could encode and the local small models cannot. "Give the agent a task the rules cannot do" is necessary but not sufficient — the task must also be one a small local model can actually generalize on.
+
+The closed investigation set, the validation envelope, and the rule fallback are kept as engineering capability (they are read-only and auditable by construction), but the rules remain the default. A unit test locks the generic baseline and the validation of known kinds and citable facts.
+
+```sh
+npm run build
+npm run --silent eval:gateway-investigation -- --rules-only
+npm run --silent eval:gateway-investigation -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+```
+
