@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { evaluateGatewayInvestigation } from '../src/evaluate-gateway-investigation.js';
+import { evaluateGatewayInvestigation, scoreInvestigation } from '../src/evaluate-gateway-investigation.js';
 import {
-  investigationKinds, suggestInvestigationsRules, suggestInvestigationsWithModel,
+  investigationKinds, suggestInvestigationsRules, suggestInvestigationsWithModel, validateInvestigationPlan,
 } from '../src/gateway-investigation.js';
 
 const facts = [
@@ -45,8 +45,43 @@ test('the model must propose only known kinds with citable facts', async () => {
     { investigations: [{ kind: 'pay-the-merchant', citations: ['journal'] }] },
     { investigations: [{ kind: 'read-local-journal', citations: ['invented'] }] },
     { investigations: 'read-local-journal' },
+    { investigations: [] },
+    { investigations: [{kind:'read-local-journal',citations:[]}] },
+    { investigations: [{kind:'read-refund-status',citations:['journal']}] },
+    { investigations: [{kind:'read-local-journal',citations:['journal','journal']}] },
+    { investigations: [{kind:'read-local-journal',citations:['journal'],url:'https://attacker.example'}] },
+    { investigations: Array.from({length:4},()=>({kind:'read-local-journal',citations:['journal']})) },
+    { investigations: [{kind:'read-local-journal',citations:['journal']}],execute:'refund' },
   ]) {
     const rejected = await suggestInvestigationsWithModel(facts, 'test-model', response(invalid));
     assert.equal(rejected.status, 'rejected');
   }
+});
+
+test('real but unrelated citations and unverified interpretations cannot authorize a tool',()=>{
+  const available=[...facts,{id:'buyer-delivery',description:'Buyer saved the trace.'},
+    {id:'inference-model-1',description:'Model claims a refund happened.'}];
+  for (const citation of ['buyer-delivery','inference-model-1']) assert.equal(validateInvestigationPlan({investigations:[
+    {kind:'read-refund-status',citations:[citation]},
+  ]},available),false);
+  assert.equal(validateInvestigationPlan({investigations:[
+    {kind:'read-local-journal',citations:['journal']},{kind:'read-local-journal',citations:['observation-42']},
+  ]},available),false);
+});
+
+test('investigation scoring is set-based even for repeated labels and outputs',()=>{
+  const score=scoreInvestigation(['read-local-journal','read-local-journal'],[
+    {kind:'read-local-journal',citations:['journal']},{kind:'read-local-journal',citations:['journal']},
+  ]);
+  assert.equal(score.recall,1);assert.equal(score.precision,1);assert.equal(score.matched,1);
+  assert.equal(score.expected,1);assert.equal(score.suggested,1);
+});
+
+test('evaluation separates rule fallback success from rejected model output',async()=>{
+  const result=await evaluateGatewayInvestigation('invalid-model',async()=>Response.json({message:{content:JSON.stringify({
+    investigations:[{kind:'refund-now',citations:['journal']}],
+  })}}));
+  assert.equal(result.agent!.rejected,8);assert.equal(result.agent!.recall,1);
+  assert.equal(result.agent!.modelOnly.recall,0);
+  assert.ok(result.cases.every((row)=>row.timing.modelDurationMs!==null));
 });

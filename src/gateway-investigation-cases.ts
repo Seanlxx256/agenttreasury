@@ -11,9 +11,9 @@ const observation = (id: string, status: string, reason?: string) =>
 
 // Conflict scenarios authored separately from the extraction dataset. The
 // expected list is the read-only check a human would run first, not a generic
-// checklist. The rule baseline always proposes chain receipt + local journal +
-// transfer-terms comparison, so a case's increment is how much the model closes
-// the gap to the targeted checks.
+// checklist. The current rule baseline maps these structured signals to targeted
+// checks and reaches full coverage. These development fixtures cannot establish
+// an incremental model benefit.
 export const gatewayInvestigationCases: GatewayInvestigationCase[] = [
   {
     name: 'one nonce matched by several transfers',

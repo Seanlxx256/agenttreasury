@@ -1,3 +1,4 @@
+import { registerGatewayInvestigation } from './gateway-investigation-api.js';
 import { registerGatewayOperations } from './gateway-operations.js';
 import { readFile } from 'node:fs/promises';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -41,6 +42,7 @@ export function registerFinanceConsole(
   authenticate: (request: FastifyRequest) => void, localDemo: boolean,
 ) {
   registerGatewayOperations(app, pool, authenticateConsole);
+  registerGatewayInvestigation(app, pool, authenticateConsole);
   async function gatewayPurchase(id: string) {
     const { rows: [purchase] } = await pool.query<ExpectedGatewayPayment & {
       issuedAt: Date; signingStartedAt: Date | null; buyerHasDelivery: boolean; sellerHasDelivery: boolean;

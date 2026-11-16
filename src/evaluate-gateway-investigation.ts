@@ -8,15 +8,15 @@ import {
 
 type Scoring = { recall: number | null; precision: number | null; matched: number; expected: number; suggested: number };
 
-function score(expected: InvestigationKind[], suggestions: InvestigationSuggestion[]): Scoring {
+export function scoreInvestigation(expected: InvestigationKind[], suggestions: InvestigationSuggestion[]): Scoring {
   const expectedSet = new Set(expected);
-  const kinds = suggestions.map(({ kind }) => kind);
+  const kinds = [...new Set(suggestions.map(({ kind }) => kind))];
   const matched = kinds.filter((kind) => expectedSet.has(kind)).length;
   return {
     matched,
-    expected: expected.length,
+    expected: expectedSet.size,
     suggested: kinds.length,
-    recall: expected.length ? matched / expected.length : null,
+    recall: expectedSet.size ? matched / expectedSet.size : null,
     precision: kinds.length ? matched / kinds.length : null,
   };
 }
@@ -38,35 +38,43 @@ const emptyScoring = (expected: number): Scoring =>
 export async function evaluateGatewayInvestigation(model?: string, request: typeof fetch = fetch) {
   const rulesRows: Scoring[] = [];
   const agentRows: Scoring[] = [];
+  const modelOnlyRows: Scoring[] = [];
   const agentStats = { ready: 0, rejected: 0, unavailable: 0 };
   const cases = [];
 
   for (const sample of gatewayInvestigationCases) {
+    const ruleStart = performance.now();
     const rulesSuggestions = suggestInvestigationsRules(sample.facts);
-    const rulesScoring = score(sample.expected, rulesSuggestions);
+    const ruleDurationMs = performance.now() - ruleStart;
+    const rulesScoring = scoreInvestigation(sample.expected, rulesSuggestions);
     rulesRows.push(rulesScoring);
 
     let agentScoring: Scoring | null = null;
     let agentStatus = 'disabled';
     let agentKinds: InvestigationKind[] = [];
+    let modelDurationMs: number | null = null;
     if (model) {
+      const modelStart = performance.now();
       const { status, investigations } = await suggestInvestigationsWithModel(sample.facts, model, request);
+      modelDurationMs = performance.now() - modelStart;
       agentStatus = status;
       agentKinds = investigations.map(({ kind }) => kind);
       if (status === 'ready') {
-        agentScoring = score(sample.expected, investigations);
+        agentScoring = scoreInvestigation(sample.expected, investigations);
         agentStats.ready++;
       } else {
         if (status === 'rejected') agentStats.rejected++;
         if (status === 'unavailable') agentStats.unavailable++;
         // Fallback to the rule checklist so the operator always has a suggestion.
-        agentScoring = score(sample.expected, rulesSuggestions);
+        agentScoring = scoreInvestigation(sample.expected, rulesSuggestions);
       }
     }
     agentRows.push(agentScoring ?? emptyScoring(sample.expected.length));
+    modelOnlyRows.push(agentStatus === 'ready' ? agentScoring! : emptyScoring(new Set(sample.expected).size));
 
     cases.push({
       name: sample.name,
+      timing: { ruleDurationMs, modelDurationMs },
       expected: sample.expected,
       rules: { kinds: rulesSuggestions.map(({ kind }) => kind), ...rulesScoring },
       agent: model ? { status: agentStatus, kinds: agentKinds, ...(agentScoring ?? emptyScoring(sample.expected.length)) } : null,
@@ -78,7 +86,8 @@ export async function evaluateGatewayInvestigation(model?: string, request: type
     model: model ?? null,
     totalCases: gatewayInvestigationCases.length,
     rules: summarize(rulesRows),
-    agent: model ? { ...summarize(agentRows), ...agentStats } : null,
+    agent: model ? { ...summarize(agentRows), ...agentStats, modelOnly: summarize(modelOnlyRows),
+      scoringBasis: 'Effective suggestions include rule fallback; modelOnly counts only accepted model outputs.' } : null,
     cases,
   };
 }

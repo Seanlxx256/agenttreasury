@@ -1,5 +1,8 @@
 # Designing and validating the agent's increment
 
+For the 2026-11-17 bounded execution implementation, stricter citation validation and new local model measurements, see [Stage 3 investigation](stage-3-investigation.md). The historical measurements below use their original evaluation protocol.
+
+
 This document answers one question: **where does the AI agent actually add value over the deterministic rules, and how is that shown?** It is the summary of three candidate increments, each built, measured on a development dataset, and recorded honestly — two positive, one negative. The detailed per-case evaluation logs live in [gateway-triage-evaluation.md](gateway-triage-evaluation.md); this document is the narrative a hiring conversation would follow.
 
 ## The starting point: the agent was not adding value

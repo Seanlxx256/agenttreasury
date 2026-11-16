@@ -111,7 +111,25 @@ function showGatewayPurchase(purchase, path, session) {
     }
   }));
   const actions = element('div', undefined, 'actions');
-  actions.append(check, review);
+  const investigation = element('section');
+  const external = element('input');
+  external.type = 'checkbox';
+  const externalLabel = element('label');
+  externalLabel.append(external, ' Refresh Gateway and chain evidence (read only)');
+  const investigate = element('button', 'Collect investigation evidence');
+  const savedInvestigation = element('button', 'View saved investigation');
+  for (const [button, fresh] of [[investigate, true], [savedInvestigation, false]]) {
+    button.type = 'button';
+    button.addEventListener('click', () => showErrors(async () => {
+      button.disabled = true;
+      try {
+        const result = await financeApi(path + '/investigation', fresh ? { method: 'POST',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshExternal: external.checked }) } : {});
+        if (session === generation && button.isConnected) showInvestigation(investigation, result);
+      } finally { button.disabled = false; }
+    }));
+  }
+  actions.append(check, review, investigate, savedInvestigation, externalLabel);
   const approvalEvidence = element('section');
   approvalEvidence.append(element('h3', 'Approval evidence'), metadata([
     ['Dispute status', purchase.disputeStatus], ['Dispute reason', purchase.disputeReason],
@@ -213,7 +231,7 @@ function showGatewayPurchase(purchase, path, session) {
       ['Transfer ID', transferId], ['Batch hash', batchHash], ['Posted', timestamp(postedAt)],
     ]), entries);
   }
-  actions.after(triage);
+  actions.after(triage, investigation);
   if (!purchase.observations.length) {
     gatewayDetail.append(element('p', 'No Gateway check recorded.', 'muted'));
     return;
@@ -633,3 +651,16 @@ async function openCase(id) {
 }
 byId('case-filter').addEventListener('change', () => showErrors(() => loadCases()));
 byId('cases-more').addEventListener('click', () => showErrors(() => loadCases(true)));
+
+function showInvestigation(container, report) {
+  container.replaceChildren(element('h3', 'Read-only investigation'), element('p',
+    'Evidence gathering only. This report does not authorize payment, refund, budget release or case closure.'),
+  metadata([['Run', report.runId], ['Planner', report.planner.status], ['Captured', timestamp(report.snapshot.capturedAt)],
+    ['Completed checks', report.summary.completed], ['Blocked checks', report.summary.blocked], ['Unavailable checks', report.summary.unavailable]]));
+  if (report.staleAtCompletion || report.staleNow) container.append(element('p',
+    'Local records changed after this snapshot. Collect fresh evidence before making an operational decision.', 'muted'));
+  container.append(evidenceBlock('Snapshot facts and source references', { facts: report.snapshot.facts, sources: report.snapshot.sources }),
+    evidenceBlock('Selected checks and citations', report.planner.investigations));
+  for (const check of report.checks) container.append(evidenceBlock(check.kind + ' · ' + check.status, check));
+  container.append(evidenceBlock('Original local snapshot', report.snapshot.records));
+}

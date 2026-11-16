@@ -82,6 +82,16 @@ test('case console requires an outcome and binds resolution to displayed evidenc
   } });
 });
 
+test('investigation console renders untrusted evidence as text and flags stale snapshots',async()=>{
+  const {context,root}=await consoleHarness('operations');
+  const report={runId:'1',planner:{status:'disabled',investigations:[]},summary:{completed:1,blocked:1,unavailable:0},
+    snapshot:{capturedAt:'2026-11-17T00:00:00Z',facts:[],sources:{},records:{note:'<script>refund()</script>'}},
+    checks:[{kind:'read-chain-receipt',status:'blocked',reason:'No bound hash'}],staleNow:true};
+  runInContext(`showInvestigation(document.getElementById('gateway-detail'), ${JSON.stringify(report)})`,context);
+  assert.match(root.textContent,/Local records changed/);assert.match(root.textContent,/<script>refund\(\)<\/script>/);
+  assert.match(root.textContent,/does not authorize payment/);assert.match(root.textContent,/No bound hash/);
+});
+
 test('finance sees evidence before approving and submits the exact displayed version', async () => {
   const { root, posts } = await consoleHarness('finance');
   assert.match(root.textContent, /Incorrect trace/);

@@ -22,6 +22,7 @@ finance?*
 - **Buyer-side recovery.** A six-state machine covers submission-unknown →
   charged-delivery-missing → delivered, keyed by request ID and authorization nonce so a
   retry replays idempotently instead of double-charging.
+- **Bounded read-only investigations.** Operator-triggered plans collect request-scoped evidence through a closed set of tools, validate citation relevance, and flag stale local snapshots. A SELECT-only database role passes the collection tests. The actual 0.5B/1.5B comparison remains below the rule baseline; deterministic planning stays the default. See [Stage 3 and measured results](stage-3-investigation.md).
 - **Constrained signing service.** The executable Gateway buyer sends only request/task IDs to a separate signer. The signer checks current grants, stored authorization, testnet, recipient allowlist and amount cap. A durable pre-signing marker preserves budget after lost responses; tests kill/restart the real signer process. Local process separation is not OS-enforced key custody or a wallet-native policy claim. See [Stage 2](stage-2-signing-boundary.md).
 - **Durable reconciliation operations.** Balance-scan sightings are grouped into versioned cases with evidence-bound operator transitions, protected metrics and correlated logs. A local cold-backup drill checks restored budgets, journal, cursors and case history. Docker/CI configuration is supplied; container and 24-hour soak acceptance remain unverified. See [Stage 1 operations](stage-1-operations.md).
 - **Dual-ledger reconciliation.** The local journal and Circle Gateway transfers are
@@ -97,7 +98,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 151/151 (Stage 2 local regression run).
+- `npm test` passes 163/163 (Stage 3 local regression run).
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing

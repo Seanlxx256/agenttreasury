@@ -1,0 +1,654 @@
+{
+  "dataset": "gateway-investigation-v1",
+  "rules": {
+    "matched": 17,
+    "expected": 17,
+    "suggested": 17,
+    "recall": 1,
+    "precision": 1
+  },
+  "comparison": {
+    "rules": {
+      "recall": 1,
+      "precision": 1
+    },
+    "qwen2.5:0.5b": {
+      "recall": 0.8823529411764706,
+      "precision": 0.7894736842105263
+    },
+    "qwen2.5:1.5b": {
+      "recall": 0.5882352941176471,
+      "precision": 0.43478260869565216
+    }
+  },
+  "models": [
+    {
+      "model": "qwen2.5:0.5b",
+      "result": {
+        "dataset": "gateway-investigation-v1",
+        "model": "qwen2.5:0.5b",
+        "totalCases": 8,
+        "rules": {
+          "matched": 17,
+          "expected": 17,
+          "suggested": 17,
+          "recall": 1,
+          "precision": 1
+        },
+        "agent": {
+          "matched": 15,
+          "expected": 17,
+          "suggested": 19,
+          "recall": 0.8823529411764706,
+          "precision": 0.7894736842105263,
+          "ready": 2,
+          "rejected": 6,
+          "unavailable": 0,
+          "modelOnly": {
+            "matched": 2,
+            "expected": 17,
+            "suggested": 6,
+            "recall": 0.11764705882352941,
+            "precision": 0.3333333333333333
+          },
+          "scoringBasis": "Effective suggestions include rule fallback; modelOnly counts only accepted model outputs."
+        },
+        "cases": [
+          {
+            "name": "one nonce matched by several transfers",
+            "timing": {
+              "ruleDurationMs": 0.01158399999999915,
+              "modelDurationMs": 1975.5153750000002
+            },
+            "expected": [
+              "read-chain-receipt",
+              "compare-transfer-terms",
+              "read-gateway-status"
+            ],
+            "rules": {
+              "kinds": [
+                "read-chain-receipt",
+                "compare-transfer-terms",
+                "read-gateway-status"
+              ],
+              "matched": 3,
+              "expected": 3,
+              "suggested": 3,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "rejected",
+              "kinds": [
+                "read-chain-receipt",
+                "compare-transfer-terms",
+                "read-gateway-status"
+              ],
+              "matched": 3,
+              "expected": 3,
+              "suggested": 3,
+              "recall": 1,
+              "precision": 1
+            }
+          },
+          {
+            "name": "transfer terms contradict the authorization",
+            "timing": {
+              "ruleDurationMs": 0.017666999999846666,
+              "modelDurationMs": 696.6768750000001
+            },
+            "expected": [
+              "compare-transfer-terms",
+              "read-original-authorization"
+            ],
+            "rules": {
+              "kinds": [
+                "compare-transfer-terms",
+                "read-original-authorization"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 1,
+              "expected": 2,
+              "suggested": 3,
+              "recall": 0.5,
+              "precision": 0.3333333333333333
+            }
+          },
+          {
+            "name": "posted journal disagrees with the Gateway charge",
+            "timing": {
+              "ruleDurationMs": 0.01445800000010422,
+              "modelDurationMs": 691.0866660000002
+            },
+            "expected": [
+              "read-local-journal",
+              "compare-transfer-terms"
+            ],
+            "rules": {
+              "kinds": [
+                "read-local-journal",
+                "compare-transfer-terms"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "rejected",
+              "kinds": [
+                "read-local-journal",
+                "compare-transfer-terms"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            }
+          },
+          {
+            "name": "Gateway charged but no local journal exists",
+            "timing": {
+              "ruleDurationMs": 0.010583000000224274,
+              "modelDurationMs": 781.0001250000005
+            },
+            "expected": [
+              "read-local-journal",
+              "read-gateway-status"
+            ],
+            "rules": {
+              "kinds": [
+                "read-local-journal",
+                "read-gateway-status"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 1,
+              "expected": 2,
+              "suggested": 3,
+              "recall": 0.5,
+              "precision": 0.3333333333333333
+            }
+          },
+          {
+            "name": "Gateway failed after a journal was posted",
+            "timing": {
+              "ruleDurationMs": 0.01733299999978044,
+              "modelDurationMs": 688.7604999999994
+            },
+            "expected": [
+              "read-chain-receipt",
+              "read-local-journal"
+            ],
+            "rules": {
+              "kinds": [
+                "read-chain-receipt",
+                "read-local-journal"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "rejected",
+              "kinds": [
+                "read-chain-receipt",
+                "read-local-journal"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            }
+          },
+          {
+            "name": "delivery violates the merchant commitment",
+            "timing": {
+              "ruleDurationMs": 0.010833000000275206,
+              "modelDurationMs": 696.8294999999998
+            },
+            "expected": [
+              "read-merchant-recipient",
+              "read-chain-receipt"
+            ],
+            "rules": {
+              "kinds": [
+                "read-merchant-recipient",
+                "read-chain-receipt"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "rejected",
+              "kinds": [
+                "read-merchant-recipient",
+                "read-chain-receipt"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            }
+          },
+          {
+            "name": "Gateway charged and neither side saved a trace",
+            "timing": {
+              "ruleDurationMs": 0.011459000000286323,
+              "modelDurationMs": 717.640292
+            },
+            "expected": [
+              "read-original-authorization",
+              "read-gateway-status"
+            ],
+            "rules": {
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "rejected",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            }
+          },
+          {
+            "name": "checks paused and the latest lookup is unavailable",
+            "timing": {
+              "ruleDurationMs": 0.007625000000189175,
+              "modelDurationMs": 666.6093330000003
+            },
+            "expected": [
+              "read-gateway-status",
+              "read-original-authorization"
+            ],
+            "rules": {
+              "kinds": [
+                "read-gateway-status",
+                "read-original-authorization"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "rejected",
+              "kinds": [
+                "read-gateway-status",
+                "read-original-authorization"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "result": {
+        "dataset": "gateway-investigation-v1",
+        "model": "qwen2.5:1.5b",
+        "totalCases": 8,
+        "rules": {
+          "matched": 17,
+          "expected": 17,
+          "suggested": 17,
+          "recall": 1,
+          "precision": 1
+        },
+        "agent": {
+          "matched": 10,
+          "expected": 17,
+          "suggested": 23,
+          "recall": 0.5882352941176471,
+          "precision": 0.43478260869565216,
+          "ready": 7,
+          "rejected": 1,
+          "unavailable": 0,
+          "modelOnly": {
+            "matched": 8,
+            "expected": 17,
+            "suggested": 21,
+            "recall": 0.47058823529411764,
+            "precision": 0.38095238095238093
+          },
+          "scoringBasis": "Effective suggestions include rule fallback; modelOnly counts only accepted model outputs."
+        },
+        "cases": [
+          {
+            "name": "one nonce matched by several transfers",
+            "timing": {
+              "ruleDurationMs": 0.014874999999847205,
+              "modelDurationMs": 3571.7135000000007
+            },
+            "expected": [
+              "read-chain-receipt",
+              "compare-transfer-terms",
+              "read-gateway-status"
+            ],
+            "rules": {
+              "kinds": [
+                "read-chain-receipt",
+                "compare-transfer-terms",
+                "read-gateway-status"
+              ],
+              "matched": 3,
+              "expected": 3,
+              "suggested": 3,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 2,
+              "expected": 3,
+              "suggested": 3,
+              "recall": 0.6666666666666666,
+              "precision": 0.6666666666666666
+            }
+          },
+          {
+            "name": "transfer terms contradict the authorization",
+            "timing": {
+              "ruleDurationMs": 0.01883300000008603,
+              "modelDurationMs": 1642.4775829999999
+            },
+            "expected": [
+              "compare-transfer-terms",
+              "read-original-authorization"
+            ],
+            "rules": {
+              "kinds": [
+                "compare-transfer-terms",
+                "read-original-authorization"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 1,
+              "expected": 2,
+              "suggested": 3,
+              "recall": 0.5,
+              "precision": 0.3333333333333333
+            }
+          },
+          {
+            "name": "posted journal disagrees with the Gateway charge",
+            "timing": {
+              "ruleDurationMs": 0.01429199999984121,
+              "modelDurationMs": 1628.7189579999995
+            },
+            "expected": [
+              "read-local-journal",
+              "compare-transfer-terms"
+            ],
+            "rules": {
+              "kinds": [
+                "read-local-journal",
+                "compare-transfer-terms"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 0,
+              "expected": 2,
+              "suggested": 3,
+              "recall": 0,
+              "precision": 0
+            }
+          },
+          {
+            "name": "Gateway charged but no local journal exists",
+            "timing": {
+              "ruleDurationMs": 0.025666999999884865,
+              "modelDurationMs": 1988.6656669999993
+            },
+            "expected": [
+              "read-local-journal",
+              "read-gateway-status"
+            ],
+            "rules": {
+              "kinds": [
+                "read-local-journal",
+                "read-gateway-status"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 1,
+              "expected": 2,
+              "suggested": 3,
+              "recall": 0.5,
+              "precision": 0.3333333333333333
+            }
+          },
+          {
+            "name": "Gateway failed after a journal was posted",
+            "timing": {
+              "ruleDurationMs": 0.007625000000189175,
+              "modelDurationMs": 1850.3625840000004
+            },
+            "expected": [
+              "read-chain-receipt",
+              "read-local-journal"
+            ],
+            "rules": {
+              "kinds": [
+                "read-chain-receipt",
+                "read-local-journal"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 1,
+              "expected": 2,
+              "suggested": 3,
+              "recall": 0.5,
+              "precision": 0.3333333333333333
+            }
+          },
+          {
+            "name": "delivery violates the merchant commitment",
+            "timing": {
+              "ruleDurationMs": 0.019667000000481494,
+              "modelDurationMs": 1711.9997500000027
+            },
+            "expected": [
+              "read-merchant-recipient",
+              "read-chain-receipt"
+            ],
+            "rules": {
+              "kinds": [
+                "read-merchant-recipient",
+                "read-chain-receipt"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 1,
+              "expected": 2,
+              "suggested": 3,
+              "recall": 0.5,
+              "precision": 0.3333333333333333
+            }
+          },
+          {
+            "name": "Gateway charged and neither side saved a trace",
+            "timing": {
+              "ruleDurationMs": 0.015749999998661224,
+              "modelDurationMs": 1693.7131249999984
+            },
+            "expected": [
+              "read-original-authorization",
+              "read-gateway-status"
+            ],
+            "rules": {
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "ready",
+              "kinds": [
+                "read-original-authorization",
+                "read-gateway-status",
+                "read-chain-receipt"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 3,
+              "recall": 1,
+              "precision": 0.6666666666666666
+            }
+          },
+          {
+            "name": "checks paused and the latest lookup is unavailable",
+            "timing": {
+              "ruleDurationMs": 0.014542000000801636,
+              "modelDurationMs": 1680.8958330000023
+            },
+            "expected": [
+              "read-gateway-status",
+              "read-original-authorization"
+            ],
+            "rules": {
+              "kinds": [
+                "read-gateway-status",
+                "read-original-authorization"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            },
+            "agent": {
+              "status": "rejected",
+              "kinds": [
+                "read-gateway-status",
+                "read-original-authorization"
+              ],
+              "matched": 2,
+              "expected": 2,
+              "suggested": 2,
+              "recall": 1,
+              "precision": 1
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

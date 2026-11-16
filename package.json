@@ -45,7 +45,8 @@
     "worker:gateway-balances": "node dist/src/scan-gateway-balances.js",
     "test:operations": "npm run build && node --test --test-concurrency=1 dist/test/gateway-operations.test.js dist/test/gateway-balance-scan.test.js",
     "signer:gateway": "node dist/src/gateway-signer-server.js",
-    "test:signer": "npm run build && node --test dist/test/gateway-signer.test.js"
+    "test:signer": "npm run build && node --test dist/test/gateway-signer.test.js",
+    "test:investigation": "npm run build && node --test --test-concurrency=1 dist/test/gateway-investigation.test.js dist/test/gateway-investigation-run.test.js"
   },
   "dependencies": {
     "@circle-fin/x402-batching": "^4.0.0",

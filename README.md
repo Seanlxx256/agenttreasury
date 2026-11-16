@@ -1,6 +1,6 @@
 # AgentTreasury
 
-For durable reconciliation cases, operations metrics, deployment and recovery drills, see [Stage 1 operations](docs/stage-1-operations.md). For the constrained, separate-process Gateway signer, see [Stage 2 signing boundary](docs/stage-2-signing-boundary.md).
+For durable reconciliation cases, operations metrics, deployment and recovery drills, see [Stage 1 operations](docs/stage-1-operations.md). For the constrained, separate-process Gateway signer, see [Stage 2 signing boundary](docs/stage-2-signing-boundary.md). For bounded evidence collection and the measured rules/model comparison, see [Stage 3 investigation](docs/stage-3-investigation.md).
 
 > For a hiring-focused two-minute summary, see [project highlights](docs/project-highlights.md). For how the agent's value over the rules is designed and measured, see [the agent increment findings](docs/agent-increment-findings.md).
 
@@ -110,7 +110,7 @@ REQUEST_ID=$(node -p 'crypto.randomUUID()')
 npm run buy:gateway -- "$REQUEST_ID"
 ```
 
-The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer reserves the task budget and stores the request and nonce before sending the signed request. Apply all migrations through `035` before restarting the buyer, signer, workers, merchant and finance API.
+The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer reserves the task budget and stores the request and nonce before sending the signed request. Apply all migrations through `036` before restarting the buyer, signer, workers, merchant and finance API.
 
 If the paid response is lost, rerun `npm run buy:gateway -- "$REQUEST_ID"`. The buyer queries Gateway using the stored nonce. When Gateway confirms a matching charge, the buyer uses a separate retrieval token to fetch the original trace and save it locally. The merchant serves the stored result through a read-only endpoint. The same purchase ID and nonce can be submitted to the seller only once.
 
