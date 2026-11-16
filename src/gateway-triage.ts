@@ -1,3 +1,5 @@
+import { resolveTriageModelProfile, type TriageModelProfile } from './gateway-triage-models.js';
+
 export type TriageObservation = { id: string; evidence: { status: string; reason?: string } };
 
 type TriagePurchase = {
@@ -108,13 +110,14 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
 
 export async function reviewGatewayTriage(
   input: ReturnType<typeof prepareGatewayTriage>, model?: string, request: typeof fetch = fetch,
-  mode: 'choose-action' | 'support-rules' = 'choose-action',
+  mode: 'choose-action' | 'support-rules' = 'choose-action', profile?: TriageModelProfile,
 ) {
   const { facts, rules } = input;
   const supportingRules = mode === 'support-rules';
   const allowed = supportingRules ? [rules] : input.allowed;
   const maxCitations = supportingRules ? rules.citations.length + 2 : 8;
   if (!model) return { facts, rules, agent: { status: 'disabled' as const } };
+  const resolvedProfile = profile ?? resolveTriageModelProfile(model);
   const schema = {
     type: 'object', required: ['action', 'citations'], additionalProperties: false,
     properties: {
@@ -129,11 +132,11 @@ export async function reviewGatewayTriage(
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(30000),
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        model, stream: false, format: schema, options: { temperature: 0, num_predict: 512 },
+        model, stream: false, format: schema, options: resolvedProfile.options,
         messages: [
           { role: 'system', content: supportingRules
-            ? 'The action has already been decided. Return that action and copy all requiredCitations into citations. Add up to two supplied fact IDs only if they help the operator understand why this action is appropriate. Leave out unrelated facts.'
-            : 'Select the best action from allowed using the facts. Return JSON with action and citations. Copy requiredCitations from the selected action into citations exactly.' },
+            ? resolvedProfile.supportSystemPrompt
+            : resolvedProfile.chooseSystemPrompt },
           { role: 'user', content: JSON.stringify({
             facts, allowed: allowed.map(({ action, citations }) => ({ action, requiredCitations: citations })),
           }) },

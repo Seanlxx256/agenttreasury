@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { evaluateGatewayTriage } from '../src/evaluate-gateway-triage.js';
+import { evaluateGatewayTriage, evaluateGatewayTriageAcrossModels } from '../src/evaluate-gateway-triage.js';
 import { prepareGatewayTriage, reviewGatewayTriage } from '../src/gateway-triage.js';
+import { defaultTriageModelProfile, resolveTriageModelProfile, triageModelProfiles } from '../src/gateway-triage-models.js';
 
 const purchase = {
   budgetStatus: 'spent', reviewRequired: false, buyerHasDelivery: false,
@@ -168,4 +169,70 @@ test('critical evidence replay scores added facts without leaking labels to the 
     rules: { expected: 3, hits: 3, recall: 1, unrelated: 0 },
     assisted: { expected: 3, hits: 3, recall: 1, unrelated: 1 },
   });
+});
+
+test('triage model profiles resolve known models and fall back for unknown', () => {
+  const qwen = resolveTriageModelProfile('qwen2.5:0.5b');
+  assert.equal(qwen, triageModelProfiles['qwen2.5:0.5b']);
+  assert.match(qwen.chooseSystemPrompt, /Action meanings/);
+
+  const unknown = resolveTriageModelProfile('not-a-real-model');
+  assert.equal(unknown.name, 'not-a-real-model');
+  assert.equal(unknown.chooseSystemPrompt, defaultTriageModelProfile.chooseSystemPrompt);
+  assert.equal(unknown.supportSystemPrompt, defaultTriageModelProfile.supportSystemPrompt);
+});
+
+test('triage applies a per-model profile prompt and still enforces the validation envelope', async () => {
+  const input = prepareGatewayTriage(purchase, [charged]);
+  let systemPrompt = '';
+  const request: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    systemPrompt = body.messages[0].content;
+    assert.equal(body.options.temperature, 0);
+    assert.equal(body.options.num_predict, 512);
+    return Response.json({ message: { content: JSON.stringify({
+      action: 'retrieve-delivery', citations: ['observation-42', 'buyer-delivery', 'seller-delivery'],
+    }) } });
+  };
+  const accepted = await reviewGatewayTriage(input, 'qwen2.5:0.5b', request);
+  assert.equal(accepted.agent.status, 'ready');
+  assert.equal(systemPrompt, triageModelProfiles['qwen2.5:0.5b']!.chooseSystemPrompt);
+
+  const rejected = await reviewGatewayTriage(input, 'qwen2.5:0.5b', async () =>
+    Response.json({ message: { content: JSON.stringify({ action: 'retry-payment', citations: ['budget'] }) } }));
+  assert.equal(rejected.agent.status, 'rejected');
+  assert.equal(rejected.rules.action, 'retrieve-delivery');
+});
+
+test('triage uses the per-model support prompt in support-rules mode', async () => {
+  const input = prepareGatewayTriage(purchase, [charged]);
+  let systemPrompt = '';
+  const request: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    systemPrompt = body.messages[0].content;
+    return Response.json({ message: { content: JSON.stringify({ action: 'retrieve-delivery', citations: input.rules.citations }) } });
+  };
+  await reviewGatewayTriage(input, 'qwen2.5:0.5b', request, 'support-rules');
+  assert.equal(systemPrompt, triageModelProfiles['qwen2.5:0.5b']!.supportSystemPrompt);
+});
+
+test('triage evaluation compares several models in one run', async () => {
+  const request: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    const { allowed } = JSON.parse(body.messages[1].content);
+    const escalate = allowed.find((option: { action: string }) => option.action === 'escalate');
+    const chosen = escalate ?? allowed[0];
+    return Response.json({ message: { content: JSON.stringify({ action: chosen.action, citations: chosen.requiredCitations }) } });
+  };
+  const result = await evaluateGatewayTriageAcrossModels(['qwen2.5:0.5b', 'qwen2.5:1.5b'], request);
+  assert.deepEqual(Object.keys(result.comparison), ['rules', 'qwen2.5:0.5b', 'qwen2.5:1.5b']);
+  assert.equal(result.rules.cases, 12);
+  assert.equal(result.models.length, 2);
+  assert.equal(result.models[0]?.profile, 'qwen2.5:0.5b');
+  assert.equal(result.models[1]?.profile, 'qwen2.5:1.5b');
+  // Comparison rows carry the model's own metrics, not the rule baseline.
+  assert.equal(result.comparison.rules!.actionAccuracy, 1);
+  assert.equal(result.comparison['qwen2.5:0.5b']!.actionAccuracy, result.models[0]!.agent!.actionAccuracy);
+  assert.ok(result.comparison['qwen2.5:0.5b']!.actionAccuracy! < 1);
+  assert.ok(result.comparison['qwen2.5:0.5b']!.unnecessaryEscalationRate! > 0);
 });

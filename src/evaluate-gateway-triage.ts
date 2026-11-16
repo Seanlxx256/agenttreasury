@@ -4,6 +4,7 @@ import { gatewayTriageDatasets, type GatewayTriageCase } from './gateway-triage-
 import {
   prepareGatewayTriage, reviewGatewayTriage, type TriageAction, type TriageRecommendation,
 } from './gateway-triage.js';
+import { resolveTriageModelProfile } from './gateway-triage-models.js';
 
 function needsHumanReview(action: TriageAction | null) {
   return action === 'escalate' || action === 'review-conflict';
@@ -142,19 +143,73 @@ export async function evaluateGatewayTriage(
   };
 }
 
+// Run the same dataset against several models and report a side-by-side
+// comparison. Models are evaluated serially so a local Ollama never loads
+// several weights at once.
+export async function evaluateGatewayTriageAcrossModels(
+  models: string[], request: typeof fetch = fetch,
+  dataset: Dataset = 'gateway-triage-v1', mode: 'choose-action' | 'support-rules' = 'choose-action',
+) {
+  const rules = await evaluateGatewayTriage(undefined, request, dataset, mode);
+  const results = [];
+  for (const model of models) {
+    const result = await evaluateGatewayTriage(model, request, dataset, mode);
+    const profile = resolveTriageModelProfile(model);
+    results.push({
+      model,
+      profile: profile.name === model ? profile.name : `${profile.name} (fallback)`,
+      result,
+    });
+  }
+  const summarizeRow = (summary: ReturnType<typeof summarize>) => ({
+    actionAccuracy: summary.actionAccuracy,
+    correctCitationSets: summary.correctCitationSets,
+    citationPrecision: summary.citationPrecision,
+    recommendationCoverage: summary.recommendationCoverage,
+    unnecessaryEscalationRate: summary.unnecessaryEscalationRate,
+    meanGenerationMs: summary.meanGenerationMs,
+  });
+  const comparison: Record<string, ReturnType<typeof summarizeRow>> = {
+    rules: summarizeRow(rules.rules),
+  };
+  for (const { model, result } of results) comparison[model] = summarizeRow(result.agent ?? rules.rules);
+  return {
+    dataset,
+    mode,
+    rules: rules.rules,
+    comparison,
+    models: results.map(({ model, profile, result }) => ({
+      model, profile,
+      agent: result.agent,
+      rejected: result.agent?.rejected ?? 0,
+      unavailable: result.agent?.unavailable ?? 0,
+    })),
+  };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { values } = parseArgs({ options: {
     'rules-only': { type: 'boolean' }, 'support-rules': { type: 'boolean' }, model: { type: 'string' },
-    dataset: { type: 'string', default: 'gateway-triage-v1' },
+    models: { type: 'string' }, dataset: { type: 'string', default: 'gateway-triage-v1' },
   } });
   const { dataset } = values;
+  const modelList = (values.models ?? '').split(',').map((name) => name.trim()).filter(Boolean);
   if (!Object.hasOwn(gatewayTriageDatasets, dataset) || values.model === '' ||
-      (values['rules-only'] && values.model !== undefined)) {
+      (values.models !== undefined && modelList.length === 0) ||
+      (values.model !== undefined && values.models !== undefined) ||
+      (values['rules-only'] && (values.model !== undefined || values.models !== undefined))) {
     const datasets = Object.keys(gatewayTriageDatasets).join('|');
-    throw new Error(`Usage: npm run eval:gateway -- [--dataset ${datasets}] [--support-rules] [--rules-only | --model MODEL]`);
+    throw new Error(`Usage: npm run eval:gateway -- [--dataset ${datasets}] [--support-rules] [--rules-only | --model MODEL | --models M1,M2,...]`);
   }
-  const model = values['rules-only'] ? undefined : (values.model ?? process.env.GATEWAY_TRIAGE_MODEL) || undefined;
-  const result = await evaluateGatewayTriage(model, fetch, dataset as Dataset, values['support-rules'] ? 'support-rules' : 'choose-action');
-  console.log(JSON.stringify(result, null, 2));
-  if (result.agent?.recommendations === 0) process.exitCode = 2;
+  const mode = values['support-rules'] ? 'support-rules' as const : 'choose-action' as const;
+  if (values.models !== undefined) {
+    const result = await evaluateGatewayTriageAcrossModels(modelList, fetch, dataset as Dataset, mode);
+    console.log(JSON.stringify(result, null, 2));
+    if (result.models.length && result.models.every(({ agent }) => !agent || agent.recommendations === 0)) process.exitCode = 2;
+  } else {
+    const model = values['rules-only'] ? undefined : (values.model ?? process.env.GATEWAY_TRIAGE_MODEL) || undefined;
+    const result = await evaluateGatewayTriage(model, fetch, dataset as Dataset, mode);
+    console.log(JSON.stringify(result, null, 2));
+    if (result.agent?.recommendations === 0) process.exitCode = 2;
+  }
 }

@@ -160,3 +160,42 @@ npm run --silent eval:gateway -- --dataset gateway-critical-evidence-v1 --suppor
 The rule recommendation now cites a saved seller trace when the buyer still needs to check the original authorization and recover delivery if the charge is confirmed. It cites a missing journal for a confirmed charge on a purchase with a tracked budget. It also cites an existing journal when Gateway reports a conflict.
 
 The six-case rules-only rerun found **3/3 critical facts**, compared with 0/3 before the change. All six actions and citation sets matched their labels, with zero unrelated references and no new references in the three controls. The other three datasets also matched all 21 action and citation labels. These results measure the rules on the replay fixtures.
+
+## Multi-model comparison and per-model prompts
+
+The triage call path now resolves a per-model profile instead of hardcoding one prompt. Profiles live in `src/gateway-triage-models.ts`. Each profile declares the choose-action and support-rules system prompts plus sampling options (temperature and token budget). A model not listed in the registry falls back to the default prompt, so adding a model is a registry entry — no change to the triage or evaluation call path.
+
+The validation envelope is unchanged by any profile. The model still proposes only `action` and `citations`; the server enforces the JSON schema, rejects actions outside the permitted set, rejects citations outside the supplied facts, requires the action's required citations, and supplies the displayed explanation. A profile changes how the model proposes, never what the backend accepts.
+
+### Per-model prompting
+
+The first pass assumed "weak model gets a dictionary, stronger models get a principles prompt". That assumption was measured and rejected:
+
+- A **principles** prompt ("prefer the most specific action, escalate only when…") collapsed the mid-size models to `escalate` — 1.5b picked escalation for 12/12 cases, and 3b scored 8/12 with four unnecessary escalations.
+- A **dictionary** (one line per action with its trigger) is the correct base for every Qwen size tested.
+
+The remaining per-model difference is a single line: how `escalate` is described.
+
+| Model | Escalation line | Action accuracy | Unnecessary escalations |
+| --- | --- | ---: | ---: |
+| `qwen2.5:0.5b` | "…otherwise only when no other action fits" (last resort) | 12/12 | 0/9 |
+| `qwen2.5:1.5b` | same last-resort line + a positive closing note | 9/12 | 3/9 |
+| `qwen2.5:3b` | "ONLY when polling is paused and the latest lookup is unavailable" | 11/12 | 1/9 |
+
+Measured on 2026-11-16 on an Apple Silicon Mac with Ollama, dataset `gateway-triage-v1`, temperature zero. Mean generation was 211 ms (0.5b), 403 ms (1.5b), 952 ms (3b).
+
+Three findings worth carrying forward:
+
+1. **A weak model fixates on whatever word is repeated.** Emphasizing "escalate is not a default" made 0.5b escalate every time; the plain dictionary without that sentence restores 12/12.
+2. **The escalation boundary itself is per-model.** 0.5b needs the "last resort" framing; 3b needs an absolute "ONLY when". Sharing one escalation line cost 3b three points (11/12 → 9/12).
+3. **1.5b retains a stubborn escalation bias** (three unnecessary escalations) that prompt wording alone did not remove. It is the weakest local choice for the choose-action task.
+
+### Running the comparison
+
+```sh
+npm run build
+npm run --silent eval:gateway -- --dataset gateway-triage-v1 --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+```
+
+The output reports the rule baseline and a `comparison` table with action accuracy, complete citation sets, citation precision, recommendation coverage, unnecessary escalation rate, and mean generation time per model. Models are evaluated serially so a local Ollama never loads several weights at once.
+

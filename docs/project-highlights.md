@@ -29,9 +29,11 @@ finance?*
   application, backed by Circle Agent Wallet transfer limits and recipient policies as an
   unbroadcastable floor. Documented in
   [agent-wallet-governance-boundary.md](agent-wallet-governance-boundary.md).
-- **Read-only triage agent.** A locally-run LLM picks an action and cites evidence, but
-  the explanation is supplied by the server and the recommendation is advisory — the
-  backend validates before acting. The constraints are regression-tested.
+- **Read-only triage agent with a swappable model.** A locally-run LLM picks an action
+  and cites evidence, but the explanation is supplied by the server and the
+  recommendation is advisory — the backend validates before acting. Models resolve
+  through per-model prompt profiles, so a new model is a registry entry and the
+  auditable JSON-schema envelope stays the same. The constraints are regression-tested.
 - **Append-only audit and operator-gated refunds on both rails.** State transitions are
   recorded, refunds need a human decision, and the Gateway rail closes the loop for a
   charged-but-undelivered payment: approval, seller-initiated return, onchain evidence.
