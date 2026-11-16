@@ -308,6 +308,18 @@ Action accuracy counts unavailable or rejected model responses as misses. Citati
 
 The first measured local run recorded 11 of 12 correct actions for rules and 6 of 12 for Qwen2.5 0.5B. See the [evaluation report](docs/gateway-triage-evaluation.md) for failure cases and reproducibility details.
 
+### Evaluate unstructured evidence extraction
+
+Extract a closed set of failure signals from free-text error strings, with a keyword rule baseline and a local model, and compare their recall and precision. This is the task the structured rules cannot cover, so it is where the model can beat the baseline.
+
+```sh
+npm run build
+npm run eval:gateway-evidence -- --rules-only
+npm run eval:gateway-evidence -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+```
+
+On `gateway-evidence-v1` (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with precision 1.00 — it misses every paraphrase. See the [evaluation report](docs/gateway-triage-evaluation.md) for the per-model recall and precision.
+
 ### Send a testnet refund from the console
 
 Build, apply migration 010 and restart the API. Start the refund worker against the same database with DATABASE_URL, BASE_SEPOLIA_RPC_URL, MERCHANT_TEST_KEY and PAYMENT_RELAYER_KEY configured. The API and browser do not need wallet keys for this action.

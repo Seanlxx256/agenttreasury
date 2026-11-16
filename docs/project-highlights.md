@@ -92,15 +92,19 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 77/77.
+- `npm test` passes 81/81.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
   1.5B to all-escalate) recorded in the evaluation doc. A held-out set of nine independent
   cases confirms the rules stay at 9/9, but no model beats them (0.5B 9/9, 1.5B 8/9,
-  3B 9/9), and each model adds hundreds of milliseconds of latency. The agent therefore
-  shows no positive increment over the rules yet — any real value would come from reading
-  unstructured evidence the rules never encoded, which is not built.
+  3B 9/9), and each model adds hundreds of milliseconds of latency.
+- The first measured positive increment comes from the task the rules genuinely cannot
+  do: extracting failure signals from free-text error strings. On `gateway-evidence-v1`
+  (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with
+  precision 1.00 — it catches every direct phrase and misses every paraphrase. The models
+  recover the paraphrases (1.5B recall 0.90, 3B 0.85, 0.5B 0.75) at a small precision cost
+  (0.71–0.94). The baseline and split are locked by a unit test.
 
 ## Not done (and why)
 

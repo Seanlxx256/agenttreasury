@@ -217,3 +217,28 @@ The honest conclusion from the held-out set: **the agent shows no positive incre
 
 What the model does *not* get a chance to do under this architecture is the part that would matter: read unstructured supplier responses, error logs, or ticket text and surface evidence the rules never encoded. Until that path exists, the agent's value proposition is "a slower way to reach the same answer," not "reduces operator work." This is the reason to hold off on expanding the AI surface until a non-structured-input extraction task is built and measured on fresh incidents.
 
+## Unstructured evidence extraction: the first measured positive increment
+
+The task that the triage agent was missing is now built: read a free-text failure reason and emit a small closed set of failure signals (`nonce-reused`, `insufficient-funds`, `recipient-not-whitelisted`, `invalid-signature`, `batch-already-processed`, `authorization-expired`, `rpc-unavailable`, `unknown-error`). The deterministic Gateway path only ever sees structured fields, so this is input the rules genuinely cannot cover.
+
+The dataset `gateway-evidence-v1` has 20 hand-authored failure strings: 10 direct phrasings and 10 paraphrases that mean the same thing without containing the keyword (for example "signed twice with the same identifier" for nonce reuse, or "the wallet ran dry" for insufficient funds). A fixed keyword table is the rule baseline.
+
+Measured on 2026-11-16 on an Apple Silicon Mac with Ollama, temperature zero:
+
+| Method | Overall recall | Overall precision | Direct recall | Paraphrase recall |
+| --- | ---: | ---: | ---: | ---: |
+| Rules (keyword table) | 0.50 | 1.00 | 1.00 | 0.00 |
+| `qwen2.5:0.5b` | 0.75 | 0.71 | — | — |
+| `qwen2.5:1.5b` | 0.90 | 0.82 | 0.90 | 0.90 |
+| `qwen2.5:3b` | 0.85 | 0.94 | — | — |
+
+This is the first dataset on which **the agent beats the rules**, and it does so exactly where the architecture predicted: the rules score 0 on the 10 paraphrases, and `qwen2.5:1.5b` recovers 9 of them. The increment is not free — the models' precision stays below 1.0 (they occasionally over-claim a signal the text does not support), and every model adds a local generation delay. The honest framing is therefore "the agent reads what the keyword table cannot, at a small false-positive cost," not "the agent is uniformly better."
+
+The rule baseline and the scoring are covered by a unit test, so the half-recall baseline and the direct/paraphrase split are reproducible without Ollama. The model results above are a measurement on this fixture set, not a production claim.
+
+```sh
+npm run build
+npm run --silent eval:gateway-evidence -- --rules-only
+npm run --silent eval:gateway-evidence -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+```
+
