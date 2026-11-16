@@ -322,15 +322,16 @@ On `gateway-evidence-v1` (20 strings, 10 direct + 10 paraphrases), the keyword b
 
 ### Evaluate read-only investigation suggestions
 
-Propose the next read-only checks for a payment conflict from a closed set of eight investigations, comparing a fixed generic checklist with a local model.
+Propose the next read-only checks for a payment conflict from a closed set of eight investigations, comparing a deterministic `fact -> check` rule mapping with a local model.
 
 ```sh
 npm run build
 npm run eval:gateway-investigation -- --rules-only
 npm run eval:gateway-investigation -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+npm run eval:gateway-investigation -- --model qwen2.5:7b
 ```
 
-The generic checklist (recall 0.53) is not beaten by the local models (best 0.59); the suggestions stay read-only and auditable with the rules as the default. See the [evaluation report](docs/gateway-triage-evaluation.md).
+The rule mapping reaches recall 1.00 / precision 1.00; the models stay at 0.59 recall even at 7b. The suggestions stay read-only and auditable with the exact rule mapping as the default. See the [evaluation report](docs/gateway-triage-evaluation.md).
 
 ### Send a testnet refund from the console
 

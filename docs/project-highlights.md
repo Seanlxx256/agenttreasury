@@ -108,11 +108,11 @@ actually ran the thing:
   signals are wired into `prepareGatewayTriage` as citable facts, so the finance console
   surfaces evidence the structured rules never encoded.
 - A second candidate increment — read-only investigation suggestions for conflicts — is
-  measured and recorded as a negative result: the generic checklist (recall 0.53) is not
-  beaten by the local models (best 0.59, 0.5b 0.12), because "what to check next" is a
-  structured fact-to-check mapping the rules could encode, not a semantic task a small
-  model generalizes on. The read-only, auditable suggestion capability is kept with the
-  rules as the default.
+  measured and recorded as a negative result, and it is not a size problem: a deterministic
+  `fact -> check` rule mapping reaches recall 1.00 / precision 1.00, while the models stay
+  at 0.59 recall even at 7b, because "what to check next" is a structured mapping the rules
+  can encode exactly, not a semantic task a local model generalizes on. The read-only,
+  auditable suggestion capability is kept with the exact rule mapping as the default.
 
 ## Not done (and why)
 

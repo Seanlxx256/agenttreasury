@@ -42,7 +42,7 @@ export async function evaluateGatewayInvestigation(model?: string, request: type
   const cases = [];
 
   for (const sample of gatewayInvestigationCases) {
-    const rulesSuggestions = suggestInvestigationsRules();
+    const rulesSuggestions = suggestInvestigationsRules(sample.facts);
     const rulesScoring = score(sample.expected, rulesSuggestions);
     rulesRows.push(rulesScoring);
 

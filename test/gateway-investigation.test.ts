@@ -10,20 +10,26 @@ const facts = [
   { id: 'journal', description: 'A payment journal entry has been posted.' },
 ];
 
-test('the rule baseline proposes a fixed read-only checklist', () => {
-  const suggestions = suggestInvestigationsRules();
-  assert.deepEqual(suggestions.map(({ kind }) => kind),
+test('the rule baseline maps conflict signals to targeted checks and falls back generically', () => {
+  const generic = suggestInvestigationsRules();
+  assert.deepEqual(generic.map(({ kind }) => kind),
     ['read-chain-receipt', 'read-local-journal', 'compare-transfer-terms']);
-  assert.ok(suggestions.every(({ kind }) => investigationKinds.includes(kind)));
+  assert.ok(generic.every(({ kind }) => investigationKinds.includes(kind)));
+
+  const targeted = suggestInvestigationsRules([
+    { id: 'observation-42', description: 'Gateway observation: conflict (accounting-mismatch)' },
+    { id: 'journal', description: 'A payment journal entry has been posted.' },
+  ]);
+  assert.deepEqual(targeted.map(({ kind }) => kind).sort(),
+    ['compare-transfer-terms', 'read-local-journal']);
 });
 
-test('the investigation baseline scores its generic checklist against the labeled checks', async () => {
+test('the mapped baseline hits every labeled check', async () => {
   const result = await evaluateGatewayInvestigation(undefined);
   assert.equal(result.totalCases, 8);
-  // The generic checklist matches 9 of 17 labeled checks across the eight conflicts.
-  assert.equal(result.rules.matched, 9);
+  assert.equal(result.rules.matched, 17);
   assert.equal(result.rules.expected, 17);
-  assert.equal(result.rules.recall, 9 / 17);
+  assert.equal(result.rules.recall, 1);
 });
 
 test('the model must propose only known kinds with citable facts', async () => {

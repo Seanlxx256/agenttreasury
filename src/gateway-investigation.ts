@@ -31,13 +31,61 @@ export const investigationKindDescriptions: Record<InvestigationKind, string> = 
 
 export type InvestigationSuggestion = { kind: InvestigationKind; citations: string[] };
 
-// The rule baseline is a fixed generic checklist for any conflict: confirm what
-// the chain recorded, what the local books recorded, and that the two agree.
+// The rule baseline maps each structured conflict signal to the check it demands,
+// and falls back to a generic checklist when no signal matches. This is the
+// deterministic ceiling for the task: "what to check next" is a fact -> check
+// mapping, not a semantic judgment.
 const DEFAULT_INVESTIGATIONS: InvestigationKind[] =
   ['read-chain-receipt', 'read-local-journal', 'compare-transfer-terms'];
 
-export function suggestInvestigationsRules(): InvestigationSuggestion[] {
-  return DEFAULT_INVESTIGATIONS.map((kind) => ({ kind, citations: [] }));
+type Fact = { id: string; description: string };
+
+export function suggestInvestigationsRules(facts: Fact[] = []): InvestigationSuggestion[] {
+  const kinds = new Set<InvestigationKind>();
+  const hasFact = (id: string) => facts.some((fact) => fact.id === id);
+  const hasObservation = (needle: string) =>
+    facts.some((fact) => fact.id.startsWith('observation-') && fact.description.includes(needle));
+  const deliveryMissing = (id: string) =>
+    facts.some((fact) => fact.id === id && fact.description.includes('missing'));
+
+  if (hasObservation('multiple-transfers')) {
+    kinds.add('read-chain-receipt');
+    kinds.add('compare-transfer-terms');
+    kinds.add('read-gateway-status');
+  }
+  if (hasObservation('transfer-mismatch')) {
+    kinds.add('compare-transfer-terms');
+    kinds.add('read-original-authorization');
+  }
+  if (hasObservation('accounting-mismatch')) {
+    kinds.add('read-local-journal');
+    kinds.add('compare-transfer-terms');
+  }
+  if (hasFact('journal-missing')) {
+    kinds.add('read-local-journal');
+    kinds.add('read-gateway-status');
+  }
+  if (hasObservation('failed') && hasFact('journal')) {
+    kinds.add('read-chain-receipt');
+    kinds.add('read-local-journal');
+  }
+  if (hasFact('delivery-commitment')) {
+    kinds.add('read-merchant-recipient');
+    kinds.add('read-chain-receipt');
+  }
+  if (hasObservation('charged') && deliveryMissing('buyer-delivery') && deliveryMissing('seller-delivery')) {
+    kinds.add('read-original-authorization');
+    kinds.add('read-gateway-status');
+  }
+  if (hasFact('polling') && hasObservation('unavailable')) {
+    kinds.add('read-gateway-status');
+    kinds.add('read-original-authorization');
+  }
+
+  if (kinds.size === 0) {
+    return DEFAULT_INVESTIGATIONS.map((kind) => ({ kind, citations: [] }));
+  }
+  return [...kinds].map((kind) => ({ kind, citations: [] }));
 }
 
 const investigationSystemPrompt = [
@@ -52,7 +100,7 @@ const investigationSystemPrompt = [
 export async function suggestInvestigationsWithModel(
   facts: Array<{ id: string; description: string }>, model?: string, request: typeof fetch = fetch,
 ): Promise<{ status: 'disabled' | 'ready' | 'unavailable' | 'rejected'; investigations: InvestigationSuggestion[] }> {
-  if (!model) return { status: 'disabled', investigations: suggestInvestigationsRules() };
+  if (!model) return { status: 'disabled', investigations: suggestInvestigationsRules(facts) };
   const profile = resolveTriageModelProfile(model);
   const schema = {
     type: 'object', required: ['investigations'], additionalProperties: false,
@@ -82,7 +130,7 @@ export async function suggestInvestigationsWithModel(
     });
     if (!response.ok) {
       await response.body?.cancel();
-      return { status: 'unavailable', investigations: suggestInvestigationsRules() };
+      return { status: 'unavailable', investigations: suggestInvestigationsRules(facts) };
     }
     const envelope = await response.json();
     const content = envelope?.message?.content;
@@ -97,8 +145,8 @@ export async function suggestInvestigationsWithModel(
           Array.isArray(item.citations) && item.citations.every((id: unknown) => typeof id === 'string' && facts.some((fact) => fact.id === id)))) {
       return { status: 'ready', investigations: parsed.investigations as InvestigationSuggestion[] };
     }
-    return { status: 'rejected', investigations: suggestInvestigationsRules() };
+    return { status: 'rejected', investigations: suggestInvestigationsRules(facts) };
   } catch {
-    return { status: 'unavailable', investigations: suggestInvestigationsRules() };
+    return { status: 'unavailable', investigations: suggestInvestigationsRules(facts) };
   }
 }
