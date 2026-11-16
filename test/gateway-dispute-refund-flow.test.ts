@@ -94,7 +94,7 @@ test('commitment violation flows through dispute, approval, refund and reconcili
 
   // 2. A human arbitrates a refund.
   const decided = await decideGatewayDeliveryDispute(pool, requestId, 'REFUND');
-  assert.equal(decided.status, 'REFUNDED');
+  assert.equal(decided.status, 'REFUND_APPROVED');
   assert.equal(decided.decidedBy, 'finance-operator');
 
   // 3. The refund now executes through the normal broadcast entry point, which
@@ -134,6 +134,10 @@ test('commitment violation flows through dispute, approval, refund and reconcili
   const recorded = await recordGatewayRefund(pool, chain, requestId, refundHash, 5, reason);
   assert.equal(recorded.requestId, requestId);
   assert.equal(recorded.transactionHash, refundHash);
+
+  const { rows: [finished] } = await pool.query(
+    'SELECT status FROM gateway_delivery_disputes WHERE request_id = $1', [requestId]);
+  assert.equal(finished.status, 'REFUNDED');
 
   // 5. The refund lands in the correct account, and the audit trail is intact.
   const { rows: journal } = await pool.query(

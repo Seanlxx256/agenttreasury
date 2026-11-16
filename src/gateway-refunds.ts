@@ -140,6 +140,13 @@ export async function recordGatewayRefund(
       RETURNING ${refundFields}
     `, [requestId, arcGatewayNetwork, hash, logIndex, String(refundReceipt.blockNumber), refundBlock, reason]);
     if (!inserted) throw new PaymentError(409, 'REFUND_TRANSFER_ALREADY_USED');
+    // The refund is now proven onchain, which finishes any dispute that approved
+    // this return. A plain refund request has no dispute row, so this is a no-op
+    // there.
+    await client.query(
+      "UPDATE gateway_delivery_disputes SET status = 'REFUNDED' WHERE request_id = $1 AND status = 'REFUND_APPROVED'",
+      [requestId],
+    );
     return inserted;
   });
 }

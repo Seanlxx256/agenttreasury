@@ -12,7 +12,7 @@ interface GatewayDeliveryDispute {
   requestId: string;
   reason: string;
   evidence: Record<string, unknown>;
-  status: 'OPEN' | 'REFUNDED' | 'DISMISSED';
+  status: 'OPEN' | 'REFUND_APPROVED' | 'REFUNDED' | 'DISMISSED';
   raisedBy: string;
   raisedAt: Date;
   decidedBy: string | null;
@@ -98,16 +98,17 @@ export async function raiseGatewayDeliveryDispute(
   });
 }
 
-// REFUND authorizes a refund but does not move money; the onchain return is
-// recorded separately through recordGatewayRefund so the evidence rules stay in
-// one place. DISMISS closes the dispute without a refund.
+// REFUND approves a refund but does not move money; the dispute moves to
+// REFUND_APPROVED and the onchain return is executed through the refund
+// broadcast entry point, then confirmed through recordGatewayRefund which
+// finishes the dispute. DISMISS closes the dispute without a refund.
 export async function decideGatewayDeliveryDispute(pool: Pool, requestId: string, decision: 'REFUND' | 'DISMISS') {
   return transaction(pool, async (client) => {
     await client.query('SELECT request_id FROM gateway_payment_journal WHERE request_id = $1 FOR UPDATE', [requestId]);
     const current = await readDispute(client, requestId);
     if (!current) throw new PaymentError(404, 'DISPUTE_NOT_FOUND');
     if (current.status !== 'OPEN') throw new PaymentError(409, 'DISPUTE_ALREADY_DECIDED');
-    const status = decision === 'REFUND' ? 'REFUNDED' : 'DISMISSED';
+    const status = decision === 'REFUND' ? 'REFUND_APPROVED' : 'DISMISSED';
     const { rows: [updated] } = await client.query<GatewayDeliveryDispute>(`
       UPDATE gateway_delivery_disputes SET status = $2, decided_by = 'finance-operator', decided_at = now()
       WHERE request_id = $1 RETURNING ${disputeColumns}

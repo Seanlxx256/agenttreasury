@@ -57,3 +57,10 @@ test('Gateway lookup requires matching evidence before reporting a failed or cha
     status: 503,
   })), /HTTP 503/);
 });
+
+test('a failed transfer preserves the vendor free-text failure reason', async () => {
+  const failed = { ...transfer, status: 'failed', txHash: null, error: 'nonce already used for this wallet' };
+  assert.deepEqual(await observeGatewayPayment(expected, async () => Response.json({
+    transfers: [failed],
+  })), { status: 'failed', id: transfer.id, txHash: null, reason: 'nonce already used for this wallet' });
+});

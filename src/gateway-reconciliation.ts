@@ -13,7 +13,8 @@ type GatewayPage = { transfers?: unknown; pagination?: { pageAfter?: unknown } }
 
 export type GatewayObservation =
   | { status: 'unknown' }
-  | ({ status: 'pending' | 'failed' } & TransferEvidence)
+  | ({ status: 'pending' } & TransferEvidence)
+  | ({ status: 'failed' } & TransferEvidence & { reason?: string })
   | { status: 'charged'; id: string; txHash: string }
   | { status: 'conflict'; reason: 'multiple-transfers' | 'transfer-mismatch' };
 
@@ -58,11 +59,24 @@ export async function observeGatewayPayment(
         throw new Error('Confirmed Gateway transfer is missing a valid batch hash');
       }
       return { status: 'charged', id: transfer.id, txHash: transfer.txHash.toLowerCase() };
-    case 'failed':
-      return { status: 'failed', ...evidence };
+    case 'failed': {
+      const reason = readFailureText(transfer);
+      return reason ? { status: 'failed', ...evidence, reason } : { status: 'failed', ...evidence };
+    }
     default:
       throw new Error('Unrecognized Gateway transfer status');
   }
+}
+
+// Preserve the vendor's free-text failure reason so the unstructured evidence
+// extraction pipeline has something to read. Gateway responses may name this
+// field differently across versions, so read whichever one is present.
+function readFailureText(transfer: Record<string, unknown>): string | undefined {
+  for (const key of ['error', 'errorMessage', 'failureReason', 'message']) {
+    const value = transfer[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
 }
 
 function matchesHex(observed: unknown, expected: string): boolean {

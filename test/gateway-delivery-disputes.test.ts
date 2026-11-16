@@ -127,7 +127,7 @@ test('Gateway delivery dispute is arbitrated by a human and refunds through the 
     const refunded = await makePurchase({ charged: true, delivered: true });
     await raiseGatewayDeliveryDispute(pool, refunded.requestId, seeded.agentId, 'bad content', evidence);
     const decided = await decideGatewayDeliveryDispute(pool, refunded.requestId, 'REFUND');
-    assert.equal(decided.status, 'REFUNDED');
+    assert.equal(decided.status, 'REFUND_APPROVED');
     assert.equal(decided.decidedBy, 'finance-operator');
     await assert.rejects(decideGatewayDeliveryDispute(pool, refunded.requestId, 'DISMISS'),
       (error: Error & { code?: string }) => error.code === 'DISPUTE_ALREADY_DECIDED');
@@ -145,7 +145,7 @@ test('Gateway delivery dispute is arbitrated by a human and refunds through the 
   await t.test('a REFUND arbitration flows through the existing onchain evidence path', async () => {
     const purchase = await makePurchase({ charged: true, delivered: true });
     await raiseGatewayDeliveryDispute(pool, purchase.requestId, seeded.agentId, 'bad content', evidence);
-    assert.equal((await decideGatewayDeliveryDispute(pool, purchase.requestId, 'REFUND')).status, 'REFUNDED');
+    assert.equal((await decideGatewayDeliveryDispute(pool, purchase.requestId, 'REFUND')).status, 'REFUND_APPROVED');
 
     const refundHash = `0x${'c'.repeat(64)}` as Hash;
     const chain: GatewayRefundChain = {
@@ -169,6 +169,10 @@ test('Gateway delivery dispute is arbitrated by a human and refunds through the 
     assert.equal(recorded.requestId, purchase.requestId);
     assert.equal(recorded.transactionHash, refundHash);
     assert.equal(recorded.reason, 'dispute upheld');
+
+    const { rows: [finished] } = await pool.query(
+      'SELECT status FROM gateway_delivery_disputes WHERE request_id = $1', [purchase.requestId]);
+    assert.equal(finished.status, 'REFUNDED');
   });
 
   await t.test('raise snapshots the objective delivery commitment assessment', async () => {

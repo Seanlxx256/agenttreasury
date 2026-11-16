@@ -4,7 +4,7 @@ import { resolveReservation } from './budget.js';
 import { transaction } from './db.js';
 import { observeGatewayPayment, type ExpectedGatewayPayment, type GatewayObservation } from './gateway-reconciliation.js';
 
-type CheckedPayment = GatewayObservation | { status: 'unavailable' } |
+type CheckedPayment = GatewayObservation | { status: 'unavailable'; reason?: string } |
   { status: 'conflict'; reason: 'accounting-mismatch'; reported: GatewayObservation };
 
 export async function checkGatewayPayment(
@@ -17,8 +17,10 @@ export async function checkGatewayPayment(
   let evidence: CheckedPayment;
   try {
     evidence = await observeGatewayPayment(expected, request);
-  } catch {
-    evidence = { status: 'unavailable' };
+  } catch (error) {
+    // Keep the failure text instead of collapsing it to a bare "unavailable":
+    // this is the free-text evidence the extraction pipeline reads.
+    evidence = { status: 'unavailable', reason: error instanceof Error ? error.message : String(error) };
   }
   return transaction(pool, async (client) => {
     const { rows: [owner] } = await client.query<{ task_id: string | null }>(

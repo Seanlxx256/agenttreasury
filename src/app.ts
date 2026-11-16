@@ -7,6 +7,7 @@ import { deliverPayment } from './delivery.js';
 import type { MerchantConfig } from './merchant.js';
 import { decideRefund, requestRefund } from './refund-requests.js';
 import { decideGatewayRefund, requestGatewayRefund } from './gateway-refund-requests.js';
+import { raiseGatewayDeliveryDispute } from './gateway-delivery-disputes.js';
 import { getPaymentLedger } from './ledger.js';
 import { createIntent, getIntent, PaymentError, tokenDigest } from './payments.js';
 import type { Purchase } from './payments.js';
@@ -157,6 +158,19 @@ export function buildApp(
         properties: { reason: { type: 'string', minLength: 1, maxLength: 500 } } },
     },
   }, async (request) => requestGatewayRefund(pool, request.params.id, await authenticate(request), request.body.reason));
+
+  app.post<{ Params: { id: string }; Body: { reason: string; evidence: Record<string, unknown> } }>(
+    '/gateway-purchases/:id/dispute', {
+      schema: {
+        params: { type: 'object', required: ['id'], properties: { id: uuid } },
+        body: { type: 'object', required: ['reason', 'evidence'], additionalProperties: false,
+          properties: { reason: { type: 'string', minLength: 1, maxLength: 500 }, evidence: { type: 'object' } } },
+      },
+    }, async (request) => {
+      const agentId = await authenticate(request);
+      return raiseGatewayDeliveryDispute(pool, request.params.id, agentId, request.body.reason, request.body.evidence);
+    },
+  );
 
   app.post<{ Params: { id: string }; Body: { decision: 'APPROVED' | 'DENIED' } }>(
     '/finance/gateway-purchases/:id/refund-decision', {

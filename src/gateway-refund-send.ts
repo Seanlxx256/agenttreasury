@@ -32,7 +32,7 @@ export async function resolveRefundTransaction(
     const { rows: [approval] } = await client.query<{ approved: boolean }>(
       `SELECT (
          EXISTS (SELECT 1 FROM gateway_refund_requests WHERE request_id = $1 AND status = 'APPROVED' AND reason = $2)
-         OR EXISTS (SELECT 1 FROM gateway_delivery_disputes WHERE request_id = $1 AND status = 'REFUNDED' AND reason = $2)
+         OR EXISTS (SELECT 1 FROM gateway_delivery_disputes WHERE request_id = $1 AND status = 'REFUND_APPROVED' AND reason = $2)
        ) AS approved`,
       [requestId, reason],
     );

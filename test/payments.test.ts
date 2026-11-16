@@ -346,7 +346,7 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
         throw new Error('Gateway unavailable');
       });
       assert.equal(unavailable.status, 'submission-unknown');
-      assert.deepEqual(unavailable.payment, { status: 'unavailable' });
+      assert.deepEqual(unavailable.payment, { status: 'unavailable', reason: 'Gateway unavailable' });
       const notFound = await purchaseGatewayTrace(pool, interrupted, sign, send, async () =>
         Response.json({ transfers: [] }));
       assert.deepEqual(notFound.payment, { status: 'unknown' });
@@ -428,7 +428,11 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       assert.equal(recovered.nonce, lost.nonce);
       assert.deepEqual((await purchaseGatewayTrace(pool, interrupted, sign, send)).delivery, recovered.delivery);
       assert.equal((await finance.inject({ url: financeUrl, headers })).json().buyerHasDelivery, true);
-      assert.ok((await reviewQueue()).every(({ id }) => id !== interrupted.requestId));
+      // The recovered fixture trace carries an errored call, which violates the
+      // merchant's all-successful commitment, so it now surfaces for dispute
+      // review rather than silently closing.
+      const recoveredEntry = (await reviewQueue()).find(({ id }) => id === interrupted.requestId);
+      assert.equal(recoveredEntry?.reason, 'delivery-commitment-violated');
       const batchHash = `0x${'b'.repeat(64)}`;
       const verified = await collectGatewayPurchaseEvidence(pool, interrupted.requestId, async (hash) => {
         assert.equal(hash, batchHash);

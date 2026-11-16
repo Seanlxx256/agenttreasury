@@ -8,6 +8,7 @@ import { checkGatewayPayment } from './gateway-payment-evidence.js';
 import type { ExpectedGatewayPayment } from './gateway-reconciliation.js';
 import { prepareGatewayTriage, reviewGatewayTriage, type TriageObservation } from './gateway-triage.js';
 import { confirmGatewayMerchantRecipientChange, requestGatewayMerchantRecipientChange } from './gateway-merchant-recipient.js';
+import { decideGatewayDeliveryDispute } from './gateway-delivery-disputes.js';
 import { PaymentError } from './payments.js';
 
 const orderFields = `i.id, i.task_id AS "taskId", i.amount::text, i.status, i.payee,
@@ -85,6 +86,7 @@ export function registerFinanceConsole(
         SELECT p.request_id AS id, p.amount_units::text AS "amountUnits", p.authorized_at AS "issuedAt",
           CASE
             WHEN latest.status = 'conflict' THEN 'payment-conflict'
+            WHEN p.commitment_satisfied = false AND p.delivery IS NOT NULL THEN 'delivery-commitment-violated'
             WHEN p.delivery IS NULL AND (p.budget_status = 'spent' OR latest.status = 'charged')
               THEN 'charged-delivery-missing'
             WHEN p.budget_status = 'reserved' AND p.reconcile_review_at IS NOT NULL THEN 'checks-paused'
@@ -97,7 +99,11 @@ export function registerFinanceConsole(
         ) latest ON true
       )
       SELECT id, "amountUnits", "issuedAt", reason FROM cases WHERE reason IS NOT NULL
-      ORDER BY CASE reason WHEN 'payment-conflict' THEN 1 WHEN 'charged-delivery-missing' THEN 2 ELSE 3 END,
+      ORDER BY CASE reason
+                 WHEN 'payment-conflict' THEN 1
+                 WHEN 'delivery-commitment-violated' THEN 2
+                 WHEN 'charged-delivery-missing' THEN 3
+                 ELSE 4 END,
                "issuedAt", id
       LIMIT 100
     `);
@@ -146,6 +152,20 @@ export function registerFinanceConsole(
     `, [id]);
     return reviewGatewayTriage(prepareGatewayTriage(purchase, rows), process.env.GATEWAY_TRIAGE_MODEL, fetch, 'support-rules');
   });
+
+  app.post<{ Params: { id: string }; Body: { decision: 'REFUND' | 'DISMISS' } }>(
+    '/finance/gateway-purchases/:id/dispute-decision', {
+      preHandler: async (request) => { authenticate(request); },
+      schema: {
+        params: paymentParams,
+        body: { type: 'object', required: ['decision'], additionalProperties: false,
+          properties: { decision: { enum: ['REFUND', 'DISMISS'] } } },
+      },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return decideGatewayDeliveryDispute(pool, request.params.id, request.body.decision);
+    },
+  );
 
   app.post<{ Params: { id: string }; Body: { recipient: string } }>('/finance/merchants/:id/recipient-change', {
     schema: {
