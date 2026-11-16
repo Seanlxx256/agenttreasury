@@ -30,11 +30,11 @@ export interface GatewayBalanceChain {
   }>;
 }
 
-export async function gatewayBalanceChain(network: GatewayNetworkName = gatewayChainName): Promise<GatewayBalanceChain> {
+export async function gatewayBalanceChain(network: GatewayNetworkName = gatewayChainName,
+  client = gatewayClient(network, 4)): Promise<GatewayBalanceChain> {
   const config = gatewayNetworkConfig(network);
-  const client = gatewayClient(network, 4);
-  const address = config.domain.verifyingContract;
-  const token = config.usdc;
+  const address = config.domain.verifyingContract.toLowerCase() as Address;
+  const token = config.usdc.toLowerCase() as Address;
   const domainId = config.domainId;
   if (await client.getChainId() !== config.chainConfig.id) throw new Error('RPC endpoint must serve the selected Arc network');
   return {

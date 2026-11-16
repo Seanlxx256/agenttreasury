@@ -14,6 +14,7 @@ export type Purchase = ExpectedGatewayPayment & {
 
 export type BalanceSnapshot = {
   version: 1;
+  ledgerScope?: 'wallet' | 'none';
   network: GatewayBalanceChain['network'];
   payer: Address;
   from: string; to: string; finalized: string;
@@ -33,7 +34,7 @@ export type BalanceSnapshot = {
 };
 
 export async function reconcileGatewayBalances(
-  pool: Pool, chain: GatewayBalanceChain, payer: Address, from: bigint, to: bigint, request: typeof fetch = fetch,
+  pool: Pool | null, chain: GatewayBalanceChain, payer: Address, from: bigint, to: bigint, request: typeof fetch = fetch,
   capture?: (snapshot: BalanceSnapshot) => void,
 ) {
   if (from < 1n || to < from || to - from >= 2000n) throw new Error('Specify an inclusive range of 1 to 2000 blocks after deployment');
@@ -43,13 +44,13 @@ export async function reconcileGatewayBalances(
   const openingBlock = from - 1n;
   const [openingHash, closingHash] = await Promise.all([chain.blockHash(openingBlock), chain.blockHash(to)]);
   const [{ rows: purchases }, opening, closing] = await Promise.all([
-    pool.query<Purchase>(`
+    pool ? pool.query<Purchase>(`
       SELECT p.request_id AS "requestId", p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits",
         p.network, p.budget_status AS "budgetStatus", j.batch_hash AS "batchHash", j.amount::text AS "journalAmount"
       FROM gateway_demo_purchases p LEFT JOIN gateway_payment_journal j USING (request_id)
       WHERE p.payer = $1 AND p.network = $2 AND (p.submitted_at IS NOT NULL OR p.signing_started_at IS NOT NULL OR j.request_id IS NOT NULL)
       ORDER BY p.request_id
-    `, [wallet, chain.network]),
+    `, [wallet, chain.network]) : Promise.resolve({ rows: [] as Purchase[] }),
     chain.totalBalance(wallet, openingBlock),
     chain.totalBalance(wallet, to),
   ]);
@@ -89,7 +90,7 @@ export async function reconcileGatewayBalances(
   if (currentOpeningHash !== openingHash || currentClosingHash !== closingHash) throw new Error('Finalized block hash changed during reconciliation');
   const serialize = (rows: typeof chainMoves.deposits) => rows.map((row) => ({ ...row, amount: String(row.amount) }));
   const snapshot: BalanceSnapshot = {
-    version: 1, network: chain.network, payer: wallet, from: String(from), to: String(to), finalized: String(finalized),
+    version: 1, ledgerScope: pool ? 'wallet' : 'none', network: chain.network, payer: wallet, from: String(from), to: String(to), finalized: String(finalized),
     openingHash, closingHash, opening: String(opening), closing: String(closing), purchases, receiptBlocks, unsettled,
     source: chain.source ?? null,
     movements: { deposits: serialize(chainMoves.deposits), withdrawals: serialize(chainMoves.withdrawals),

@@ -9,6 +9,9 @@ import EmbeddedPostgres from 'embedded-postgres';
 import { Pool } from 'pg';
 import { buildApp } from '../src/app.js';
 import { collectInvestigationSnapshot, executeInvestigationChecks, runGatewayInvestigation } from '../src/gateway-investigation-run.js';
+import { persistBalanceEvidence } from '../src/gateway-balance-evidence.js';
+import { replayBalanceSnapshot, type BalanceSnapshot } from '../src/reconcile-gateway-balances.js';
+import type { Address, Hash } from 'viem';
 import { migrate } from '../src/migrate.js';
 import { seedGateway } from '../src/seed.js';
 
@@ -57,7 +60,7 @@ test('investigation executes bounded reads with provenance, freshness and no bus
     await pool.query(`CREATE ROLE investigation_reader LOGIN PASSWORD '${readerPassword}'`);
     await pool.query(`GRANT SELECT ON gateway_demo_purchases,research_tasks,gateway_demo_deliveries,gateway_payment_observations,
       gateway_payment_journal,gateway_payment_journal_lines,gateway_refund_requests,gateway_refund_authorizations,
-      gateway_payment_refunds,gateway_task_grants,gateway_merchants TO investigation_reader`);
+      gateway_payment_refunds,gateway_task_grants,gateway_merchants,gateway_balance_evidence,gateway_balance_scans TO investigation_reader`);
     reader=new Pool({...config,user:'investigation_reader',password:readerPassword});
     const before=await state();const result=await runGatewayInvestigation(reader,purchase.id);
     assert.equal(result.planner.status,'disabled');assert.equal(result.checks.length,2);
@@ -146,4 +149,63 @@ test('investigation executes bounded reads with provenance, freshness and no bus
     assert.equal((await app.inject({url})).statusCode,401);
     assert.equal((await app.inject({url,headers:{authorization:`Bearer ${finance}`}})).statusCode,200);
   });
+  let nextBlock = 200;
+  async function saveBalanceEvidence(nonce = purchase.nonce, network: 'arc' | 'arcTestnet' = 'arcTestnet', ledgerScope: 'wallet' | 'none' = 'wallet') {
+    const scanId = randomUUID(); const end = nextBlock++;
+    const snapshot: BalanceSnapshot = { version: 1, ledgerScope, network, payer: payer as Address,
+      from: '1', to: String(end), finalized: String(end), openingHash: `0x${'0'.repeat(64)}`,
+      closingHash: `0x${end.toString(16).padStart(64, '0')}`, opening: '3000', closing: '3000',
+      source: null, movements: { deposits: [], withdrawals: [], burns: [], batches: [] },
+      purchases: [{ requestId: purchase.id, nonce, payer, network, recipient, amountUnits: '1000',
+        budgetStatus: 'reserved', journalAmount: '2000', batchHash: hash as Hash }],
+      receiptBlocks: { [hash]: null }, unsettled: [] };
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`INSERT INTO gateway_balance_scans(id,network,payer,from_block,to_block,status,result)
+        VALUES($1,$2,$3,1,$4,'discrepancy',$5)`, [scanId,network,payer,end,JSON.stringify(replayBalanceSnapshot(snapshot))]);
+      await persistBalanceEvidence(client,scanId,snapshot);
+      await client.query('COMMIT');
+    } catch(error) { await client.query('ROLLBACK'); throw error; }
+    finally { client.release(); }
+    return scanId;
+  }
+  await t.test('saved balance reads bind request and nonce; models cannot use unrelated citations', async () => {
+    await saveBalanceEvidence(`0x${'f'.repeat(64)}`);
+    let snapshot = await collectInvestigationSnapshot(reader!,purchase.id);
+    assert.equal(snapshot.records.balanceEvidence.length,0,'same wallet/request with a different nonce is excluded');
+    const id = await saveBalanceEvidence();
+    snapshot = await collectInvestigationSnapshot(reader!,purchase.id);
+    assert.equal(snapshot.records.balanceEvidence.length,1);
+    assert.equal(snapshot.records.balanceEvidence[0]!.scanId,id);
+    assert.equal(snapshot.records.balanceEvidence[0]!.verification,'verified');
+    const before = await state();
+    const report = await runGatewayInvestigation(reader!,purchase.id, { chainRead:async()=>{throw new Error('No RPC');},
+      gatewayRequest:async()=>{throw new Error('No Gateway');} });
+    const check = report.checks.find((row)=>row.kind==='read-balance-evidence');
+    assert.equal(check?.status,'ok');assert.ok(check?.source.includes(id));
+    assert.deepEqual(await state(),before);
+    await assert.rejects(executeInvestigationChecks(snapshot,[{kind:'read-balance-evidence',citations:['journal']}]),
+      (error:Error & {code?:string})=>error.code==='INVALID_INVESTIGATION_PLAN');
+    const other = await make();
+    assert.equal((await collectInvestigationSnapshot(reader!,other.id)).records.balanceEvidence.length,0);
+  });
+  await t.test('balance evidence is bounded, participates in freshness, and fails closed on corruption', async () => {
+    const before = await collectInvestigationSnapshot(reader!,purchase.id);
+    await saveBalanceEvidence();await saveBalanceEvidence();const newest=await saveBalanceEvidence();
+    const current = await collectInvestigationSnapshot(reader!,purchase.id);
+    assert.equal(current.records.balanceEvidence.length,3);
+    assert.notEqual(current.fingerprint,before.fingerprint);
+    await pool.query(`UPDATE gateway_balance_scans SET result='{}' WHERE id=$1`,[newest]);
+    const corrupted = await collectInvestigationSnapshot(reader!,purchase.id);
+    assert.ok(corrupted.records.balanceEvidence.some((row)=>row.verification==='failed'));
+    assert.notEqual(corrupted.fingerprint,current.fingerprint);
+    const checks = await executeInvestigationChecks(corrupted,[{kind:'read-balance-evidence',citations:['balance-evidence']}]);
+    assert.equal(checks[0]!.status,'unavailable');
+    assert.ok(!JSON.stringify(checks).includes('DO_NOT_EXPORT'));
+    const chainOnly = await saveBalanceEvidence(purchase.nonce,'arcTestnet','none');
+    const rejected = await collectInvestigationSnapshot(reader!,purchase.id);
+    assert.equal(rejected.records.balanceEvidence.find((row)=>row.scanId===chainOnly)?.verification,'failed');
+  });
+
 });

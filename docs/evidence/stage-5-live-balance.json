@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "capturedAt": "2026-11-16T17:37:39.273Z",
+  "scope": "public-chain-only",
+  "limitation": "No local purchases or journal supplied. Journal differences are not proven business incidents.",
+  "snapshot": {
+    "version": 1,
+    "ledgerScope": "none",
+    "network": "arcTestnet",
+    "payer": "0xb21c91a0f4d4c03f4b6a0fc5214f06e431ff2b2d",
+    "from": "72581534",
+    "to": "72581534",
+    "finalized": "72581684",
+    "openingHash": "0xdf2af42e675b3932d7ded0bda2cbb5189db71cae3e01f635b7f840aa02afaa3a",
+    "closingHash": "0xc246b1791f2a93ae26dd4bb9fd12e1ab54b3e006cc68d755fb45b1f29ffb2619",
+    "opening": "1000005300991732",
+    "closing": "1000005302092732",
+    "purchases": [],
+    "receiptBlocks": {},
+    "unsettled": [],
+    "source": {
+      "kind": "rpc",
+      "chainId": 5042002,
+      "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+    },
+    "movements": {
+      "deposits": [
+        {
+          "hash": "0x61d3b6d60186b17b6e8aed097ff320ac87d103d298948fe4d6fcf0dc60002a55",
+          "logIndex": 64,
+          "amount": "1101000",
+          "evidence": {
+            "blockNumber": "72581534",
+            "blockHash": "0xc246b1791f2a93ae26dd4bb9fd12e1ab54b3e006cc68d755fb45b1f29ffb2619",
+            "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+            "topics": [
+              "0x4174a9435a04d04d274c76779cad136a41fde6937c56241c09ab9d3c7064a1a9",
+              "0x0000000000000000000000003600000000000000000000000000000000000000",
+              "0x000000000000000000000000b21c91a0f4d4c03f4b6a0fc5214f06e431ff2b2d",
+              "0x000000000000000000000000008888878f94c0d87defdf0b07f46b93c1934442"
+            ],
+            "data": "0x000000000000000000000000000000000000000000000000000000000010ccc8"
+          }
+        }
+      ],
+      "withdrawals": [],
+      "burns": [],
+      "batches": []
+    }
+  },
+  "digest": "4e994cb73b69c245c19b43a83c64b013fd9442c89f94d96f8d5714a4c92ebd35",
+  "result": {
+    "status": "MATCHED",
+    "network": "eip155:5042002",
+    "token": "0x3600000000000000000000000000000000000000",
+    "payer": "0xb21c91a0f4d4c03f4b6a0fc5214f06e431ff2b2d",
+    "window": {
+      "openingBlock": "72581533",
+      "openingHash": "0xdf2af42e675b3932d7ded0bda2cbb5189db71cae3e01f635b7f840aa02afaa3a",
+      "from": "72581534",
+      "to": "72581534",
+      "closingHash": "0xc246b1791f2a93ae26dd4bb9fd12e1ab54b3e006cc68d755fb45b1f29ffb2619"
+    },
+    "balance": {
+      "opening": "1000005300991732",
+      "closing": "1000005302092732",
+      "deposits": "1101000",
+      "withdrawals": "0",
+      "burns": "0",
+      "batchDelta": "0",
+      "journalDebits": "0",
+      "chainClosing": "1000005302092732",
+      "journalClosing": "1000005302092732",
+      "chainDifference": "0",
+      "journalDifference": "0"
+    },
+    "capitalMovements": {
+      "deposits": [
+        {
+          "hash": "0x61d3b6d60186b17b6e8aed097ff320ac87d103d298948fe4d6fcf0dc60002a55",
+          "logIndex": 64,
+          "amount": "1101000",
+          "evidence": {
+            "blockNumber": "72581534",
+            "blockHash": "0xc246b1791f2a93ae26dd4bb9fd12e1ab54b3e006cc68d755fb45b1f29ffb2619",
+            "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+            "topics": [
+              "0x4174a9435a04d04d274c76779cad136a41fde6937c56241c09ab9d3c7064a1a9",
+              "0x0000000000000000000000003600000000000000000000000000000000000000",
+              "0x000000000000000000000000b21c91a0f4d4c03f4b6a0fc5214f06e431ff2b2d",
+              "0x000000000000000000000000008888878f94c0d87defdf0b07f46b93c1934442"
+            ],
+            "data": "0x000000000000000000000000000000000000000000000000000000000010ccc8"
+          }
+        }
+      ],
+      "withdrawals": [],
+      "burns": []
+    },
+    "batches": [],
+    "missingBatches": [],
+    "currentAuthorizations": {
+      "pendingAmount": "0",
+      "unresolved": []
+    }
+  }
+}

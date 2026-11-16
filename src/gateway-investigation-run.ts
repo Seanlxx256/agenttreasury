@@ -1,3 +1,4 @@
+import { collectPurchaseBalanceEvidence } from './gateway-investigation-balance.js';
 import { createHash } from 'node:crypto';
 import type { Pool } from 'pg';
 import type { Hash } from 'viem';
@@ -43,15 +44,18 @@ export async function collectInvestigationSnapshot(pool: Pool, requestId: string
     const { rows:[merchant] }=await client.query(`SELECT g.merchant_id AS id,g.recipient AS "grantRecipient",
       g.approved_recipient_version AS "grantVersion",m.recipient AS "currentRecipient",m.recipient_change_version AS "currentVersion"
       FROM gateway_task_grants g LEFT JOIN gateway_merchants m ON m.id=g.merchant_id WHERE g.task_id=$1`,[purchase.taskId]);
+    const balanceEvidence = await collectPurchaseBalanceEvidence(client, purchase);
     await client.query('COMMIT');
-    const records={ purchase,observations,journal:journal ?? null,refund:refund ?? null,merchant:merchant ?? null };
+    const records={ purchase,balanceEvidence,observations,journal:journal ?? null,refund:refund ?? null,merchant:merchant ?? null };
     const prepared=prepareGatewayTriage({...purchase,journal:records.journal},observations);
     const facts: InvestigationFact[]=prepared.facts.map(({id,description})=>({id,description}));
+    if (balanceEvidence.length) facts.push({id:'balance-evidence',description:'Saved historical balance evidence is linked to this request; inspect replay verification before drawing conclusions.'});
     if (refund) facts.push({id:'refund',description:'A refund workflow record exists; its status must be inspected.'});
     if (merchant) facts.push({id:'merchant-recipient',description:'A merchant-bound grant is recorded for this purchase.'});
     if (purchase.signingStartedAt) facts.push({id:'signing',description:'Signing started; this is not proof of merchant submission.'});
     const sources=Object.fromEntries(facts.map((fact)=>[fact.id,
       fact.id.startsWith('observation-') ? `gateway_payment_observations:${fact.id.slice(12)}` :
+      fact.id==='balance-evidence' ? `gateway_balance_evidence:${balanceEvidence.map((row)=>row.scanId).join(',')}` :
       fact.id==='journal' ? `gateway_payment_journal:${requestId}` :
       fact.id==='refund' ? `gateway_refund_requests:${requestId}` :
       fact.id==='merchant-recipient' ? `gateway_task_grants:${purchase.taskId}` : `purchase-snapshot:${requestId}`]));
@@ -99,6 +103,15 @@ export async function executeInvestigationChecks(snapshot:Snapshot, plan:Investi
       status:'ok',source:`snapshot:${snapshot.fingerprint}`};
     switch(step.kind) {
       case 'read-original-authorization': result.data=purchase;break;
+      case 'read-balance-evidence': {
+        const evidence = snapshot.records.balanceEvidence;
+        result.data={evidence};
+        result.source=`gateway_balance_evidence:${evidence.map((row)=>row.scanId).join(',')}`;
+        if (evidence.some((row)=>row.verification!=='verified')) {
+          result.status='unavailable';result.reason='At least one linked snapshot failed replay verification.';
+        }
+        break;
+      }
       case 'read-local-journal': result.data={journal};break;
       case 'read-refund-status': result.data={refund};break;
       case 'read-merchant-recipient': result.data={merchant};break;

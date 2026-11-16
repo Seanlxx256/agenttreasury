@@ -18,6 +18,7 @@
     "funding:record": "node dist/src/record-funding.js",
     "reconcile:gateway": "node dist/src/reconcile-gateway.js",
     "reconcile:gateway-balances": "node dist/src/reconcile-gateway-balances.js",
+    "capture:gateway-balances": "node dist/src/capture-gateway-balance-sample.js",
     "replay:gateway-balances": "node dist/src/gateway-balance-evidence.js",
     "scan:gateway-balances": "node dist/src/gateway-balance-scanner.js",
     "eval:gateway": "node dist/src/evaluate-gateway-triage.js",

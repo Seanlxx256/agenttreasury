@@ -70,10 +70,14 @@ export async function replaySavedBalanceScan(pool: Pool, scanId: string) {
     SELECT e.snapshot,e.digest,s.result FROM gateway_balance_evidence e
     JOIN gateway_balance_scans s ON s.id=e.scan_id WHERE e.scan_id=$1`, [scanId]);
   if (!saved) throw new Error('Scan has no replay evidence (unknown or legacy scan)');
+  return verifyBalanceEvidence(scanId, saved);
+}
+
+export function verifyBalanceEvidence(scanId: string, saved: { snapshot: BalanceSnapshot; digest: string; result: unknown }) {
   if (evidenceDigest(saved.snapshot) !== saved.digest) throw new Error('Balance evidence digest mismatch');
   const report = replayBalanceSnapshot(saved.snapshot);
   if (evidenceDigest(report) !== evidenceDigest(saved.result)) throw new Error('Replayed report differs from saved result');
-  return { scanId, verified: true, source: saved.snapshot.source, digest: saved.digest, report };
+  return { scanId, verified: true, ledgerScope: saved.snapshot.ledgerScope ?? 'wallet', source: saved.snapshot.source, digest: saved.digest, report };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -423,6 +423,32 @@ test('continuous balance scan persists progress, raises work orders, and recover
     const snapshot = await readInput(result.scanId);
     const corruptedReader = { query: async () => ({ rows: [{ snapshot, digest: 'incorrect', result: {} }] }) } as unknown as Pool;
     await assert.rejects(replaySavedBalanceScan(corruptedReader, result.scanId), /digest mismatch/);
+  });
+
+  await t.test('real public testnet deposit survives database persistence and offline replay', async () => {
+    const sample = JSON.parse(await readFile(new URL('../../docs/evidence/stage-5-live-balance.json', import.meta.url),'utf8'));
+    assert.equal(sample.scope,'public-chain-only');
+    assert.equal(sample.snapshot.ledgerScope,'none');
+    assert.equal(sample.snapshot.source.kind,'rpc');
+    assert.ok(sample.snapshot.movements.deposits.length > 0);
+    assert.equal(evidenceDigest(sample.snapshot),sample.digest);
+    const scanId = randomUUID(); const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`INSERT INTO gateway_balance_scans(id,network,payer,from_block,to_block,status,result)
+        VALUES($1,'arcTestnet',$2,$3,$4,'matched',$5)`,
+      [scanId,sample.snapshot.payer,sample.snapshot.from,sample.snapshot.to,JSON.stringify(sample.result)]);
+      await persistBalanceEvidence(client,scanId,sample.snapshot);
+      await persistBalanceEvidence(client,scanId,sample.snapshot);
+      await client.query('COMMIT');
+    } catch(error) { await client.query('ROLLBACK');throw error; }
+    finally {client.release();}
+    const replay=await replaySavedBalanceScan(pool,scanId);
+    assert.equal(replay.verified,true);
+    assert.deepEqual(replay.report,sample.result);
+    const events=await pool.query('SELECT * FROM gateway_balance_events WHERE payer=$1',[sample.snapshot.payer]);
+    assert.equal(events.rowCount,sample.snapshot.movements.deposits.length);
+    assert.equal(events.rows[0].payload.evidence.blockHash,sample.snapshot.closingHash);
   });
 
 });

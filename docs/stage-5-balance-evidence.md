@@ -1,5 +1,9 @@
 # Stage 5: persistent balance evidence and offline replay
 
+Follow-up: [live deposit capture and investigation references](stage-5-live-evidence.md)
+adds a real public testnet sample. The acceptance results below describe the
+initial Stage 5 implementation.
+
 The testnet balance scanner now saves the inputs needed to reproduce each new
 report. Previously it retained the report and cursor, but a later investigation
 could not recalculate that result independently of the current ledger and RPC.

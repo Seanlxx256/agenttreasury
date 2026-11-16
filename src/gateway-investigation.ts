@@ -12,6 +12,7 @@ export const investigationKinds = [
   'read-chain-receipt',
   'read-batch-calldata',
   'read-local-journal',
+  'read-balance-evidence',
   'read-refund-status',
   'read-merchant-recipient',
   'compare-transfer-terms',
@@ -23,6 +24,7 @@ export const investigationKindDescriptions: Record<InvestigationKind, string> = 
   'read-gateway-status': 'Query the latest Gateway status for the request.',
   'read-chain-receipt': 'Read the on-chain transfer receipt or batch evidence.',
   'read-batch-calldata': 'Inspect the batch calldata for this transfer.',
+  'read-balance-evidence': 'Replay saved balance evidence bound to this request and inspect historical discrepancies.',
   'read-local-journal': 'Review the local payment journal entry.',
   'read-refund-status': 'Check the refund request and its broadcast status.',
   'read-merchant-recipient': 'Verify the merchant payout address on file.',
@@ -47,6 +49,8 @@ export function suggestInvestigationsRules(facts: InvestigationFact[] = []): Inv
     facts.some((fact) => fact.id.startsWith('observation-') && fact.description.includes(needle));
   const deliveryMissing = (id: string) =>
     facts.some((fact) => fact.id === id && fact.description.includes('missing'));
+
+  if (hasFact('balance-evidence')) kinds.add('read-balance-evidence');
 
   if (hasObservation('multiple-transfers')) {
     kinds.add('read-chain-receipt');
@@ -161,6 +165,7 @@ export function relevantInvestigationFacts(kind: InvestigationKind, facts: Inves
       case 'read-gateway-status': return observation || ['polling', 'journal-missing'].includes(fact.id);
       case 'read-chain-receipt':
       case 'read-batch-calldata': return fact.id === 'journal' || consequential;
+      case 'read-balance-evidence': return fact.id === 'balance-evidence';
       case 'read-local-journal': return ['budget', 'journal', 'journal-missing'].includes(fact.id) || consequential;
       case 'read-refund-status': return fact.id === 'refund';
       case 'read-merchant-recipient': return ['merchant-recipient', 'delivery-commitment'].includes(fact.id);
