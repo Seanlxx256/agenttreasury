@@ -37,6 +37,11 @@ finance?*
 - **Append-only audit and operator-gated refunds on both rails.** State transitions are
   recorded, refunds need a human decision, and the Gateway rail closes the loop for a
   charged-but-undelivered payment: approval, seller-initiated return, onchain evidence.
+- **Tamper-evident audit chain.** Every audit row hashes its own fields plus the previous
+  row's hash, so editing or reordering the log breaks the chain and is detectable offline
+  without trusting the database operator — the application-layer answer to x402's missing
+  self-contained receipt. `verifyAuditChain()` recomputes the chain end to end, and
+  concurrent writers are serialized by an advisory lock so the chain can never fork.
 - **Delivery disputes for pay-then-verify.** A charged payment with a delivered-but-wrong
   result can be raised as a dispute, kept separate from the missing-delivery refund path,
   and arbitrated by an operator into a refund — executed through the same onchain evidence
@@ -71,7 +76,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 41/41.
+- `npm test` passes 46/46.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
