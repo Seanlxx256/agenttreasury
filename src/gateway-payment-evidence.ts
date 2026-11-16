@@ -33,7 +33,7 @@ export async function checkGatewayPayment(
       taskId: string | null; day: string; amount: string; submitted: boolean;
       budgetStatus: 'reserved' | 'spent' | 'released' | null;
     }>(`SELECT task_id AS "taskId", budget_day::text AS day, amount_units::text AS amount,
-                budget_status AS "budgetStatus", submitted_at IS NOT NULL AS submitted
+                budget_status AS "budgetStatus", (submitted_at IS NOT NULL OR signing_started_at IS NOT NULL) AS submitted
          FROM gateway_demo_purchases WHERE request_id = $1 AND nonce = $2 FOR UPDATE`, [requestId, expected.nonce]);
     if (!purchase) return evidence;
 

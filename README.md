@@ -1,6 +1,6 @@
 # AgentTreasury
 
-For durable reconciliation cases, operations metrics, deployment and recovery drills, see [Stage 1 operations](docs/stage-1-operations.md).
+For durable reconciliation cases, operations metrics, deployment and recovery drills, see [Stage 1 operations](docs/stage-1-operations.md). For the constrained, separate-process Gateway signer, see [Stage 2 signing boundary](docs/stage-2-signing-boundary.md).
 
 > For a hiring-focused two-minute summary, see [project highlights](docs/project-highlights.md). For how the agent's value over the rules is designed and measured, see [the agent increment findings](docs/agent-increment-findings.md).
 
@@ -63,10 +63,10 @@ The Agent Wallet and the local payer are separate accounts funded through differ
 npm run gateway:wallet -- init          # reuses the existing key, prints only the public address
 export GATEWAY_PAYER_ADDRESS=0xYourPrintedArcTestnetEOA
 export GATEWAY_MERCHANT_RECIPIENT=0xYourSeparateRecipientAddress
-export GATEWAY_TESTNET_SIGNER_FILE=.gateway-local/payer-key
+export GATEWAY_SIGNER_KEY_FILE=.gateway-local/payer-key
 ```
 
-Fund the printed address with Arc test USDC, leaving enough for gas, then run `npm run gateway:wallet -- deposit 0.5`. Wait for Gateway to credit the deposit before buying. If you already use Circle CLI with an imported EOA, you can leave `GATEWAY_TESTNET_SIGNER_FILE` unset and let the buyer use the CLI signer.
+Fund the printed address with Arc test USDC, leaving enough for gas, then run `npm run gateway:wallet -- deposit 0.5`. Wait for Gateway to credit the deposit before buying. The local launcher starts a separate constrained signer; the buyer no longer reads keys or falls back to Circle CLI signing. See [signer configuration](docs/stage-2-signing-boundary.md).
 
 For a local run with embedded PostgreSQL, keep the payer and recipient variables set and run:
 
@@ -74,9 +74,9 @@ For a local run with embedded PostgreSQL, keep the payer and recipient variables
 npm run gateway:local -- buy
 ```
 
-This starts a separate database and a loopback merchant, applies migrations, creates a scoped task, and submits one 0.001 test USDC purchase. Keep the printed request ID. If the purchase or accounting is pending, rerun `npm run gateway:local -- buy <request-id>` with that ID to reconcile the charge and recover delivery. A `buy` command without an ID starts a new purchase.
+This starts a separate database, a loopback merchant and a constrained signer process, applies migrations, creates a scoped task, and submits one 0.001 test USDC purchase. Keep the printed request ID. If the purchase or accounting is pending, rerun `npm run gateway:local -- buy <request-id>` with that ID to reconcile the charge and recover delivery. A `buy` command without an ID starts a new purchase.
 
-Once the trace has been delivered, use `npm run gateway:local -- reconcile <request-id>` to look up the stored authorization, update the budget and journal when Gateway reports a terminal result, and verify the batch receipt on Arc. This command only accepts an existing submitted purchase and needs no wallet settings or merchant process. Use `npm run gateway:local -- verify <request-id>` to inspect the evidence without updating the payment records.
+Once the trace has been delivered, use `npm run gateway:local -- reconcile <request-id>` to look up the stored authorization, update the budget and journal when Gateway reports a terminal result, and verify the batch receipt on Arc. This command only accepts an existing submitted or signing-started purchase and needs no wallet settings or merchant process. Use `npm run gateway:local -- verify <request-id>` to inspect the evidence without updating the payment records.
 
 The local database, task credentials, and purchase history persist in the ignored `.gateway-local/` directory. `npm run gateway:local -- prepare` runs database setup without a wallet. The default PostgreSQL and merchant ports are 55433 and 3002. Set `GATEWAY_DB_PORT` or `GATEWAY_MERCHANT_PORT` if those ports are occupied, and keep the same merchant port when resuming a purchase.
 
@@ -88,7 +88,7 @@ To see the same lost-response drill without Arc testnet access, a wallet, or Cir
 npm run demo:offline
 ```
 
-It runs the production merchant, buyer, and verification code against embedded PostgreSQL and replaces only the network boundary: Gateway settle and transfer lookup are answered by a deterministic mock, the batch receipt is confirmed, and the paid response is dropped once. The run prints `submission-unknown`, then `delivered`, then `PASSED` with the balanced journal, all self-contained under the ignored `.gateway-offline/` directory.
+It runs the production merchant, buyer, and verification code against embedded PostgreSQL and uses a local throwaway-key signing adapter and replaces the network boundary: Gateway settle and transfer lookup are answered by a deterministic mock, the batch receipt is confirmed, and the paid response is dropped once. The run prints `submission-unknown`, then `delivered`, then `PASSED` with the balanced journal, all self-contained under the ignored `.gateway-offline/` directory.
 
 ### Run with a separate development database
 
@@ -101,7 +101,7 @@ npm run seed -- --gateway
 npm run merchant:gateway
 ```
 
-In a second terminal with the same environment values, set the task ID and token printed by the seed command. The task starts with 0.003 test USDC in total and daily budget. Generate and keep one request ID for the purchase:
+Start the separate signer as described in [Stage 2](docs/stage-2-signing-boundary.md#running-locally). In the buyer terminal, set `GATEWAY_SIGNER_URL` and `GATEWAY_SIGNER_TOKEN`, remove any signing key path, and set the task ID and token printed by the seed command. The task starts with 0.003 test USDC in total and daily budget. Generate and keep one request ID for the purchase:
 
 ```sh
 export GATEWAY_TASK_ID=your-task-id
@@ -110,7 +110,7 @@ REQUEST_ID=$(node -p 'crypto.randomUUID()')
 npm run buy:gateway -- "$REQUEST_ID"
 ```
 
-The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer reserves the task budget and stores the request and nonce before sending the signed request. Apply migration `015` before restarting the buyer, merchant, and finance API.
+The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer reserves the task budget and stores the request and nonce before sending the signed request. Apply all migrations through `035` before restarting the buyer, signer, workers, merchant and finance API.
 
 If the paid response is lost, rerun `npm run buy:gateway -- "$REQUEST_ID"`. The buyer queries Gateway using the stored nonce. When Gateway confirms a matching charge, the buyer uses a separate retrieval token to fetch the original trace and save it locally. The merchant serves the stored result through a read-only endpoint. The same purchase ID and nonce can be submitted to the seller only once.
 

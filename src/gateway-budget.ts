@@ -72,7 +72,7 @@ export async function releaseUnsubmittedGatewayPurchase(
   await client.query('SELECT id FROM research_tasks WHERE id = $1 FOR UPDATE', [taskId]);
   const { rows: [purchase] } = await client.query<{ day: string; amount: string }>(
     `DELETE FROM gateway_demo_purchases
-     WHERE request_id = $1 AND nonce = $2 AND task_id = $3 AND budget_status = 'reserved' AND submitted_at IS NULL
+     WHERE request_id = $1 AND nonce = $2 AND task_id = $3 AND budget_status = 'reserved' AND submitted_at IS NULL AND signing_started_at IS NULL
      RETURNING budget_day::text AS day, amount_units::text AS amount`, [requestId, nonce, taskId],
   );
   if (purchase) await resolveReservation(client, taskId, purchase.day, purchase.amount, false);

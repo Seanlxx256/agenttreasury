@@ -16,14 +16,14 @@ export async function processGatewayReconciliation(pool: Pool, request: typeof f
     WITH candidate AS (
       SELECT request_id FROM gateway_demo_purchases
       WHERE budget_status = 'reserved' AND reconcile_review_at IS NULL AND reconcile_after <= now()
-        AND (submitted_at IS NOT NULL OR authorized_at <= now() - interval '2 minutes')
+        AND (submitted_at IS NOT NULL OR signing_started_at IS NOT NULL OR authorized_at <= now() - interval '2 minutes')
       ORDER BY reconcile_after, request_id
       LIMIT 1 FOR UPDATE SKIP LOCKED
     )
     UPDATE gateway_demo_purchases p SET reconcile_after = now() + interval '30 seconds'
     FROM candidate WHERE p.request_id = candidate.request_id
     RETURNING p.request_id AS "requestId", p.task_id AS "taskId", p.nonce, p.payer, p.recipient,
-              p.amount_units::text AS "amountUnits", p.network, p.submitted_at IS NOT NULL AS submitted,
+              p.amount_units::text AS "amountUnits", p.network, (p.submitted_at IS NOT NULL OR p.signing_started_at IS NOT NULL) AS submitted,
               p.reconcile_after::text AS "leaseUntil", p.reconcile_attempts AS attempts
   `);
   if (!claim) return false;
@@ -35,7 +35,7 @@ export async function processGatewayReconciliation(pool: Pool, request: typeof f
       const { rows: [released] } = await client.query<{ day: string }>(`
         UPDATE gateway_demo_purchases SET budget_status = 'released'
         WHERE request_id = $1 AND nonce = $2 AND reconcile_after = $3::timestamptz
-          AND budget_status = 'reserved' AND submitted_at IS NULL
+          AND budget_status = 'reserved' AND submitted_at IS NULL AND signing_started_at IS NULL
         RETURNING budget_day::text AS day
       `, [claim.requestId, claim.nonce, claim.leaseUntil]);
       if (!released) return;

@@ -43,7 +43,9 @@
     "finance:demo": "npm run build && node scripts/finance-demo.mjs",
     "worker:refund": "node dist/src/finance-refund-worker.js",
     "worker:gateway-balances": "node dist/src/scan-gateway-balances.js",
-    "test:operations": "npm run build && node --test --test-concurrency=1 dist/test/gateway-operations.test.js dist/test/gateway-balance-scan.test.js"
+    "test:operations": "npm run build && node --test --test-concurrency=1 dist/test/gateway-operations.test.js dist/test/gateway-balance-scan.test.js",
+    "signer:gateway": "node dist/src/gateway-signer-server.js",
+    "test:signer": "npm run build && node --test dist/test/gateway-signer.test.js"
   },
   "dependencies": {
     "@circle-fin/x402-batching": "^4.0.0",

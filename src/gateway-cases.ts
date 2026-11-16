@@ -75,7 +75,7 @@ export async function gatewayOperationsMetrics(pool: Pool) {
       FROM gateway_reconciliation_cases) AS cases,
     (SELECT jsonb_build_object('reserved',count(*) FILTER(WHERE budget_status='reserved'),
       'due',count(*) FILTER(WHERE budget_status='reserved' AND reconcile_review_at IS NULL AND reconcile_after<=now()
-        AND (submitted_at IS NOT NULL OR authorized_at<=now()-interval '2 minutes')),
+        AND (submitted_at IS NOT NULL OR signing_started_at IS NOT NULL OR authorized_at<=now()-interval '2 minutes')),
       'pausedForReview',count(*) FILTER(WHERE budget_status='reserved' AND reconcile_review_at IS NOT NULL),
       'oldestReservedSeconds',extract(epoch FROM now()-min(authorized_at) FILTER(WHERE budget_status='reserved')))
       FROM gateway_demo_purchases) AS recovery,

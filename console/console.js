@@ -195,6 +195,7 @@ function showGatewayPurchase(purchase, path, session) {
     ['Request ID', purchase.id], ['Authorization nonce', purchase.nonce],
     ['Payer', purchase.payer], ['Recipient', purchase.recipient],
     ['Amount', amount(purchase.amountUnits)], ['Authorization saved', timestamp(purchase.issuedAt)],
+    ['Signing started', timestamp(purchase.signingStartedAt)],
     ['Task', purchase.taskId], ['Task budget', purchase.budgetStatus ?? 'Untracked'],
     ['Seller delivery', purchase.sellerHasDelivery ? 'Saved' : 'Missing'],
     ['Buyer delivery', purchase.buyerHasDelivery ? 'Saved' : 'Missing'],

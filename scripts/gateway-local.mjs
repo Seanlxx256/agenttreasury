@@ -1,3 +1,4 @@
+import { gatewayBuyerEnvironment, startLocalGatewaySigner } from './gateway-local-signer.mjs';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -59,6 +60,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, interrupt);
 
 let started = false;
 let app;
+let signer;
 try {
   if (!existsSync(join(databaseDir, 'PG_VERSION'))) await database.initialise();
   await database.start();
@@ -72,11 +74,11 @@ try {
     process.exitCode = await run('reconcile-gateway-balances.js', payer, suppliedId, extra[0]);
   } else if (mode === 'reconcile') {
     const { rows: [purchase] } = await pool.query(
-      `SELECT nonce, payer, recipient, amount_units::text AS "amountUnits"
-       FROM gateway_demo_purchases WHERE request_id = $1 AND submitted_at IS NOT NULL`,
+      `SELECT nonce, payer, recipient, network, amount_units::text AS "amountUnits"
+       FROM gateway_demo_purchases WHERE request_id = $1 AND (submitted_at IS NOT NULL OR signing_started_at IS NOT NULL)`,
       [suppliedId],
     );
-    if (!purchase) throw new Error('No submitted Gateway purchase exists for that request ID');
+    if (!purchase) throw new Error('No submitted or signing-started Gateway purchase exists for that request ID');
     const payment = await checkGatewayPayment(pool, suppliedId, purchase, 'operations');
     console.log(JSON.stringify({ requestId: suppliedId, payment }, null, 2));
     if (payment.status === 'charged') {
@@ -111,12 +113,19 @@ try {
     const task = JSON.parse(await readFile(taskFile, 'utf8'));
     env.GATEWAY_TASK_ID = task.taskId;
     env.AGENT_TOKEN = task.token;
+    if (!env.GATEWAY_SIGNER_URL) {
+      const keyFile = env.GATEWAY_SIGNER_KEY_FILE ?? env.GATEWAY_TESTNET_SIGNER_FILE;
+      if (!keyFile) throw new Error('Set GATEWAY_SIGNER_KEY_FILE or configure an external GATEWAY_SIGNER_URL and token');
+      signer = await startLocalGatewaySigner(env.DATABASE_URL, keyFile, merchant.recipient);
+      env.GATEWAY_SIGNER_URL = signer.url;
+      env.GATEWAY_SIGNER_TOKEN = signer.token;
+    }
     const result = await run('buy-gateway-trace.js', requestId);
     process.exitCode = result === 0 ? await run('verify-gateway-purchase.js', requestId) : result;
   }
 } finally {
   try {
-    await app?.close();
+    try { await app?.close(); } finally { await signer?.close(); }
   } finally {
     try {
       await pool.end();
@@ -137,7 +146,9 @@ async function saveNew(path, contents) {
 function run(entry, ...args) {
   const script = fileURLToPath(new URL(`../dist/src/${entry}`, import.meta.url));
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [script, ...args], { env, stdio: 'inherit', signal: abort.signal });
+    const childEnv = entry === 'buy-gateway-trace.js'
+      ? gatewayBuyerEnvironment(env) : env;
+    const child = spawn(process.execPath, [script, ...args], { env: childEnv, stdio: 'inherit', signal: abort.signal });
     child.once('error', reject);
     child.once('close', (code) => resolve(code ?? 1));
   });

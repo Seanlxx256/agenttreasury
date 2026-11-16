@@ -16,7 +16,7 @@ import {
   recoverGatewayPayer, traceOffer, type GatewayAuthorization, type GatewayNetworkName,
 } from './gateway-x402.js';
 
-type SigningRequest = {
+export type SigningRequest = {
   domain: ReturnType<typeof gatewayNetworkConfig>['domain'];
   types: typeof gatewayAuthorizationTypes;
   primaryType: 'TransferWithAuthorization';
@@ -153,10 +153,10 @@ export async function purchaseGatewayTrace(
     const grant = await lockGatewayGrant(client, task, { requestId, endpoint, payer, recipient, network });
     const claim = await client.query(
       `INSERT INTO gateway_demo_purchases
-        (request_id, endpoint, nonce, payer, recipient, amount_units, network, retrieval_token, task_id, budget_day, budget_status, delivery_commitment)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'reserved', $11) ON CONFLICT (request_id) DO NOTHING`,
+        (request_id, endpoint, nonce, payer, recipient, amount_units, network, retrieval_token, task_id, budget_day, budget_status, delivery_commitment, signing_authorization)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'reserved', $11, $12) ON CONFLICT (request_id) DO NOTHING`,
       [requestId, endpoint, authorization.nonce, payer.toLowerCase(), recipient.toLowerCase(),
-        requirements.amount, network, retrievalToken, task.taskId, grant.day, JSON.stringify(commitment)],
+        requirements.amount, network, retrievalToken, task.taskId, grant.day, JSON.stringify(commitment), JSON.stringify(authorization)],
     );
     if (claim.rowCount === 0) return false;
     await checkGatewayBudget(client, task.taskId, grant, requirements.amount);

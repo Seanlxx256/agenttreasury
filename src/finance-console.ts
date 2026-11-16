@@ -43,7 +43,7 @@ export function registerFinanceConsole(
   registerGatewayOperations(app, pool, authenticateConsole);
   async function gatewayPurchase(id: string) {
     const { rows: [purchase] } = await pool.query<ExpectedGatewayPayment & {
-      issuedAt: Date; buyerHasDelivery: boolean; sellerHasDelivery: boolean;
+      issuedAt: Date; signingStartedAt: Date | null; buyerHasDelivery: boolean; sellerHasDelivery: boolean;
       taskId: string | null; budgetStatus: string | null; journal: unknown;
       reviewRequired: boolean;
       commitmentSatisfied: boolean | null; commitmentViolations: string[] | null;
@@ -57,7 +57,7 @@ export function registerFinanceConsole(
       SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits", p.network,
              p.task_id AS "taskId", p.budget_status AS "budgetStatus",
              (p.budget_status = 'reserved' AND p.reconcile_review_at IS NOT NULL) IS TRUE AS "reviewRequired",
-             p.authorized_at AS "issuedAt", (p.delivery IS NOT NULL) AS "buyerHasDelivery",
+             p.authorized_at AS "issuedAt", p.signing_started_at AS "signingStartedAt", (p.delivery IS NOT NULL) AS "buyerHasDelivery",
              (d.delivery IS NOT NULL) AS "sellerHasDelivery",
              p.commitment_satisfied AS "commitmentSatisfied",
              p.commitment_violations AS "commitmentViolations",
