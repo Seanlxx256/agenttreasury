@@ -63,6 +63,13 @@ single deployment can therefore settle for several merchants, each pinned to
 its own network and payout address, and reconciliation is naturally partitioned
 by merchant.
 
+A payout-address change never moves the live address in one step: it is staged
+via `POST /finance/merchants/:id/recipient-change`, then confirmed by a finance
+operator via `POST /finance/merchants/:id/recipient-change/confirm`. Both steps
+write an audit row (`requested` by the operator role, `confirmed` by
+`finance-operator`), so the B2B "change the bank account" substitution vector is
+blocked at the console boundary rather than only inside a helper function.
+
 ## 4. Continuous balance scanning with a persisted cursor
 
 Balance reconciliation was a one-shot CLI (`reconcile-gateway-balances.ts`)

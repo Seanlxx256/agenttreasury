@@ -7,6 +7,7 @@ import { getPaymentLedger } from './ledger.js';
 import { checkGatewayPayment } from './gateway-payment-evidence.js';
 import type { ExpectedGatewayPayment } from './gateway-reconciliation.js';
 import { prepareGatewayTriage, reviewGatewayTriage, type TriageObservation } from './gateway-triage.js';
+import { confirmGatewayMerchantRecipientChange, requestGatewayMerchantRecipientChange } from './gateway-merchant-recipient.js';
 import { PaymentError } from './payments.js';
 
 const orderFields = `i.id, i.task_id AS "taskId", i.amount::text, i.status, i.payee,
@@ -27,6 +28,9 @@ const orders = `FROM payment_intents i
   LEFT JOIN finance_refund_jobs f ON f.intent_id = i.id`;
 
 const paymentParams = { type: 'object', required: ['id'],
+  properties: { id: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } } };
+
+const merchantParams = { type: 'object', required: ['id'],
   properties: { id: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } } };
 
 export function registerFinanceConsole(
@@ -141,6 +145,26 @@ export function registerFinanceConsole(
       ORDER BY observations.id DESC
     `, [id]);
     return reviewGatewayTriage(prepareGatewayTriage(purchase, rows), process.env.GATEWAY_TRIAGE_MODEL, fetch, 'support-rules');
+  });
+
+  app.post<{ Params: { id: string }; Body: { recipient: string } }>('/finance/merchants/:id/recipient-change', {
+    schema: {
+      params: merchantParams,
+      body: { type: 'object', required: ['recipient'], additionalProperties: false,
+        properties: { recipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' } } },
+    },
+  }, async (request, reply) => {
+    const role = authenticateConsole(request);
+    reply.header('Cache-Control', 'no-store');
+    return requestGatewayMerchantRecipientChange(pool, request.params.id, request.body.recipient, role);
+  });
+
+  app.post<{ Params: { id: string } }>('/finance/merchants/:id/recipient-change/confirm', {
+    preHandler: async (request) => { authenticate(request); },
+    schema: { params: merchantParams },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return confirmGatewayMerchantRecipientChange(pool, request.params.id);
   });
 
   for (const [path, file, type] of [
