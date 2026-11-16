@@ -12,6 +12,9 @@ import { migrate } from '../src/migrate.js';
 import { seedGateway } from '../src/seed.js';
 import { lockGatewayGrant } from '../src/gateway-budget.js';
 import { transaction } from '../src/db.js';
+import {
+  confirmGatewayMerchantRecipientChange, requestGatewayMerchantRecipientChange,
+} from '../src/gateway-merchant-recipient.js';
 
 async function availablePort() {
   const probe = createServer();
@@ -83,6 +86,18 @@ test('gateway grant authorization requires the matching network', { timeout: 30_
         client, { taskId: seeded.taskId, agentToken: seeded.token }, termsFor('arc'),
       )),
       (error: Error & { code?: string }) => error.code === 'GATEWAY_PAYMENT_TERMS_NOT_ALLOWED',
+    );
+  });
+
+  await t.test('rejects a grant after the merchant payout address changed', async () => {
+    const next = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const staged = await requestGatewayMerchantRecipientChange(pool, seeded.merchantId, next, 'ops');
+    await confirmGatewayMerchantRecipientChange(pool, seeded.merchantId, staged.pendingRecipientVersion!, next);
+    await assert.rejects(
+      transaction(pool, (client) => lockGatewayGrant(
+        client, { taskId: seeded.taskId, agentToken: seeded.token }, termsFor('arcTestnet'),
+      )),
+      (error: Error & { code?: string }) => error.code === 'GATEWAY_RECIPIENT_SUPERSEDED',
     );
   });
 });

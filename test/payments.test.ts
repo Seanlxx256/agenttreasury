@@ -428,11 +428,11 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
       assert.equal(recovered.nonce, lost.nonce);
       assert.deepEqual((await purchaseGatewayTrace(pool, interrupted, sign, send)).delivery, recovered.delivery);
       assert.equal((await finance.inject({ url: financeUrl, headers })).json().buyerHasDelivery, true);
-      // The recovered fixture trace carries an errored call, which violates the
-      // merchant's all-successful commitment, so it now surfaces for dispute
-      // review rather than silently closing.
+      // The recovered fixture trace reports a reverted target transaction, which
+      // is a correct diagnostic delivery under the commitment (which does not pin
+      // 'success'), so it closes cleanly instead of surfacing for dispute review.
       const recoveredEntry = (await reviewQueue()).find(({ id }) => id === interrupted.requestId);
-      assert.equal(recoveredEntry?.reason, 'delivery-commitment-violated');
+      assert.equal(recoveredEntry, undefined);
       const batchHash = `0x${'b'.repeat(64)}`;
       const verified = await collectGatewayPurchaseEvidence(pool, interrupted.requestId, async (hash) => {
         assert.equal(hash, batchHash);
@@ -446,6 +446,15 @@ test('payment API against PostgreSQL', { timeout: 30_000 }, async (t) => {
         'PENDING');
       assert.equal((await collectGatewayPurchaseEvidence(pool, interrupted.requestId, async () =>
         ({ status: 'reverted', blockNumber: 42n }), gateway)).status, 'FAILED');
+      // A purchase whose stored delivery commitment is unsatisfied must fail the
+      // overall verification, not pass with a mismatched detail view.
+      await pool.query(
+        `UPDATE gateway_demo_purchases SET commitment_satisfied = false, commitment_violations = $2 WHERE request_id = $1`,
+        [interrupted.requestId, JSON.stringify(['trace.calls[0] type WRONG_TYPE != CALL'])]);
+      const breached = await collectGatewayPurchaseEvidence(pool, interrupted.requestId, async () =>
+        ({ status: 'success', blockNumber: 42n }), gateway);
+      assert.equal(breached.status, 'FAILED');
+      assert.ok(breached.problems.some((problem: string) => problem.includes('Delivery commitment not satisfied')));
       assert.equal(submissions, 2);
       assert.equal(signatures, 2);
 

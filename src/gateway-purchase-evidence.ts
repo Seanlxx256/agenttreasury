@@ -11,6 +11,8 @@ type PurchaseRecord = ExpectedGatewayPayment & {
   submitted: boolean;
   buyerDelivery: unknown;
   sellerDelivery: unknown;
+  commitmentSatisfied: boolean | null;
+  commitmentViolations: string[] | null;
   entries: { side: string; account: string; amount: string; transferId: string; batchHash: string }[] | null;
 };
 
@@ -33,6 +35,7 @@ export async function collectGatewayPurchaseEvidence(
     SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits", p.network,
            p.task_id AS "taskId", p.budget_status AS "budgetStatus", p.submitted_at IS NOT NULL AS submitted,
            p.delivery AS "buyerDelivery", d.delivery AS "sellerDelivery",
+           p.commitment_satisfied AS "commitmentSatisfied", p.commitment_violations AS "commitmentViolations",
            (SELECT jsonb_agg(jsonb_build_object(
               'side', l.side, 'account', l.account, 'amount', l.amount::text,
               'transferId', l.transfer_id, 'batchHash', l.batch_hash
@@ -44,7 +47,7 @@ export async function collectGatewayPurchaseEvidence(
   if (!purchase) throw new Error('Gateway purchase not found');
 
   const { nonce, payer, recipient, amountUnits, network, taskId, budgetStatus, submitted,
-    buyerDelivery, sellerDelivery, entries } = purchase;
+    buyerDelivery, sellerDelivery, commitmentSatisfied, commitmentViolations, entries } = purchase;
   const gateway = await observeGatewayPayment({ nonce, payer, recipient, amountUnits, network }, request);
   const hash = gateway.status === 'charged' && isHash(gateway.txHash) ? gateway.txHash : null;
   const receipt = hash ? await readReceipt(hash) : null;
@@ -59,6 +62,10 @@ export async function collectGatewayPurchaseEvidence(
       (sellerDelivery !== null && !matchesDelivery(sellerDelivery, requestId, nonce)) ||
       (buyerDelivery !== null && sellerDelivery !== null && !isDeepStrictEqual(buyerDelivery, sellerDelivery))) {
     problems.push('Saved deliveries do not match the purchase.');
+  }
+  if (commitmentSatisfied === false) {
+    const detail = commitmentViolations?.length ? `: ${commitmentViolations.join('; ')}` : '';
+    problems.push(`Delivery commitment not satisfied${detail}`);
   }
 
   if (budgetStatus === 'reserved' && !entries) pending.push('Awaiting budget and journal posting.');
@@ -82,6 +89,7 @@ export async function collectGatewayPurchaseEvidence(
     requestId, nonce, payer, recipient, amountUnits, taskId, budgetStatus,
     gateway, journal: entries,
     delivery: { buyerSaved: buyerDelivery !== null, sellerSaved: sellerDelivery !== null },
+    commitment: { satisfied: commitmentSatisfied, violations: commitmentViolations ?? [] },
     batch: hash && chainConfig.blockExplorers ? {
       hash, explorerUrl: chainConfig.blockExplorers.default.url + '/tx/' + hash,
       receiptStatus: receipt?.status ?? null,

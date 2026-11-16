@@ -1,6 +1,6 @@
 # Designing and validating the agent's increment
 
-This document answers one question: **where does the AI agent actually add value over the deterministic rules, and how is that shown?** It is the summary of three candidate increments, each built, measured on a held-out dataset, and recorded honestly — two positive, one negative. The detailed per-case evaluation logs live in [gateway-triage-evaluation.md](gateway-triage-evaluation.md); this document is the narrative a hiring conversation would follow.
+This document answers one question: **where does the AI agent actually add value over the deterministic rules, and how is that shown?** It is the summary of three candidate increments, each built, measured on a development dataset, and recorded honestly — two positive, one negative. The detailed per-case evaluation logs live in [gateway-triage-evaluation.md](gateway-triage-evaluation.md); this document is the narrative a hiring conversation would follow.
 
 ## The starting point: the agent was not adding value
 
@@ -14,7 +14,7 @@ For each candidate increment:
 
 1. Define a **closed output set** (not free text), so every output is machine-checkable.
 2. Build a **rule baseline** that represents what the structured code already does.
-3. Run the rule baseline and a local model on the **same held-out inputs** and compare recall / precision (or accuracy).
+3. Run the rule baseline and a local model on the **same development inputs** and compare recall / precision (or accuracy).
 4. Require the model to **cite its evidence** and validate those citations server-side.
 5. Keep every proposal **read-only**: the agent suggests, the backend enforces limits, and nothing executes a write.
 
@@ -25,6 +25,10 @@ The three candidates, ordered by how testable they are:
 | A | Unstructured evidence extraction | Read free-text error strings and emit failure signals the keyword table cannot enumerate. |
 | B | Read-only investigation suggestions | When evidence conflicts, propose the next check the operator should run. |
 | C | Cross-case pattern recognition | Cluster several failures from one supplier/network into a systemic problem. |
+
+## Method boundary: development, not held-out
+
+The datasets below are development sets: the signal definitions and prompts were tuned against them, so the numbers carry an optimistic bias and must not be read as held-out generalization. A frozen test set, built after the implementation stopped changing, is the required next step before claiming held-out results. What the numbers do show honestly is whether a model can even reach the rules on the exact inputs that shaped the prompt — a necessary first check, not a production guarantee.
 
 ## Results
 
@@ -42,6 +46,17 @@ Measured on 2026-11-16 on an Apple Silicon Mac, local Ollama, temperature zero.
 | `qwen2.5:3b` | 0.95 | 0.95 |
 
 The keyword table catches every direct phrase and misses every paraphrase. `3b` recovers the paraphrases at a small precision cost. This is wired into `prepareGatewayTriage`: free-text observation reasons become `evidence-*` facts (rules) and `evidence-model-*` facts (model), citable in the finance console.
+
+The numbers above were tuned in the loop, so they overstate generalization. After freezing the prompt, a separate ten-string held-out set (`gateway-evidence-test-v1`) was authored and measured once, without touching the prompt:
+
+| Method (held-out) | Recall | Precision |
+| --- | ---: | ---: |
+| Keyword rules | 0.50 | 1.00 |
+| `qwen2.5:0.5b` | 0.30 | 1.00 |
+| `qwen2.5:1.5b` | 0.80 | 1.00 |
+| `qwen2.5:3b` | 0.70 | 1.00 |
+
+The held-out measurement keeps the direction of the claim — models recover reworded failures the keywords miss — but lowers its magnitude: the best model reaches 0.80, not 0.95, and 0.5b falls below the rules.
 
 ### B. Read-only investigation suggestions — negative
 
@@ -85,12 +100,13 @@ The three results reduce to one sentence:
 
 **Claimable:**
 
-- The agent's value is demonstrated on two specific, held-out tasks (signal extraction, cross-case clustering), with rule baselines and per-model recall/precision.
+- The agent's value is demonstrated on two specific development-set tasks (signal extraction, cross-case clustering), with rule baselines and per-model recall/precision.
 - The failure is demonstrated too: the agent is *not* used where a deterministic mapping is exact, and that decision is backed by a 7b comparison rather than intuition.
-- Every agent output is a closed-set, citation-validated, read-only suggestion; the backend enforces the envelope regardless of model.
+- Every agent output is a closed-set, read-only suggestion whose signal must carry a verbatim source quote, and the backend rejects any signal whose quote is not in the source text.
 
 **Not claimable:**
 
+- No held-out generalization. The datasets are development sets tuned in the loop; a frozen test set has not been measured, so the recall/precision gains cannot yet be attributed to out-of-distribution behavior.
 - No production operator-time reduction is shown. The evaluations measure decision correctness and evidence, not minutes saved; an operator pilot exists as a harness but real timing data is not collected.
 - No claim that "the agent reduces human review" in production — the datasets are synthetic fixtures, and the models add latency.
 - No claim that the agent beats the rules everywhere — it wins on two semantic tasks and ties/loses on the structured one.

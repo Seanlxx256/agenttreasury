@@ -29,8 +29,10 @@ test('a paraphrase the rules miss is recovered by the model as an extra fact', a
     calls++;
     const body = JSON.parse(String(init?.body));
     if (body.format?.properties?.signals) {
-      // First call: unstructured evidence extraction.
-      return Response.json({ message: { content: JSON.stringify({ signals: ['nonce-reused'] }) } });
+      // First call: unstructured evidence extraction with a verbatim quote.
+      return Response.json({ message: { content: JSON.stringify({ signals: [
+        { signal: 'nonce-reused', quote: 'signed twice with the same identifier' },
+      ] }) } });
     }
     // Second call: support-rules action selection, citing the recovered fact.
     return Response.json({ message: { content: JSON.stringify({

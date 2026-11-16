@@ -154,11 +154,12 @@ export async function reviewGatewayTriage(
   if (input.unstructured.length > 0) {
     const { status, signals } = await extractEvidenceWithModel(input.unstructured.join('\n'), model, request);
     if (status === 'ready') {
-      for (const signal of signals) {
+      for (const { signal, quote } of signals) {
         const alreadyPresent = facts.some((fact) =>
           fact.id === 'evidence-' + signal || fact.id === 'evidence-model-' + signal);
         if (!alreadyPresent) {
-          facts.push({ id: 'evidence-model-' + signal, description: evidenceSignalDescriptions[signal] });
+          facts.push({ id: 'evidence-model-' + signal,
+            description: `${evidenceSignalDescriptions[signal]} (source: "${quote}")` });
         }
       }
     }

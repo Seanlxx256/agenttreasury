@@ -1,9 +1,16 @@
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { gatewayEvidenceCases } from './gateway-evidence-cases.js';
+import { gatewayEvidenceTestCases } from './gateway-evidence-test-cases.js';
 import {
   extractEvidenceRules, extractEvidenceWithModel, type EvidenceSignal,
 } from './gateway-evidence-extraction.js';
+
+const datasets = {
+  'gateway-evidence-v1': gatewayEvidenceCases,
+  'gateway-evidence-test-v1': gatewayEvidenceTestCases,
+} as const;
+type DatasetName = keyof typeof datasets;
 
 type Scoring = { recall: number | null; precision: number | null; matched: number; expected: number; extracted: number };
 
@@ -33,7 +40,10 @@ function summarize(rows: Scoring[]): Scoring {
 const emptyScoring = (expected: number): Scoring =>
   ({ matched: 0, expected, extracted: 0, recall: 0, precision: null });
 
-export async function evaluateGatewayEvidence(model?: string, request: typeof fetch = fetch) {
+export async function evaluateGatewayEvidence(
+  model?: string, request: typeof fetch = fetch, datasetName: DatasetName = 'gateway-evidence-v1',
+) {
+  const samples = datasets[datasetName];
   const directRules: Scoring[] = [];
   const paraphraseRules: Scoring[] = [];
   const directAgent: Scoring[] = [];
@@ -41,7 +51,7 @@ export async function evaluateGatewayEvidence(model?: string, request: typeof fe
   const agentStats = { ready: 0, rejected: 0, unavailable: 0 };
   const cases = [];
 
-  for (const sample of gatewayEvidenceCases) {
+  for (const sample of samples) {
     const ruleSignals = extractEvidenceRules(sample.text).map(({ signal }) => signal);
     const rulesScoring = score(sample.expected, ruleSignals);
     (sample.paraphrased ? paraphraseRules : directRules).push(rulesScoring);
@@ -52,9 +62,9 @@ export async function evaluateGatewayEvidence(model?: string, request: typeof fe
     if (model) {
       const { status, signals } = await extractEvidenceWithModel(sample.text, model, request);
       agentStatus = status;
-      agentSignals = signals;
+      agentSignals = signals.map(({ signal }) => signal);
       if (status === 'ready') {
-        agentScoring = score(sample.expected, signals);
+        agentScoring = score(sample.expected, agentSignals);
         (sample.paraphrased ? paraphraseAgent : directAgent).push(agentScoring);
         agentStats.ready++;
       } else {
@@ -76,9 +86,9 @@ export async function evaluateGatewayEvidence(model?: string, request: typeof fe
   const allRules = [...directRules, ...paraphraseRules];
   const allAgent = [...directAgent, ...paraphraseAgent];
   return {
-    dataset: 'gateway-evidence-v1',
+    dataset: datasetName,
     model: model ?? null,
-    totalCases: gatewayEvidenceCases.length,
+    totalCases: samples.length,
     rules: summarize(allRules),
     agent: model ? { ...summarize(allAgent), ...agentStats } : null,
     byPhrasing: {
@@ -97,11 +107,13 @@ export async function evaluateGatewayEvidence(model?: string, request: typeof fe
   };
 }
 
-export async function evaluateGatewayEvidenceAcrossModels(models: string[], request: typeof fetch = fetch) {
-  const rules = await evaluateGatewayEvidence(undefined, request);
+export async function evaluateGatewayEvidenceAcrossModels(
+  models: string[], request: typeof fetch = fetch, datasetName: DatasetName = 'gateway-evidence-v1',
+) {
+  const rules = await evaluateGatewayEvidence(undefined, request, datasetName);
   const results = [];
   for (const model of models) {
-    results.push({ model, result: await evaluateGatewayEvidence(model, request) });
+    results.push({ model, result: await evaluateGatewayEvidence(model, request, datasetName) });
   }
   const comparison: Record<string, { recall: number | null; precision: number | null }> = {
     rules: { recall: rules.rules.recall, precision: rules.rules.precision },
@@ -109,23 +121,28 @@ export async function evaluateGatewayEvidenceAcrossModels(models: string[], requ
   for (const { model, result } of results) {
     comparison[model] = { recall: result.agent?.recall ?? null, precision: result.agent?.precision ?? null };
   }
-  return { dataset: 'gateway-evidence-v1', rules: rules.rules, comparison, models: results };
+  return { dataset: datasetName, rules: rules.rules, comparison, models: results };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { values } = parseArgs({ options: {
     'rules-only': { type: 'boolean' }, model: { type: 'string' }, models: { type: 'string' },
+    dataset: { type: 'string' },
   } });
+  const datasetName = (values.dataset ?? 'gateway-evidence-v1') as DatasetName;
+  if (!(datasetName in datasets)) {
+    throw new Error(`Unknown dataset. Choose one of: ${Object.keys(datasets).join(', ')}`);
+  }
   const modelList = (values.models ?? '').split(',').map((name) => name.trim()).filter(Boolean);
   if (values.model === '' || (values.models !== undefined && modelList.length === 0) ||
       (values.model !== undefined && values.models !== undefined) ||
       (values['rules-only'] && (values.model !== undefined || values.models !== undefined))) {
-    throw new Error('Usage: npm run eval:gateway-evidence -- [--rules-only | --model MODEL | --models M1,M2,...]');
+    throw new Error('Usage: npm run eval:gateway-evidence -- [--rules-only | --model MODEL | --models M1,M2,...] [--dataset NAME]');
   }
   if (values.models !== undefined) {
-    console.log(JSON.stringify(await evaluateGatewayEvidenceAcrossModels(modelList), null, 2));
+    console.log(JSON.stringify(await evaluateGatewayEvidenceAcrossModels(modelList, fetch, datasetName), null, 2));
   } else {
     const model = values['rules-only'] ? undefined : (values.model ?? process.env.GATEWAY_TRIAGE_MODEL) || undefined;
-    console.log(JSON.stringify(await evaluateGatewayEvidence(model), null, 2));
+    console.log(JSON.stringify(await evaluateGatewayEvidence(model, fetch, datasetName), null, 2));
   }
 }

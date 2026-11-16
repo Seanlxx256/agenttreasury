@@ -181,12 +181,12 @@ test('Gateway delivery dispute is arbitrated by a human and refunds through the 
       commitment: {
         deliveryCommitment: traceDeliveryCommitment,
         satisfied: false,
-        violations: ['trace.calls[0] errored: execution reverted'],
+        violations: ['trace.calls[0] type WRONG_TYPE != CALL'],
       },
     });
     const raised = await raiseGatewayDeliveryDispute(pool, purchase.requestId, seeded.agentId, 'bad content', evidence);
     assert.equal(raised.deliveryAssessment?.satisfied, false);
-    assert.deepEqual(raised.deliveryAssessment?.violations, ['trace.calls[0] errored: execution reverted']);
+    assert.deepEqual(raised.deliveryAssessment?.violations, ['trace.calls[0] type WRONG_TYPE != CALL']);
     assert.deepEqual(raised.deliveryAssessment?.commitment, traceDeliveryCommitment);
     // The buyer's subjective claim stays untouched; the objective assessment sits alongside it.
     assert.deepEqual(raised.evidence, evidence);

@@ -56,12 +56,15 @@ finance?*
 - **Delivery commitment binding.** The merchant's offer declares what a valid delivery must
   look like, the buyer stores that commitment at purchase time and checks the received
   delivery against it, and the dispute path snapshots the objective mismatch next to the
-  buyer's claim. "Expected vs received" becomes reproducible evidence instead of a
-  pay-then-verify assertion.
+  buyer's claim. The verifier checks call type and terminal result, and treats a reverted
+  target transaction as a correct diagnostic answer rather than a delivery failure, so
+  "expected vs received" becomes reproducible evidence instead of a pay-then-verify assertion.
 - **Commitment-aware triage and recipient-change review.** The read-only triage agent
   recognizes a delivered-but-commitment-violating payment and recommends raising a dispute,
-  and a merchant payout address can never change silently — it is staged and then confirmed
-  by a finance operator, closing the "change the bank account" B2B fraud vector.
+  and a merchant payout address can never change silently — it is staged, confirmed by a
+  finance operator against the exact version the operator reviewed, and any task grant that
+  predates the change is rejected at payment time, closing the "change the bank account"
+  B2B fraud vector.
 - **Multi-network, multi-merchant, multi-process.** The network is a column on each
   purchase, resolved through a per-network config factory derived from Circle's official
   SDK, so one worker pool spans testnet and mainnet. Merchants are first-class entities
@@ -92,7 +95,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 100/100.
+- `npm test` passes 107/107.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
@@ -106,7 +109,13 @@ actually ran the thing:
   recover the paraphrases (qwen2.5:3b recall 0.95 / precision 0.95; 1.5b and 0.5b 0.85)
   at a small precision cost. The baseline and split are locked by a unit test, and the
   signals are wired into `prepareGatewayTriage` as citable facts, so the finance console
-  surfaces evidence the structured rules never encoded.
+  surfaces evidence the structured rules never encoded. Every model signal must carry a
+  verbatim source quote that the server checks against the input text, so an unsupported
+  signal is rejected rather than accepted as a fact. The numbers are development-set
+  results (the prompts were tuned against them), not held-out generalization. On a
+  frozen ten-string held-out set (`gateway-evidence-test-v1`), the best model reaches
+  0.80 recall (1.5b, 3b 0.70) while 0.5b drops to 0.30 below the rules' 0.50 — the
+  direction holds, the magnitude is recorded honestly.
 - A second candidate increment — read-only investigation suggestions for conflicts — is
   measured and recorded as a negative result, and it is not a size problem: a deterministic
   `fact -> check` rule mapping reaches recall 1.00 / precision 1.00, while the models stay

@@ -55,7 +55,8 @@ export function extractEvidenceRules(text: string): ExtractedEvidence[] {
 
 const extractSystemPrompt = [
   'Read the payment error text and list which of the following failure signals it states.',
-  'Return JSON with one field "signals": an array of signal names only.',
+  'Return JSON with one field "signals": an array of objects, each with a "signal" and a "quote".',
+  'The "quote" must be the exact phrase from the text that supports the signal, copied verbatim. For unknown-error, quote the whole text.',
   'Signal meanings:',
   '- nonce-reused: the same authorization signature identifier (nonce) was submitted twice.',
   '  Do NOT use this merely because something happened twice or a past record was referenced again.',
@@ -71,13 +72,19 @@ const extractSystemPrompt = [
 
 export async function extractEvidenceWithModel(
   text: string, model?: string, request: typeof fetch = fetch,
-): Promise<{ status: 'disabled' | 'ready' | 'unavailable' | 'rejected'; signals: EvidenceSignal[] }> {
+): Promise<{ status: 'disabled' | 'ready' | 'unavailable' | 'rejected'; signals: ExtractedEvidence[] }> {
   if (!model) return { status: 'disabled', signals: [] };
   const profile = resolveTriageModelProfile(model);
   const schema = {
     type: 'object', required: ['signals'], additionalProperties: false,
     properties: {
-      signals: { type: 'array', uniqueItems: true, maxItems: 3, items: { type: 'string', enum: [...evidenceSignals] } },
+      signals: { type: 'array', uniqueItems: true, maxItems: 3, items: {
+        type: 'object', required: ['signal', 'quote'], additionalProperties: false,
+        properties: {
+          signal: { type: 'string', enum: [...evidenceSignals] },
+          quote: { type: 'string', minLength: 1, maxLength: 200 },
+        },
+      } },
     },
   };
   try {
@@ -99,15 +106,33 @@ export async function extractEvidenceWithModel(
     const envelope = await response.json();
     const content = envelope?.message?.content;
     let parsed: unknown;
-    if (typeof content === 'string' && content.length <= 2000) {
+    if (typeof content === 'string' && content.length <= 4000) {
       try { parsed = JSON.parse(content); } catch { /* rejected below */ }
     }
+    // A signal is only accepted when (1) its name is in the closed set and (2)
+    // its quote is a verbatim substring of the source text. This keeps model
+    // inference tethered to evidence the operator can actually read.
     if (parsed && typeof parsed === 'object' && 'signals' in parsed && Array.isArray(parsed.signals) &&
-        parsed.signals.every((signal: unknown) => typeof signal === 'string' && evidenceSignals.includes(signal as EvidenceSignal))) {
-      return { status: 'ready', signals: [...new Set(parsed.signals as EvidenceSignal[])] };
+        parsed.signals.length > 0 && parsed.signals.every((entry: unknown): entry is ExtractedEvidence =>
+          isExtractedEvidence(entry) && quoteMatchesText(entry.quote, text))) {
+      return { status: 'ready', signals: [...parsed.signals] };
     }
     return { status: 'rejected', signals: [] };
   } catch {
     return { status: 'unavailable', signals: [] };
   }
+}
+
+function isExtractedEvidence(value: unknown): value is ExtractedEvidence {
+  if (!value || typeof value !== 'object') return false;
+  const { signal, quote } = value as { signal?: unknown; quote?: unknown };
+  return typeof signal === 'string' && evidenceSignals.includes(signal as EvidenceSignal) &&
+    typeof quote === 'string' && quote.trim().length > 0 && quote.length <= 200;
+}
+
+function quoteMatchesText(quote: string, text: string): boolean {
+  const normalize = (value: string) =>
+    value.trim().replace(/^["'`]+|["'`]+$/g, '').toLowerCase().replace(/\s+/g, ' ');
+  const normalizedQuote = normalize(quote);
+  return normalizedQuote.length > 0 && normalize(text).includes(normalizedQuote);
 }

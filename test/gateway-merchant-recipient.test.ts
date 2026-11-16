@@ -75,12 +75,26 @@ test('merchant payout address changes require a human review', { timeout: 30_000
   await t.test('confirming applies the staged address and clears the pending state', async () => {
     const { merchantId, recipient } = await newMerchant();
     const next = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
-    await requestGatewayMerchantRecipientChange(pool, merchantId, next, 'ops');
-    const confirmed = await confirmGatewayMerchantRecipientChange(pool, merchantId);
+    const staged = await requestGatewayMerchantRecipientChange(pool, merchantId, next, 'ops');
+    const confirmed = await confirmGatewayMerchantRecipientChange(
+      pool, merchantId, staged.pendingRecipientVersion!, next);
     assert.equal(confirmed.recipient, next);
     assert.notEqual(confirmed.recipient, recipient);
     assert.equal(confirmed.pendingRecipient, null);
     assert.equal(confirmed.pendingRecipientRequestedBy, null);
+    assert.equal(confirmed.recipientChangeVersion, staged.pendingRecipientVersion);
+  });
+
+  await t.test('stale confirmation is rejected when a newer request overwrote the pending address', async () => {
+    const { merchantId } = await newMerchant();
+    const first = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const second = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const stagedFirst = await requestGatewayMerchantRecipientChange(pool, merchantId, first, 'ops');
+    await requestGatewayMerchantRecipientChange(pool, merchantId, second, 'ops');
+    await assert.rejects(
+      confirmGatewayMerchantRecipientChange(pool, merchantId, stagedFirst.pendingRecipientVersion!, first),
+      (error: Error & { code?: string }) => error.code === 'RECIPIENT_CHANGE_STALE',
+    );
   });
 
   await t.test('rejects a change to the current address', async () => {
@@ -96,8 +110,8 @@ test('merchant payout address changes require a human review', { timeout: 30_000
   });
 
   await t.test('confirmation without a pending change is rejected', async () => {
-    const { merchantId } = await newMerchant();
-    await assert.rejects(confirmGatewayMerchantRecipientChange(pool, merchantId),
+    const { merchantId, recipient } = await newMerchant();
+    await assert.rejects(confirmGatewayMerchantRecipientChange(pool, merchantId, 1, recipient),
       (error: Error & { code?: string }) => error.code === 'NO_PENDING_RECIPIENT');
   });
 });

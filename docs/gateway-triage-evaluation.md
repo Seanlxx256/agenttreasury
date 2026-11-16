@@ -234,9 +234,20 @@ Measured on 2026-11-16 on an Apple Silicon Mac with Ollama, temperature zero:
 
 This is the first dataset on which **the agent beats the rules**, and it does so exactly where the architecture predicted: the rules score 0 on the 10 paraphrases, and `qwen2.5:3b` recovers 9 of them. The increment is not free — the models' precision stays below 1.0 (they occasionally over-claim a signal the text does not support), and every model adds a local generation delay. The honest framing is therefore "the agent reads what the keyword table cannot, at a small false-positive cost," not "the agent is uniformly better."
 
-The first pass over-claimed: with a loose signal list the weak models hallucinated `nonce-reused` on any text about something happening twice, and `1.5b` misread rate limiting. Tightening the signal definitions — a negative boundary on `nonce-reused`, an explicit `rpc-unavailable` list (timeout, connection refused, 429, throttling), and "list a signal only when the text states its condition directly" — raised the best model from 0.85/0.94 to 0.95/0.95 recall/precision without touching the closed signal set. One paraphrase ("booked earlier under a different reference") remains misread by `3b` as nonce reuse; it is kept as an honest residual rather than over-fitting the prompt to the fixture.
+The first pass over-claimed: with a loose signal list the weak models hallucinated `nonce-reused` on any text about something happening twice, and `1.5b` misread rate limiting. Tightening the signal definitions — a negative boundary on `nonce-reused`, an explicit `rpc-unavailable` list (timeout, connection refused, 429, throttling), and "list a signal only when the text states its condition directly" — raised the best model from 0.85/0.94 to 0.95/0.95 recall/precision without touching the closed signal set. One paraphrase ("booked earlier under a different reference") remains misread by `3b` as nonce reuse; it is kept as an honest residual rather than over-fitting the prompt to the fixture. This tuning happened on the development set, so the improved numbers are optimistic and are not a held-out measurement.
 
 The rule baseline and the scoring are covered by a unit test, so the half-recall baseline and the direct/paraphrase split are reproducible without Ollama. The model results above are a measurement on this fixture set, not a production claim.
+
+After the prompt was frozen, a separate ten-string held-out set (`gateway-evidence-test-v1`) was authored from the same taxonomy with new wording and measured once. It mixes direct and reworded phrasings and was never used to tune the prompt or the keyword table. The frozen-set result is more modest than the development numbers above:
+
+| Method | Recall | Precision |
+| --- | ---: | ---: |
+| Rules (keywords) | 0.50 | 1.00 |
+| qwen2.5:0.5b | 0.30 | 1.00 |
+| qwen2.5:1.5b | 0.80 | 1.00 |
+| qwen2.5:3b | 0.70 | 1.00 |
+
+The held-out recall confirms the direction of the development set — the models recover reworded failures the keyword table misses — but not its magnitude: the best frozen-set model reaches 0.80, not the 0.95 seen after in-loop tuning, and 0.5b drops below the rules. This is the honest held-out measurement; it replaces the optimistic development-set numbers as the claim that can be made about generalization.
 
 The extraction is wired into the triage path. `prepareGatewayTriage` collects any free-text `reason` that is not one of the three structured conflict reasons, reduces the keyword signals into `evidence-*` facts synchronously, and `reviewGatewayTriage` recovers the remaining signals as `evidence-model-*` facts before action selection, so the finance console can cite evidence the structured rules never encoded. A separate unit test walks the direct-keyword, paraphrase-model, and conflict-reason-exclusion paths.
 
@@ -244,6 +255,9 @@ The extraction is wired into the triage path. `prepareGatewayTriage` collects an
 npm run build
 npm run --silent eval:gateway-evidence -- --rules-only
 npm run --silent eval:gateway-evidence -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+# Frozen held-out set
+npm run --silent eval:gateway-evidence -- --rules-only --dataset gateway-evidence-test-v1
+npm run --silent eval:gateway-evidence -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b --dataset gateway-evidence-test-v1
 ```
 
 ## Read-only investigation suggestions: no positive increment

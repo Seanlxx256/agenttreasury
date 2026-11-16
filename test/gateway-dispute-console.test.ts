@@ -79,7 +79,7 @@ test('disputes reach the console and commitment violations reach the review queu
         options?.delivered ? JSON.stringify({ requestId, nonce, gatewayReference: 'ref-1', trace: { source: 'fixture' } }) : null,
         options?.commitmentViolated ? JSON.stringify(traceDeliveryCommitment) : null,
         options?.commitmentViolated ? false : null,
-        options?.commitmentViolated ? JSON.stringify(['trace.calls[0] errored: execution reverted']) : null]);
+        options?.commitmentViolated ? JSON.stringify(['trace.calls[0] type WRONG_TYPE != CALL']) : null]);
     if (options?.charged) {
       await pool.query(`
         INSERT INTO gateway_payment_journal (request_id, transfer_id, batch_hash, amount)

@@ -74,9 +74,9 @@ test('finance console exposes the commitment assessment', { timeout: 30_000 }, a
        budget_status, submitted_at, delivery, delivery_commitment, commitment_satisfied, commitment_violations)
     VALUES ($1, $2, $3, $4, $5, 1000, $6, '2026-01-01', 'spent', now(), $7, $8, false, $9)
   `, [requestId, `${origin}/trace/${requestId}`, nonce, payer, recipient, seeded.taskId,
-      JSON.stringify({ requestId, nonce, gatewayReference: 'ref-1', trace: { source: 'fixture', calls: [{ type: 'CALL', error: 'execution reverted' }] } }),
+      JSON.stringify({ requestId, nonce, gatewayReference: 'ref-1', trace: { source: 'fixture', calls: [{ type: 'WRONG_TYPE', status: 'success' }] } }),
       JSON.stringify(traceDeliveryCommitment),
-      JSON.stringify(['trace.calls[0] errored: execution reverted'])]);
+      JSON.stringify(['trace.calls[0] type WRONG_TYPE != CALL'])]);
   await pool.query(`
     INSERT INTO gateway_payment_journal (request_id, transfer_id, batch_hash, amount)
     VALUES ($1, $2, $3, 1000)
@@ -89,7 +89,7 @@ test('finance console exposes the commitment assessment', { timeout: 30_000 }, a
   assert.equal(response.statusCode, 200);
   const body = response.json();
   assert.equal(body.commitmentSatisfied, false);
-  assert.deepEqual(body.commitmentViolations, ['trace.calls[0] errored: execution reverted']);
+  assert.deepEqual(body.commitmentViolations, ['trace.calls[0] type WRONG_TYPE != CALL']);
 });
 
 test('delivery recovery verifies against the stored commitment, not a locally regenerated one', { timeout: 30_000 }, async (t) => {

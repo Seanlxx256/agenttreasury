@@ -179,12 +179,18 @@ export function registerFinanceConsole(
     return requestGatewayMerchantRecipientChange(pool, request.params.id, request.body.recipient, role);
   });
 
-  app.post<{ Params: { id: string } }>('/finance/merchants/:id/recipient-change/confirm', {
+  app.post<{ Params: { id: string }; Body: { version: number; expectedRecipient: string } }>('/finance/merchants/:id/recipient-change/confirm', {
     preHandler: async (request) => { authenticate(request); },
-    schema: { params: merchantParams },
+    schema: {
+      params: merchantParams,
+      body: { type: 'object', required: ['version', 'expectedRecipient'], additionalProperties: false,
+        properties: { version: { type: 'integer', minimum: 1 },
+          expectedRecipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' } } },
+    },
   }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
-    return confirmGatewayMerchantRecipientChange(pool, request.params.id);
+    return confirmGatewayMerchantRecipientChange(
+      pool, request.params.id, request.body.version, request.body.expectedRecipient);
   });
 
   for (const [path, file, type] of [

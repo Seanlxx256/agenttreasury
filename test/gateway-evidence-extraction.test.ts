@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { evaluateGatewayEvidence } from '../src/evaluate-gateway-evidence.js';
-import { extractEvidenceRules } from '../src/gateway-evidence-extraction.js';
+import { extractEvidenceRules, extractEvidenceWithModel } from '../src/gateway-evidence-extraction.js';
 
 test('unstructured evidence extraction leaves room for a model that rules cannot cover', async (t) => {
   await t.test('the keyword baseline catches direct phrasings', () => {
@@ -35,4 +35,15 @@ test('unstructured evidence extraction leaves room for a model that rules cannot
     assert.equal(result.byPhrasing.paraphrased.rules.recall, 0);
     assert.equal(result.byPhrasing.paraphrased.cases, 10);
   });
+});
+
+test('model signals are rejected without a verbatim source quote', async () => {
+  const text = 'the transfer was signed twice with the same identifier';
+  const run = (signals: unknown) => extractEvidenceWithModel(text, 'test-model', async () =>
+    Response.json({ message: { content: JSON.stringify({ signals }) } }));
+
+  assert.equal((await run([{ signal: 'nonce-reused', quote: 'signed twice with the same identifier' }])).status, 'ready');
+  assert.equal((await run([{ signal: 'nonce-reused', quote: 'this phrase is not in the text' }])).status, 'rejected');
+  assert.equal((await run([{ signal: 'nonce-reused' }])).status, 'rejected');
+  assert.equal((await run([{ signal: 'made-up-signal', quote: 'signed twice with the same identifier' }])).status, 'rejected');
 });

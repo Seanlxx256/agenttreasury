@@ -62,6 +62,7 @@ test('merchant payout address changes flow through the finance console', { timeo
   const seeded = await seedGateway(pool, { origin: 'http://127.0.0.1:3002', payer, recipient });
   const merchantId = seeded.merchantId;
   const next = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+  let pendingVersion = 0;
   const operations = { authorization: `Bearer ${operationsToken}` };
   const finance = { authorization: `Bearer ${financeToken}` };
 
@@ -75,12 +76,14 @@ test('merchant payout address changes flow through the finance console', { timeo
     assert.equal(body.recipient, recipient);
     assert.equal(body.pendingRecipient, next);
     assert.equal(body.pendingRecipientRequestedBy, 'operations');
+    assert.equal(body.pendingRecipientVersion, 1);
+    pendingVersion = body.pendingRecipientVersion;
   });
 
   await t.test('confirmation requires the finance role', async () => {
     const denied = await app.inject({
       method: 'POST', url: `/finance/merchants/${merchantId}/recipient-change/confirm`,
-      headers: operations,
+      headers: operations, payload: { version: pendingVersion, expectedRecipient: next },
     });
     assert.equal(denied.statusCode, 403);
     assert.equal(denied.json().code, 'FINANCE_ROLE_REQUIRED');
@@ -89,7 +92,7 @@ test('merchant payout address changes flow through the finance console', { timeo
   await t.test('finance confirmation moves the live recipient and clears the pending state', async () => {
     const response = await app.inject({
       method: 'POST', url: `/finance/merchants/${merchantId}/recipient-change/confirm`,
-      headers: finance,
+      headers: finance, payload: { version: pendingVersion, expectedRecipient: next },
     });
     assert.equal(response.statusCode, 200);
     const body = response.json();

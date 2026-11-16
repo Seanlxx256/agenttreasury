@@ -79,7 +79,7 @@ test('commitment violation flows through dispute, approval, refund and reconcili
   `, [requestId, `http://127.0.0.1:3002/trace/${requestId}`, nonce, payer, recipient, seeded.taskId,
       JSON.stringify({ requestId, nonce, gatewayReference: 'ref-1' }),
       JSON.stringify(traceDeliveryCommitment),
-      JSON.stringify(['trace.calls[0] errored: execution reverted'])]);
+      JSON.stringify(['trace.calls[0] type WRONG_TYPE != CALL'])]);
   await pool.query(`
     INSERT INTO gateway_payment_journal (request_id, transfer_id, batch_hash, amount)
     VALUES ($1, $2, $3, 1000)
@@ -90,7 +90,7 @@ test('commitment violation flows through dispute, approval, refund and reconcili
     { claim: 'delivery-content-mismatch' });
   assert.equal(raised.status, 'OPEN');
   assert.equal(raised.deliveryAssessment?.satisfied, false);
-  assert.deepEqual(raised.deliveryAssessment?.violations, ['trace.calls[0] errored: execution reverted']);
+  assert.deepEqual(raised.deliveryAssessment?.violations, ['trace.calls[0] type WRONG_TYPE != CALL']);
 
   // 2. A human arbitrates a refund.
   const decided = await decideGatewayDeliveryDispute(pool, requestId, 'REFUND');
