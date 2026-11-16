@@ -12,6 +12,9 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { gatewayBalanceScanMetrics, runGatewayBalanceScan } from '../src/gateway-balance-scanner.js';
 import { reconcileGatewayBalances } from '../src/reconcile-gateway-balances.js';
 import type { GatewayBalanceChain } from '../src/gateway-balance-chain.js';
+import { evidenceDigest, persistBalanceEvidence, replaySavedBalanceScan } from '../src/gateway-balance-evidence.js';
+import { gatewayNetworkConfig } from '../src/gateway-x402.js';
+import type { BalanceSnapshot } from '../src/reconcile-gateway-balances.js';
 import { migrate } from '../src/migrate.js';
 
 async function availablePort() {
@@ -285,5 +288,141 @@ test('continuous balance scan persists progress, raises work orders, and recover
     assert.equal(report.missingBatches.length, 0);
     assert.equal(report.batches.length, 1);
     assert.equal(report.batches[0]!.hash, batchA);
+    const outcome = await runGatewayBalanceScan(pool, chain, account);
+    assert.ok('scanId' in outcome);
+    await pool.query('UPDATE gateway_payment_journal SET amount=999 WHERE request_id=$1', [requestA]);
+    const replay = await replaySavedBalanceScan(pool, outcome.scanId);
+    assert.equal(replay.report.balance.journalDebits, '1000', 'replay uses the captured journal, not changed live rows');
+    assert.equal(replay.verified, true);
   });
+
+  const hash = (n: number) => `0x${n.toString(16).padStart(64, '0')}` as Hash;
+  const config = gatewayNetworkConfig('arcTestnet');
+  const eventChain = (amount = 7n) => fakeChain({
+    source: { kind: 'fixture', chainId: config.chainConfig.id },
+    async totalBalance(_wallet, block) { return block >= 50n ? amount : 0n; },
+    async movements() {
+      return { deposits: [{ hash: hash(900), logIndex: 0, amount, evidence: {
+        blockNumber: '50', blockHash: hash(50), address: config.domain.verifyingContract,
+        topics: [hash(901)], data: '0x' as Hash,
+      } }], withdrawals: [], burns: [], batches: [] };
+    },
+  });
+  const readInput = async (id: string): Promise<BalanceSnapshot> =>
+    (await pool.query('SELECT snapshot FROM gateway_balance_evidence WHERE scan_id=$1', [id])).rows[0].snapshot;
+
+  await t.test('saves source logs and replays without RPC, Gateway or current purchase reads', async () => {
+    const account = payer();
+    const result = await runGatewayBalanceScan(pool, eventChain(), account);
+    assert.ok('scanId' in result);
+    const saved = await readInput(result.scanId);
+    assert.equal(saved.source?.kind, 'fixture');
+    assert.equal(saved.movements.deposits[0]?.evidence?.blockHash, hash(50));
+    const oldFetch = globalThis.fetch;
+    globalThis.fetch = async () => { throw new Error('Network forbidden during replay'); };
+    try {
+      const replay = await replaySavedBalanceScan(pool, result.scanId);
+      assert.equal(replay.verified, true);
+      assert.equal(replay.report.balance.closing, '7');
+      assert.equal(replay.report.status, 'MATCHED');
+    } finally { globalThis.fetch = oldFetch; }
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await persistBalanceEvidence(client, result.scanId, saved);
+      await persistBalanceEvidence(client, result.scanId, saved);
+      await client.query('COMMIT');
+    } finally { client.release(); }
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM gateway_balance_events WHERE payer=$1',
+      [account.toLowerCase()])).rows[0].n, 1);
+    await assert.rejects(pool.query('UPDATE gateway_balance_evidence SET digest=$2 WHERE scan_id=$1',
+      [result.scanId, 'modified']), /append-only/);
+    await assert.rejects(pool.query('DELETE FROM gateway_balance_events WHERE payer=$1',
+      [account.toLowerCase()]), /append-only/);
+  });
+
+  await t.test('conflicting event rolls back result, evidence, cases and cursor, then retries', async () => {
+    const account = payer();
+    const row = (await eventChain().movements(account, 1n, 100n)).deposits[0]!;
+    const payload = { kind: 'deposits', ...row, amount: '7' };
+    await pool.query(`INSERT INTO gateway_balance_events(network,payer,transaction_hash,log_index,payload,digest)
+      VALUES('arcTestnet',$1,$2,0,$3,$4)`, [account.toLowerCase(), row.hash, JSON.stringify(payload), evidenceDigest(payload)]);
+    await assert.rejects(runGatewayBalanceScan(pool, eventChain(8n), account), /Conflicting chain event/);
+    const { rows: [failed] } = await pool.query('SELECT id,status,result FROM gateway_balance_scans WHERE payer=$1', [account.toLowerCase()]);
+    assert.equal(failed.status, 'failed');
+    assert.equal(failed.result, null);
+    for (const table of ['gateway_balance_evidence', 'gateway_balance_discrepancies']) {
+      assert.equal((await pool.query(`SELECT count(*)::int AS n FROM ${table} WHERE scan_id=$1`, [failed.id])).rows[0].n, 0);
+    }
+    assert.equal((await pool.query('SELECT * FROM gateway_balance_cursors WHERE payer=$1', [account.toLowerCase()])).rowCount, 0);
+    const recovered = await runGatewayBalanceScan(pool, eventChain(), account);
+    assert.equal(recovered.status, 'matched');
+    assert.ok('scanId' in recovered);
+    assert.equal(recovered.scanId, failed.id);
+    assert.equal((await replaySavedBalanceScan(pool, recovered.scanId)).verified, true);
+  });
+
+  await t.test('a disconnected evidence transaction rolls back and an expired lease recovers', async () => {
+    const account = payer();
+    let snapshot: BalanceSnapshot | undefined;
+    await reconcileGatewayBalances(pool, eventChain(), account, 1n, 100n, fetch, (input) => { snapshot = input; });
+    assert.ok(snapshot);
+    const scanId = randomUUID();
+    await pool.query(`INSERT INTO gateway_balance_scans(id,network,payer,from_block,to_block,status,lease_until)
+      VALUES($1,'arcTestnet',$2,1,100,'running',now()-interval '1 minute')`, [scanId, account.toLowerCase()]);
+    const client = await pool.connect();
+    await client.query('BEGIN');
+    await persistBalanceEvidence(client, scanId, snapshot);
+    client.release(true); // Drop the connection without COMMIT, as in process loss.
+    assert.equal((await pool.query('SELECT * FROM gateway_balance_evidence WHERE scan_id=$1', [scanId])).rowCount, 0);
+    const recovered = await runGatewayBalanceScan(pool, eventChain(), account);
+    assert.equal(recovered.status, 'matched');
+    assert.equal((await replaySavedBalanceScan(pool, scanId)).verified, true);
+  });
+
+  await t.test('rejects canonical-header and previously stored finalized-hash conflicts', async () => {
+    const account = payer();
+    await assert.rejects(runGatewayBalanceScan(pool, { ...eventChain(),
+      blockHash: async (n) => n === 50n ? hash(999) : hash(Number(n)),
+    }, account), /not canonical/);
+    await assert.rejects(runGatewayBalanceScan(pool, fakeChain({ blockHash: async () => hash(999) }), payer()),
+      /Conflicting finalized block/);
+  });
+
+  await t.test('stale attempts cannot persist evidence or advance the cursor', async () => {
+    const account = payer();
+    const chain = eventChain();
+    const moves = chain.movements;
+    chain.movements = async (...args) => {
+      await pool.query('UPDATE gateway_balance_scans SET attempts=attempts+1 WHERE payer=$1', [account.toLowerCase()]);
+      return moves(...args);
+    };
+    await assert.rejects(runGatewayBalanceScan(pool, chain, account), /reclaimed/);
+    const { rows: [scan] } = await pool.query('SELECT id,status FROM gateway_balance_scans WHERE payer=$1', [account.toLowerCase()]);
+    assert.equal(scan.status, 'running');
+    assert.equal((await pool.query('SELECT * FROM gateway_balance_evidence WHERE scan_id=$1', [scan.id])).rowCount, 0);
+    assert.equal((await pool.query('SELECT * FROM gateway_balance_cursors WHERE payer=$1', [account.toLowerCase()])).rowCount, 0);
+  });
+
+  await t.test('rejects missing source logs and mainnet ingestion, without advancing', async () => {
+    const chain = eventChain();
+    chain.movements = async () => ({ deposits: [{ hash: hash(900), logIndex: 0, amount: 7n }],
+      withdrawals: [], burns: [], batches: [] });
+    await assert.rejects(runGatewayBalanceScan(pool, chain, payer()), /Missing chain log provenance/);
+    await assert.rejects(runGatewayBalanceScan(pool, fakeChain({ network: 'arc' }), payer()), /testnet-only/);
+  });
+
+  await t.test('unknown/legacy evidence and tampered saved reports cannot pass replay', async () => {
+    await assert.rejects(replaySavedBalanceScan(pool, randomUUID()), /no replay evidence/);
+    const result = await runGatewayBalanceScan(pool, fakeChain(), payer());
+    assert.ok('scanId' in result);
+    assert.equal((await replaySavedBalanceScan(pool, result.scanId)).source, null);
+    await pool.query(`UPDATE gateway_balance_scans SET result=jsonb_set(result,'{balance,closing}','"123"') WHERE id=$1`, [result.scanId]);
+    await assert.rejects(replaySavedBalanceScan(pool, result.scanId), /differs from saved/);
+    // Test the read boundary against corrupted storage without disabling DB guards.
+    const snapshot = await readInput(result.scanId);
+    const corruptedReader = { query: async () => ({ rows: [{ snapshot, digest: 'incorrect', result: {} }] }) } as unknown as Pool;
+    await assert.rejects(replaySavedBalanceScan(corruptedReader, result.scanId), /digest mismatch/);
+  });
+
 });

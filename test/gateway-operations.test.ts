@@ -10,6 +10,9 @@ import { Pool } from 'pg';
 import { buildApp, tokenDigest } from '../src/app.js';
 import { transaction } from '../src/db.js';
 import { gatewayOperationsMetrics, recordGatewayCase, recordWorkerHeartbeat, transitionGatewayCase } from '../src/gateway-cases.js';
+import { runGatewayBalanceScan } from '../src/gateway-balance-scanner.js';
+import { replaySavedBalanceScan } from '../src/gateway-balance-evidence.js';
+import type { Hash } from 'viem';
 import { migrate } from '../src/migrate.js';
 
 async function port() {
@@ -180,7 +183,14 @@ test('operations lifecycle, upgrade, restart and cold-backup restore drill', { t
     await pool.query(`INSERT INTO gateway_payment_journal(request_id,transfer_id,batch_hash,amount) VALUES($1,'offline-transfer',$2,2000)`,[purchase,`0x${'3'.repeat(64)}`]);
     await pool.query(`INSERT INTO gateway_demo_purchases(request_id,endpoint,nonce,payer,recipient,amount_units,task_id,budget_day,budget_status,submitted_at)
       VALUES($1,'https://offline.example/trace',$2,$3,$3,1000,$4,current_date,'reserved',now())`,[randomUUID(),`0x${'4'.repeat(64)}`,payer,task]);
-    const tables = ['schema_migrations','research_tasks','daily_spend','gateway_demo_purchases','gateway_payment_journal',
+    const replayable = await runGatewayBalanceScan(pool, {
+      network: 'arcTestnet', finalized: async () => 100n,
+      blockHash: async (height) => `0x${height.toString(16).padStart(64, '0')}` as Hash,
+      totalBalance: async () => 0n, receiptBlock: async () => null,
+      movements: async () => ({ deposits: [], withdrawals: [], burns: [], batches: [] }),
+    }, `0x${'8'.repeat(40)}`);
+    assert.ok('scanId' in replayable);
+    const tables = ['gateway_balance_events','gateway_balance_blocks','gateway_balance_evidence','schema_migrations','research_tasks','daily_spend','gateway_demo_purchases','gateway_payment_journal',
       'gateway_balance_cursors','gateway_balance_scans','gateway_balance_discrepancies','gateway_reconciliation_cases','gateway_case_events','gateway_worker_health','audit_history'];
     async function snapshot(db: Pool) {
       const result: Record<string, unknown> = {};
@@ -199,6 +209,7 @@ test('operations lifecycle, upgrade, restart and cold-backup restore drill', { t
     restoredPool = new Pool({ ...config,port:restoredPort });
     assert.deepEqual(await snapshot(restoredPool),expected);
     await migrate(restoredPool);
+    assert.equal((await replaySavedBalanceScan(restoredPool, replayable.scanId)).verified, true);
     const row=(await restoredPool.query('SELECT * FROM gateway_reconciliation_cases WHERE id=$1',[id])).rows[0];
     await transitionGatewayCase(restoredPool,id,{ expectedVersion:row.version,status:'investigating',
       evidenceId:row.latest_discrepancy_id,note:'Verified restored evidence.' },'operations');

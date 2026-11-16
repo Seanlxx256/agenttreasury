@@ -1,3 +1,5 @@
+import { persistBalanceEvidence } from './gateway-balance-evidence.js';
+import type { BalanceSnapshot } from './reconcile-gateway-balances.js';
 import { recordGatewayCase } from './gateway-cases.js';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
@@ -27,6 +29,7 @@ type Claim =
 export async function runGatewayBalanceScan(
   pool: Pool, chain: GatewayBalanceChain, payer: Address, request: typeof fetch = fetch,
 ): Promise<GatewayBalanceScanOutcome> {
+  if (chain.network !== 'arcTestnet') throw new Error('Balance scan ingestion is testnet-only');
   const wallet = payer.toLowerCase() as Address;
   const network = chain.network;
   const finalized = await chain.finalized();
@@ -45,16 +48,19 @@ export async function runGatewayBalanceScan(
   const fromBlock = BigInt(window.from);
   const toBlock = BigInt(window.to);
 
+  let snapshot: BalanceSnapshot | undefined;
+  let discrepancies: number;
   let report: Awaited<ReturnType<typeof reconcileGatewayBalances>>;
   try {
-    report = await reconcileGatewayBalances(pool, chain, payer, fromBlock, toBlock, request);
+    report = await reconcileGatewayBalances(pool, chain, payer, fromBlock, toBlock, request, (input) => { snapshot = input; });
+    if (!snapshot) throw new Error('Missing balance scan inputs');
+    discrepancies = await persistScanResult(pool, scanId, attempts, report, network, wallet, toBlock, snapshot);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await markScanFailed(pool, scanId, attempts, message);
     throw error;
   }
 
-  const discrepancies = await persistScanResult(pool, scanId, attempts, report, network, wallet, toBlock);
   return {
     status: report.status === 'MATCHED' ? 'matched' : 'discrepancy',
     scanId, network, payer: wallet, window, discrepancies,
@@ -176,7 +182,7 @@ async function markScanFailed(pool: Pool, scanId: string, attempts: number, mess
 
 async function persistScanResult(
   pool: Pool, scanId: string, attempts: number, report: Awaited<ReturnType<typeof reconcileGatewayBalances>>,
-  network: string, payer: Address, toBlock: bigint,
+  network: string, payer: Address, toBlock: bigint, snapshot: BalanceSnapshot,
 ) {
   const discrepancies: Array<{ kind: string; detail: unknown }> = [];
   if (report.balance.chainDifference !== '0' || report.balance.journalDifference !== '0') {
@@ -211,6 +217,7 @@ async function persistScanResult(
       await client.query('ROLLBACK');
       throw new Error('Balance scan was reclaimed before its result could be persisted');
     }
+    await persistBalanceEvidence(client, scanId, snapshot);
     for (const { kind, detail } of discrepancies) {
       await recordGatewayCase(client, scanId, kind, detail);
     }
