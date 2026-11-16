@@ -333,6 +333,19 @@ npm run eval:gateway-investigation -- --model qwen2.5:7b
 
 The rule mapping reaches recall 1.00 / precision 1.00; the models stay at 0.59 recall even at 7b. The suggestions stay read-only and auditable with the exact rule mapping as the default. See the [evaluation report](docs/gateway-triage-evaluation.md).
 
+### Evaluate cross-case pattern recognition
+
+Recognize a systemic problem across several failures from one supplier or network, comparing shared-signal counting with a local model that reads the texts together.
+
+```sh
+npm run build
+npm run eval:gateway-patterns -- --rules-only
+npm run eval:gateway-patterns -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+npm run eval:gateway-patterns -- --model qwen2.5:7b
+```
+
+Shared-signal counting scores 0.67; the small models 0.83; qwen2.5:7b reads all six batches correctly (1.00). See the [evaluation report](docs/gateway-triage-evaluation.md).
+
 ### Send a testnet refund from the console
 
 Build, apply migration 010 and restart the API. Start the refund worker against the same database with DATABASE_URL, BASE_SEPOLIA_RPC_URL, MERCHANT_TEST_KEY and PAYMENT_RELAYER_KEY configured. The API and browser do not need wallet keys for this action.

@@ -274,3 +274,28 @@ npm run --silent eval:gateway-investigation -- --models qwen2.5:0.5b,qwen2.5:1.5
 npm run --silent eval:gateway-investigation -- --model qwen2.5:7b
 ```
 
+## Cross-case pattern recognition: a second positive increment
+
+The third candidate increment — recognize a systemic problem across several failures from one supplier or network — is built and measured. The module reduces a small batch of failure reasons to one of six systemic patterns (`supplier-nonce-bug`, `wallet-funding-gap`, `rpc-outage`, `recipient-config-error`, `signature-tooling-bug`, `no-systemic-pattern`). The rule baseline extracts each case's keyword signal and reports a pattern when at least two cases share one; the model reads the texts together.
+
+`gateway-patterns-v1` has six batches of three failures: three direct phrasings, two paraphrases that mean the same systemic cause without the keyword, and one mixed batch with no shared cause. Measured on 2026-11-16 on an Apple Silicon Mac with Ollama, temperature zero:
+
+| Method | Accuracy |
+| --- | ---: |
+| Rules (shared-signal counting) | 0.67 |
+| `qwen2.5:0.5b` | 0.83 |
+| `qwen2.5:1.5b` | 0.83 |
+| `qwen2.5:3b` | 0.83 |
+| `qwen2.5:7b` | 1.00 |
+
+This is the second positive increment, and it lands exactly where the framework predicted. Cross-case pattern recognition is a *semantic* task — the paraphrased batches mean "nonce reuse" or "wallet empty" without the keyword — so the rule counting misses both (0.67), and the models recover them. `qwen2.5:7b` reads all six batches correctly, including the mixed batch it must label `no-systemic-pattern`. The small models reach 0.83 and their single miss is over-claiming a pattern on the mixed batch, the same false-positive cost seen in extraction.
+
+The three increments now settle into a clear rule of thumb: **the model adds value on semantic tasks (extract a signal from free text, cluster paraphrases across cases) and no value on structured mappings (choose the next check from facts)**. `7b` is the only local model that scores perfectly on both positive tasks, at the cost of being the slowest and largest. A unit test locks the shared-signal baseline, the 4/6 rules score, and the pattern validation.
+
+```sh
+npm run build
+npm run --silent eval:gateway-patterns -- --rules-only
+npm run --silent eval:gateway-patterns -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
+npm run --silent eval:gateway-patterns -- --model qwen2.5:7b
+```
+

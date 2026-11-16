@@ -92,7 +92,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 87/87.
+- `npm test` passes 90/90.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
@@ -113,6 +113,12 @@ actually ran the thing:
   at 0.59 recall even at 7b, because "what to check next" is a structured mapping the rules
   can encode exactly, not a semantic task a local model generalizes on. The read-only,
   auditable suggestion capability is kept with the exact rule mapping as the default.
+- The third candidate increment — cross-case pattern recognition — is a second positive
+  result. On `gateway-patterns-v1` (six batches, two paraphrased), shared-signal counting
+  scores 0.67, the small models 0.83, and qwen2.5:7b reads all six correctly (1.00). The
+  rule of thumb the three increments establish: the model adds value on semantic tasks
+  (extract signals, cluster paraphrases) and none on structured mappings (choose the next
+  check).
 
 ## Not done (and why)
 

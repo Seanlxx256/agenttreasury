@@ -22,6 +22,7 @@
     "eval:gateway": "node dist/src/evaluate-gateway-triage.js",
     "eval:gateway-evidence": "node dist/src/evaluate-gateway-evidence.js",
     "eval:gateway-investigation": "node dist/src/evaluate-gateway-investigation.js",
+    "eval:gateway-patterns": "node dist/src/evaluate-gateway-patterns.js",
     "study:gateway": "npm run --silent build && node dist/src/study-gateway-triage.js",
     "worker:gateway": "node dist/src/settle-gateway.js",
     "merchant:gateway": "node dist/src/gateway-merchant-server.js",
