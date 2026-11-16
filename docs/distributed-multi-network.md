@@ -63,7 +63,36 @@ single deployment can therefore settle for several merchants, each pinned to
 its own network and payout address, and reconciliation is naturally partitioned
 by merchant.
 
-## 4. Where the boundary still is
+## 4. Continuous balance scanning with a persisted cursor
+
+Balance reconciliation was a one-shot CLI (`reconcile-gateway-balances.ts`)
+that printed a JSON report and exited: no memory of what it had scanned, no
+automatic work order for a discrepancy, and no recovery if the process died
+mid-scan. `gateway-balance-scanner.ts` + `db/028_balance_scan.sql` make the same
+reconciliation a repeatable, recoverable, auditable pass:
+
+- **A persisted cursor** (`gateway_balance_cursors`, keyed on `(network, payer)`)
+  records the next block to scan. Each run advances it only after the window's
+  result is durably written, so a crash never skips or double-counts a block.
+- **A leased, unique scan record** (`gateway_balance_scans`, unique on
+  `(network, payer, from_block, to_block)`) makes a window idempotent: re-running
+  the same window returns the existing result instead of reconciling again. A
+  `running` row whose lease expired is claimed again, which is the crash-recovery
+  path.
+- **Work orders** (`gateway_balance_discrepancies`) are raised automatically for
+  each class of difference the report can produce — balance, batch, missing
+  batch, unresolved authorization — with `open` / `acknowledged` / `resolved`
+  state and a unique `(scan_id, kind, detail)` key so re-scans do not duplicate
+  them.
+- **Metrics** (`gatewayBalanceScanMetrics`) expose the latest scan window and
+  the open work orders by kind, which is the alerting surface a scheduler can
+  poll.
+
+The recovery drill is a test, not a story: a `running` scan row whose lease is
+in the past is re-claimed and completed, and re-running an already-scanned
+window adds no duplicate work orders.
+
+## 5. Where the boundary still is
 
 This work closes the single-merchant/single-network gap and makes the existing
 concurrency primitives explicit. It does **not** yet provide:

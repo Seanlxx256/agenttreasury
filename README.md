@@ -170,6 +170,8 @@ The report pins both boundary block hashes and reads the Gateway contract's tota
 
 `currentAuthorizations` lists current Gateway evidence for unposted submissions and totals known pending authorizations. These are live lookups, separate from the historical balances. A missing transfer, conflicting evidence, unavailable lookup, or charged transfer awaiting a journal entry is listed for review. Amounts use integer USDC base units. Exit code 0 means the historical window matched, 2 signals a historical discrepancy, and 1 indicates an execution error.
 
+To reconcile continuously instead of one window at a time, run `npm run scan:gateway-balances -- "$PAYER"`. It reads and advances a persisted per-network cursor, writes each window's result and any open work orders to the database, and reports the latest window plus open discrepancies by kind. A crashed scan is re-claimed after its lease expires, and re-running an already-scanned window is idempotent.
+
 The live window above matched two batches of 0.001 test USDC each. The Gateway total moved from 0.500 to 0.498 test USDC with zero difference in both calculations.
 
 See [Circle Agent Stack](https://www.circle.com/agent-stack), [Agent Nanopayments](https://developers.circle.com/agent-stack/agent-nanopayments), [Circle Agent Stack overview](https://help.circle.com/support/en/circle-agent-stack-overview?id=kb_article_view&sysparm_article=KB0011122), and [Gateway seller reconciliation](https://developers.circle.com/gateway-nanopayments/howtos/x402-seller-reconciliation).
