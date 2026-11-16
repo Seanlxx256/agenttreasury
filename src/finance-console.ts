@@ -47,6 +47,8 @@ export function registerFinanceConsole(
       commitmentSatisfied: boolean | null; commitmentViolations: string[] | null;
       refundStatus: string | null; refundReason: string | null; refundDecidedAt: Date | null;
       refundHash: string | null;
+      disputeStatus: string | null; disputeRaisedAt: Date | null;
+      grantRecipient: string | null; merchantRecipient: string | null;
     }>(`
       SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits", p.network,
              p.task_id AS "taskId", p.budget_status AS "budgetStatus",
@@ -57,6 +59,8 @@ export function registerFinanceConsole(
              p.commitment_violations AS "commitmentViolations",
              q.status AS "refundStatus", q.reason AS "refundReason", q.decided_at AS "refundDecidedAt",
              r.transaction_hash AS "refundHash",
+             ds.status AS "disputeStatus", ds.raised_at AS "disputeRaisedAt",
+             g.recipient AS "grantRecipient", m.recipient AS "merchantRecipient",
              CASE WHEN j.request_id IS NOT NULL THEN jsonb_build_object(
                'transferId', j.transfer_id, 'batchHash', j.batch_hash, 'postedAt', j.posted_at,
                'lines', (SELECT jsonb_agg(jsonb_build_object('account', l.account, 'side', l.side,
@@ -68,6 +72,9 @@ export function registerFinanceConsole(
       LEFT JOIN gateway_payment_journal j ON j.request_id = p.request_id
       LEFT JOIN gateway_refund_requests q ON q.request_id = p.request_id
       LEFT JOIN gateway_payment_refunds r ON r.request_id = p.request_id
+      LEFT JOIN gateway_delivery_disputes ds ON ds.request_id = p.request_id
+      LEFT JOIN gateway_task_grants g ON g.task_id = p.task_id
+      LEFT JOIN gateway_merchants m ON m.id = g.merchant_id
       WHERE p.request_id = $1
     `, [id]);
     if (!purchase) throw new PaymentError(404, 'GATEWAY_PURCHASE_NOT_FOUND');
@@ -98,6 +105,14 @@ export function registerFinanceConsole(
           WHERE request_id = p.request_id AND evidence->>'status' IN ('charged', 'failed', 'conflict')
           ORDER BY id DESC LIMIT 1
         ) latest ON true
+        WHERE NOT EXISTS (
+          SELECT 1 FROM gateway_delivery_disputes d
+          WHERE d.request_id = p.request_id AND d.status IN ('DISMISSED', 'REFUNDED')
+        )
+        AND NOT EXISTS (SELECT 1 FROM gateway_payment_refunds r WHERE r.request_id = p.request_id)
+        AND NOT EXISTS (
+          SELECT 1 FROM gateway_refund_requests q WHERE q.request_id = p.request_id AND q.status = 'REFUNDED'
+        )
       )
       SELECT id, "amountUnits", "issuedAt", reason FROM cases WHERE reason IS NOT NULL
       ORDER BY CASE reason
@@ -173,7 +188,9 @@ export function registerFinanceConsole(
     reply.header('Cache-Control', 'no-store');
     // Cross-case pattern recognition reads the failure reasons the payment path
     // already recorded; it is read-only and defaults to the deterministic rules.
-    return collectGatewayPatterns(pool, process.env.GATEWAY_PATTERN_MODEL, fetch);
+    // A 30-day window keeps long-stale history out of the current pattern.
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    return collectGatewayPatterns(pool, process.env.GATEWAY_PATTERN_MODEL, fetch, since);
   });
 
   app.post<{ Params: { id: string }; Body: { recipient: string } }>('/finance/merchants/:id/recipient-change', {

@@ -45,7 +45,7 @@ export function verifyDeliveryCommitment(
   }
   const promised = commitment.trace.calls[0];
   calls.forEach((call, index) => {
-    const observed = call as { type?: string; error?: string; status?: string } | null | undefined;
+    const observed = call as { type?: unknown; error?: unknown; status?: unknown } | null | undefined;
     if (!observed || typeof observed !== 'object') {
       violations.push(`trace.calls[${index}] is not an object`);
       return;
@@ -53,17 +53,34 @@ export function verifyDeliveryCommitment(
     if (promised?.type && observed.type !== promised.type) {
       violations.push(`trace.calls[${index}] type ${observed.type ?? 'missing'} != ${promised.type}`);
     }
-    // A call must report a terminal result. `error` is a valid diagnosis of a
-    // reverted target transaction, not a delivery failure, so it satisfies the
-    // result requirement; a call with neither status nor error has not completed.
-    if (observed.status === undefined && observed.error === undefined) {
+    const hasStatus = observed.status !== undefined;
+    const hasError = observed.error !== undefined;
+    // `status` must name a terminal outcome; pending / null / any other value is
+    // not a terminal result and fails the runtime schema.
+    if (hasStatus && observed.status !== 'success' && observed.status !== 'reverted') {
+      violations.push(`trace.calls[${index}] status is not a terminal outcome`);
+      return;
+    }
+    // `error` must be a non-empty diagnosis of a reverted target transaction; an
+    // empty string is not evidence of anything.
+    if (hasError && (typeof observed.error !== 'string' || observed.error.trim() === '')) {
+      violations.push(`trace.calls[${index}] error must be a non-empty string`);
+      return;
+    }
+    // A call reports exactly one terminal result: a status OR an error, never
+    // both (a call cannot be both successful and reverted).
+    if (hasStatus && hasError) {
+      violations.push(`trace.calls[${index}] reports both status and error`);
+      return;
+    }
+    if (!hasStatus && !hasError) {
       violations.push(`trace.calls[${index}] has no terminal result`);
       return;
     }
     // A pinned status is the only place the target transaction's outcome becomes
     // a requirement: an errored call is treated as status 'reverted'.
     if (promised?.status) {
-      const effectiveStatus = observed.status ?? 'reverted';
+      const effectiveStatus = hasStatus ? observed.status : 'reverted';
       if (effectiveStatus !== promised.status) {
         violations.push(`trace.calls[${index}] status ${effectiveStatus} != ${promised.status}`);
       }

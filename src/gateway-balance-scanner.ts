@@ -18,9 +18,10 @@ export type GatewayBalanceScanOutcome =
       discrepancies: number };
 
 type Claim =
-  | { status: 'claimed'; scanId: string; attempts: number }
+  | { status: 'claimed'; scanId: string; attempts: number; window: { from: string; to: string } }
   | { status: 'already-running'; scanId: string; window: { from: string; to: string } }
-  | { status: 'already-scanned'; scanId: string; window: { from: string; to: string } };
+  | { status: 'already-scanned'; scanId: string; window: { from: string; to: string } }
+  | { status: 'up-to-date'; nextBlock: string };
 
 export async function runGatewayBalanceScan(
   pool: Pool, chain: GatewayBalanceChain, payer: Address, request: typeof fetch = fetch,
@@ -29,23 +30,16 @@ export async function runGatewayBalanceScan(
   const network = chain.network;
   const finalized = await chain.finalized();
 
-  const { rows: [cursorRow] } = await pool.query<{ next_block: string }>(
-    'SELECT next_block::text FROM gateway_balance_cursors WHERE network = $1 AND payer = $2',
-    [network, wallet],
-  );
-  let fromBlock = cursorRow ? BigInt(cursorRow.next_block) : (finalized - windowSize + 1n > 1n ? finalized - windowSize + 1n : 1n);
-  if (fromBlock < 1n) fromBlock = 1n;
-  if (fromBlock > finalized) {
-    return { status: 'up-to-date', network, payer: wallet, nextBlock: String(fromBlock), finalized: String(finalized) };
-  }
-  const toBlock = finalized < fromBlock + windowSize - 1n ? finalized : fromBlock + windowSize - 1n;
-  const window = { from: String(fromBlock), to: String(toBlock) };
-
-  const claim = await claimScan(pool, network, wallet, fromBlock, toBlock, leaseSeconds);
+  const claim = await claimScan(pool, network, wallet, finalized, leaseSeconds);
   if (claim.status === 'already-running' || claim.status === 'already-scanned') {
     return { status: claim.status, scanId: claim.scanId, network, payer: wallet, window: claim.window };
   }
-  const { scanId, attempts } = claim;
+  if (claim.status === 'up-to-date') {
+    return { status: 'up-to-date', network, payer: wallet, nextBlock: claim.nextBlock, finalized: String(finalized) };
+  }
+  const { scanId, attempts, window } = claim;
+  const fromBlock = BigInt(window.from);
+  const toBlock = BigInt(window.to);
 
   let report: Awaited<ReturnType<typeof reconcileGatewayBalances>>;
   try {
@@ -56,20 +50,32 @@ export async function runGatewayBalanceScan(
     throw error;
   }
 
-  const discrepancies = await persistScanResult(pool, scanId, attempts, report, network, wallet);
+  const discrepancies = await persistScanResult(pool, scanId, attempts, report, network, wallet, toBlock);
   return {
     status: report.status === 'MATCHED' ? 'matched' : 'discrepancy',
     scanId, network, payer: wallet, window, discrepancies,
   };
 }
 
-// Claim the (network, payer) execution right inside a transaction serialized by
-// an advisory lock keyed on (network, payer). The lock makes the active-window
-// check and the insert/claim atomic, so two processes cannot start overlapping
-// windows for the same wallet even when the finalized height changes the window
-// bounds between runs.
+// Claim the (network, payer) execution right and decide the scan window inside a
+// transaction serialized by an advisory lock keyed on (network, payer). Reading
+// the cursor and the unfinished-window state under the same lock is what makes
+// the decision correct across processes:
+//
+// - an active running scan with a live lease always wins;
+// - otherwise the OLDEST unfinished window (failed, or running with an expired
+//   lease) is recovered first, so a failed first scan is resumed at its original
+//   start instead of recomputing a fresh window from the latest finalized height
+//   and silently skipping the failed window's head;
+// - only when no unfinished window exists is a new window derived from the
+//   cursor (or the tail of the chain on the very first run).
+//
+// Recovering a window bumps its `attempts`, which is the wallet-scoped execution
+// token: a stale runner holding the previous `attempts` value can no longer mark
+// the scan failed or persist a result. Combined with the monotonic cursor
+// advance below, an old process can never rewind a cursor a newer process moved.
 async function claimScan(
-  pool: Pool, network: string, payer: Address, fromBlock: bigint, toBlock: bigint, leaseSeconds: number,
+  pool: Pool, network: string, payer: Address, finalized: bigint, leaseSeconds: number,
 ): Promise<Claim> {
   const client = await pool.connect();
   try {
@@ -88,47 +94,64 @@ async function claimScan(
         window: { from: active.from_block, to: active.to_block } };
     }
 
-    const { rows } = await client.query<{ id: string; status: string }>(`
-      SELECT id, status FROM gateway_balance_scans
-      WHERE network = $1 AND payer = $2 AND from_block = $3 AND to_block = $4
-    `, [network, payer, fromBlock, toBlock]);
-    const existing = rows[0];
+    const { rows: [unfinished] } = await client.query<{ id: string; from_block: string; to_block: string }>(`
+      SELECT id, from_block::text AS from_block, to_block::text AS to_block
+      FROM gateway_balance_scans
+      WHERE network = $1 AND payer = $2
+        AND (status = 'failed' OR (status = 'running' AND lease_until <= now()))
+      ORDER BY from_block ASC LIMIT 1
+    `, [network, payer]);
 
-    let scanId: string;
-    let attempts: number;
-    if (!existing) {
-      scanId = randomUUID();
-      attempts = 0;
-      await client.query(`
-        INSERT INTO gateway_balance_scans (id, network, payer, from_block, to_block, status, lease_until)
-        VALUES ($1, $2, $3, $4, $5, 'running', now() + $6 * interval '1 second')
-      `, [scanId, network, payer, fromBlock, toBlock, leaseSeconds]);
-    } else if (existing.status === 'failed' || existing.status === 'running') {
-      // A failed scan is retryable; a running scan is reclaimable only after its
-      // lease expired. The UPDATE ... RETURNING decides the single winner, so a
-      // losing process never proceeds.
+    if (unfinished) {
       const { rows: [claimed] } = await client.query<{ id: string; attempts: number }>(`
         UPDATE gateway_balance_scans
         SET attempts = attempts + 1, status = 'running', error = NULL,
             lease_until = now() + $2 * interval '1 second', started_at = now()
         WHERE id = $1 AND (status = 'failed' OR (status = 'running' AND lease_until <= now()))
         RETURNING id, attempts
-      `, [existing.id, leaseSeconds]);
+      `, [unfinished.id, leaseSeconds]);
       if (!claimed) {
         await client.query('COMMIT');
-        return { status: 'already-running', scanId: existing.id,
-          window: { from: String(fromBlock), to: String(toBlock) } };
+        return { status: 'already-running', scanId: unfinished.id,
+          window: { from: unfinished.from_block, to: unfinished.to_block } };
       }
-      scanId = claimed.id;
-      attempts = claimed.attempts;
-    } else {
+      await client.query('COMMIT');
+      return { status: 'claimed', scanId: claimed.id, attempts: claimed.attempts,
+        window: { from: unfinished.from_block, to: unfinished.to_block } };
+    }
+
+    // No unfinished window: derive the next window from the cursor under the lock.
+    const { rows: [cursorRow] } = await client.query<{ next_block: string }>(
+      'SELECT next_block::text FROM gateway_balance_cursors WHERE network = $1 AND payer = $2',
+      [network, payer],
+    );
+    let fromBlock = cursorRow ? BigInt(cursorRow.next_block)
+      : (finalized - windowSize + 1n > 1n ? finalized - windowSize + 1n : 1n);
+    if (fromBlock < 1n) fromBlock = 1n;
+    if (fromBlock > finalized) {
+      await client.query('COMMIT');
+      return { status: 'up-to-date', nextBlock: String(fromBlock) };
+    }
+    const toBlock = finalized < fromBlock + windowSize - 1n ? finalized : fromBlock + windowSize - 1n;
+
+    const { rows: [existing] } = await client.query<{ id: string; status: string }>(`
+      SELECT id, status FROM gateway_balance_scans
+      WHERE network = $1 AND payer = $2 AND from_block = $3 AND to_block = $4
+    `, [network, payer, fromBlock, toBlock]);
+    if (existing && (existing.status === 'matched' || existing.status === 'discrepancy')) {
       await client.query('COMMIT');
       return { status: 'already-scanned', scanId: existing.id,
         window: { from: String(fromBlock), to: String(toBlock) } };
     }
 
+    const scanId = randomUUID();
+    await client.query(`
+      INSERT INTO gateway_balance_scans (id, network, payer, from_block, to_block, status, lease_until)
+      VALUES ($1, $2, $3, $4, $5, 'running', now() + $6 * interval '1 second')
+    `, [scanId, network, payer, fromBlock, toBlock, leaseSeconds]);
     await client.query('COMMIT');
-    return { status: 'claimed', scanId, attempts };
+    return { status: 'claimed', scanId, attempts: 0,
+      window: { from: String(fromBlock), to: String(toBlock) } };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -149,7 +172,7 @@ async function markScanFailed(pool: Pool, scanId: string, attempts: number, mess
 
 async function persistScanResult(
   pool: Pool, scanId: string, attempts: number, report: Awaited<ReturnType<typeof reconcileGatewayBalances>>,
-  network: string, payer: Address,
+  network: string, payer: Address, toBlock: bigint,
 ) {
   const discrepancies: Array<{ kind: string; detail: unknown }> = [];
   if (report.balance.chainDifference !== '0' || report.balance.journalDifference !== '0') {
@@ -191,11 +214,15 @@ async function persistScanResult(
         ON CONFLICT (scan_id, kind, detail) DO NOTHING
       `, [randomUUID(), scanId, kind, JSON.stringify(detail)]);
     }
+    // GREATEST makes the cursor monotonic: even if a stale runner somehow
+    // persists after a newer window advanced it, the cursor never rewinds.
     await client.query(`
       INSERT INTO gateway_balance_cursors (network, payer, next_block)
       VALUES ($1, $2, $3)
-      ON CONFLICT (network, payer) DO UPDATE SET next_block = EXCLUDED.next_block, updated_at = now()
-    `, [network, payer, String(BigInt(report.window.to) + 1n)]);
+      ON CONFLICT (network, payer) DO UPDATE
+      SET next_block = GREATEST(gateway_balance_cursors.next_block, EXCLUDED.next_block),
+          updated_at = now()
+    `, [network, payer, String(toBlock + 1n)]);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');

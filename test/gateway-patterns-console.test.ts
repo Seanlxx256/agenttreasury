@@ -104,4 +104,31 @@ test('cross-case patterns surface from the observation log', { timeout: 30_000 }
   const byMerchant = new Map(grouped.map((entry) => [entry.merchantId, entry]));
   assert.equal(byMerchant.get(other.merchantId)?.pattern, 'no-systemic-pattern');
   assert.equal(byMerchant.get(other.merchantId)?.cases.length, 1);
+
+  // A request queried twice contributes exactly one case: the latest failed
+  // observation wins, and the returned case IDs never repeat the same request.
+  const dupRequestId = randomUUID();
+  const dupNonce = `0x${randomBytes(32).toString('hex')}`;
+  await pool.query(`
+    INSERT INTO gateway_demo_purchases
+      (request_id, endpoint, nonce, payer, recipient, amount_units, task_id, budget_day, budget_status, submitted_at)
+    VALUES ($1, $2, $3, $4, $5, 1000, $6, '2026-01-01', 'spent', now())
+  `, [dupRequestId, `http://127.0.0.1:3002/trace/${dupRequestId}`, dupNonce, payer, recipient, seeded.taskId]);
+  await pool.query(`
+    INSERT INTO gateway_payment_observations (request_id, source, evidence)
+    VALUES ($1, 'finance', $2)
+  `, [dupRequestId, JSON.stringify({ status: 'failed', reason: 'nonce already used for this wallet' })]);
+  await pool.query(`
+    INSERT INTO gateway_payment_observations (request_id, source, evidence)
+    VALUES ($1, 'finance', $2)
+  `, [dupRequestId, JSON.stringify({ status: 'failed', reason: 'nonce already used for this wallet' })]);
+
+  const deduped = await collectGatewayPatterns(pool);
+  const primary = deduped.find((entry) => entry.merchantId === seeded.merchantId);
+  assert.ok(primary);
+  // Three earlier failures + the duplicated request collapse to four cases.
+  assert.equal(primary.caseIds.length, 4);
+  assert.equal(new Set(primary.caseIds).size, 4);
+  assert.equal(primary.caseIds.filter((id) => id === dupRequestId).length, 1);
+  assert.equal(primary.cases.length, 4);
 });

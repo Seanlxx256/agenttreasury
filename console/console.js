@@ -9,6 +9,7 @@ const list = byId('orders');
 const gatewayLookup = byId('gateway-lookup');
 const gatewayDetail = byId('gateway-detail');
 const gatewayQueue = byId('gateway-queue');
+const gatewayPatterns = byId('gateway-patterns');
 let token = '';
 let role = '';
 let selected = '';
@@ -105,6 +106,49 @@ function showGatewayPurchase(purchase, path, session) {
   }));
   const actions = element('div', undefined, 'actions');
   actions.append(check, review);
+  // Dispute arbitration: once a dispute is OPEN, finance refunds or dismisses it.
+  if (purchase.disputeStatus === 'OPEN') {
+    for (const [decision, label] of [['REFUND', 'Approve refund'], ['DISMISS', 'Dismiss dispute']]) {
+      const button = element('button', label, decision === 'REFUND' ? 'primary' : undefined);
+      button.type = 'button';
+      button.addEventListener('click', () => showErrors(async () => {
+        button.disabled = true;
+        try {
+          await financeApi(path + '/dispute-decision', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }),
+          });
+          if (session !== generation || !button.isConnected) return;
+          const [updated] = await Promise.all([financeApi(path), refreshGatewayQueue()]);
+          if (session === generation && button.isConnected) showGatewayPurchase(updated, path, session);
+        } finally {
+          button.disabled = false;
+        }
+      }));
+      actions.append(button);
+    }
+  }
+  // A superseded grant: the merchant's payout address moved after this grant was
+  // issued, so finance re-authorizes it against the reviewed address.
+  if (purchase.taskId && purchase.grantRecipient && purchase.merchantRecipient &&
+      purchase.grantRecipient.toLowerCase() !== purchase.merchantRecipient.toLowerCase()) {
+    const reauthorize = element('button', 'Reauthorize recipient', 'primary');
+    reauthorize.type = 'button';
+    reauthorize.addEventListener('click', () => showErrors(async () => {
+      reauthorize.disabled = true;
+      try {
+        await financeApi('/gateway-grants/' + encodeURIComponent(purchase.taskId) + '/recipient-reauthorize', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expectedRecipient: purchase.merchantRecipient }),
+        });
+        if (session !== generation || !reauthorize.isConnected) return;
+        const [updated] = await Promise.all([financeApi(path), refreshGatewayQueue()]);
+        if (session === generation && reauthorize.isConnected) showGatewayPurchase(updated, path, session);
+      } finally {
+        reauthorize.disabled = false;
+      }
+    }));
+    actions.append(reauthorize);
+  }
   gatewayDetail.replaceChildren(metadata([
     ['Request ID', purchase.id], ['Authorization nonce', purchase.nonce],
     ['Payer', purchase.payer], ['Recipient', purchase.recipient],
@@ -183,6 +227,7 @@ async function lookupGatewayPurchase(id) {
 
 const gatewayReviewLabels = {
   'payment-conflict': 'Conflicting payment evidence',
+  'delivery-commitment-violated': 'Delivered · commitment violated',
   'charged-delivery-missing': 'Charged · buyer delivery missing',
   'checks-paused': 'Automatic checks paused',
 };
@@ -204,6 +249,20 @@ async function refreshGatewayQueue() {
     gatewayQueue.append(entry);
   }
   if (!rows.length) gatewayQueue.append(element('li', 'No Arc purchases need review.', 'muted'));
+}
+
+async function refreshGatewayPatterns() {
+  const session = generation;
+  const rows = await financeApi('/gateway-patterns');
+  if (session !== generation) return;
+  gatewayPatterns.replaceChildren();
+  for (const row of rows) {
+    const entry = element('li');
+    entry.append(element('strong', row.pattern.replaceAll('-', ' ')),
+      element('div', (row.network ?? 'network') + ' · ' + row.caseIds.length + ' case(s)', 'muted'));
+    gatewayPatterns.append(entry);
+  }
+  if (!rows.length) gatewayPatterns.append(element('li', 'No cross-case patterns.', 'muted'));
 }
 
 gatewayLookup.addEventListener('submit', (event) => {
@@ -387,7 +446,7 @@ async function showErrors(action) {
 }
 
 async function refreshConsole() {
-  await Promise.all([refreshGatewayQueue(), role === 'finance' ? refresh() : undefined]);
+  await Promise.all([refreshGatewayQueue(), refreshGatewayPatterns(), role === 'finance' ? refresh() : undefined]);
 }
 
 login.addEventListener('submit', (event) => {

@@ -176,6 +176,50 @@ test('continuous balance scan persists progress, raises work orders, and recover
     assert.equal(done.attempts, failed.attempts + 1);
   });
 
+  await t.test('a failed first scan is resumed at its original window, not recomputed', async () => {
+    const account = payer();
+    const scanId = randomUUID();
+    await pool.query(`
+      INSERT INTO gateway_balance_scans (id, network, payer, from_block, to_block, status, lease_until, started_at)
+      VALUES ($1, 'arcTestnet', $2, 1, 50, 'failed', now(), now())
+    `, [scanId, account.toLowerCase()]);
+
+    // The finalized height advanced past the failed window; recomputing from the
+    // latest height would skip blocks 1..50, so the old window must be resumed.
+    const chain = fakeChain({ async finalized() { return 150n; } });
+    const outcome = await runGatewayBalanceScan(pool, chain, account);
+    assert.equal(outcome.status, 'matched');
+
+    const { rows: [scan] } = await pool.query(
+      'SELECT from_block::text AS "fromBlock", to_block::text AS "toBlock", attempts FROM gateway_balance_scans WHERE id = $1',
+      [scanId]);
+    assert.equal(scan.fromBlock, '1');
+    assert.equal(scan.toBlock, '50');
+    assert.equal(scan.attempts, 1);
+  });
+
+  await t.test('a recovered older window cannot rewind a newer cursor', async () => {
+    const account = payer();
+    // A newer window already advanced the cursor past the older window's end.
+    await pool.query(
+      "INSERT INTO gateway_balance_cursors (network, payer, next_block) VALUES ('arcTestnet', $1, 102)",
+      [account.toLowerCase()]);
+    const scanId = randomUUID();
+    await pool.query(`
+      INSERT INTO gateway_balance_scans (id, network, payer, from_block, to_block, status, lease_until, started_at)
+      VALUES ($1, 'arcTestnet', $2, 1, 100, 'running', now() - interval '1 minute', now())
+    `, [scanId, account.toLowerCase()]);
+
+    const outcome = await runGatewayBalanceScan(pool, fakeChain(), account);
+    assert.equal(outcome.status, 'matched');
+
+    const { rows: [cursor] } = await pool.query(
+      'SELECT next_block::text AS "nextBlock" FROM gateway_balance_cursors WHERE network = $1 AND payer = $2',
+      ['arcTestnet', account.toLowerCase()]);
+    // The monotonic advance keeps 102 instead of rewinding to 101.
+    assert.equal(cursor.nextBlock, '102');
+  });
+
   await t.test('an active lease is reported already-running, not reclaimed', async () => {
     const account = payer();
     const scanId = randomUUID();

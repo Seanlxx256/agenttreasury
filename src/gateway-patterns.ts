@@ -104,33 +104,51 @@ export async function recognizePatternsWithModel(
 
 export interface CollectedGatewayPattern {
   merchantId: string | null;
+  network: string | null;
   pattern: SystemicPattern;
   cases: PatternCase[];
+  caseIds: string[];
   status: 'disabled' | 'ready' | 'unavailable' | 'rejected';
 }
 
 // Operational entry point: collect failed payment reasons from the observation
-// log, grouped by merchant, and reduce each group to one systemic pattern. The
-// finance console calls this to surface cross-case patterns from the data that
-// already flows through the payment path, rather than from the evaluator.
+// log, grouped by merchant and network, and reduce each group to one systemic
+// pattern. The finance console calls this to surface cross-case patterns from
+// the data that already flows through the payment path, rather than from the
+// evaluator.
+//
+// Each request contributes exactly ONE case: the latest failed observation for
+// that request, so a payment queried twice is not double-counted as two
+// independent failures. `since` bounds the window so stale history does not keep
+// mixing into the current pattern.
 export async function collectGatewayPatterns(
-  pool: Pool, model?: string, request: typeof fetch = fetch,
+  pool: Pool, model?: string, request: typeof fetch = fetch, since?: Date,
 ): Promise<CollectedGatewayPattern[]> {
-  const { rows } = await pool.query<{ merchantId: string | null; reasons: string[] }>(`
-    SELECT g.merchant_id AS "merchantId",
-           array_agg(o.evidence->>'reason' ORDER BY o.id) AS reasons
-    FROM gateway_payment_observations o
-    JOIN gateway_demo_purchases p ON p.request_id = o.request_id
+  const { rows } = await pool.query<{
+    merchantId: string | null; network: string | null; reasons: string[]; requestIds: string[];
+  }>(`
+    WITH failed AS (
+      SELECT DISTINCT ON (o.request_id)
+             o.request_id, o.evidence->>'reason' AS reason, o.checked_at AS "checkedAt"
+      FROM gateway_payment_observations o
+      WHERE o.evidence->>'status' = 'failed' AND o.evidence->>'reason' IS NOT NULL
+        AND o.evidence->>'reason' <> ''
+        AND ($1::timestamptz IS NULL OR o.checked_at >= $1)
+      ORDER BY o.request_id, o.id DESC
+    )
+    SELECT g.merchant_id AS "merchantId", p.network,
+           array_agg(f.request_id::text ORDER BY f."checkedAt") AS "requestIds",
+           array_agg(f.reason ORDER BY f."checkedAt") AS reasons
+    FROM failed f
+    JOIN gateway_demo_purchases p ON p.request_id = f.request_id
     JOIN gateway_task_grants g ON g.task_id = p.task_id
-    WHERE o.evidence->>'status' = 'failed' AND o.evidence->>'reason' IS NOT NULL
-      AND o.evidence->>'reason' <> ''
-    GROUP BY g.merchant_id
-  `);
+    GROUP BY g.merchant_id, p.network
+  `, [since ?? null]);
   const collected: CollectedGatewayPattern[] = [];
-  for (const { merchantId, reasons } of rows) {
-    const cases = reasons.map((text) => ({ text, dimension: merchantId ?? 'unattributed' }));
+  for (const { merchantId, network, reasons, requestIds } of rows) {
+    const cases = reasons.map((text) => ({ text, dimension: network ?? 'unattributed' }));
     const result = await recognizePatternsWithModel(cases, model, request);
-    collected.push({ merchantId, pattern: result.pattern, cases, status: result.status });
+    collected.push({ merchantId, network, pattern: result.pattern, cases, caseIds: requestIds, status: result.status });
   }
   return collected;
 }

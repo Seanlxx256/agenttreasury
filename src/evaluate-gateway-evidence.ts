@@ -14,15 +14,22 @@ type DatasetName = keyof typeof datasets;
 
 type Scoring = { recall: number | null; precision: number | null; matched: number; expected: number; extracted: number };
 
-function score(expected: EvidenceSignal[], extracted: EvidenceSignal[]): Scoring {
+export function score(expected: EvidenceSignal[], extracted: EvidenceSignal[]): Scoring {
+  // Count the intersection of the two SIGNAL SETS. A model that emits the same
+  // signal twice (with different quotes) must not double its recall, so dedupe
+  // both sides before counting; recall is capped at 1 and precision at 1.
   const expectedSet = new Set(expected);
-  const matched = extracted.filter((signal) => expectedSet.has(signal)).length;
+  const extractedSet = new Set(extracted);
+  let matched = 0;
+  for (const signal of extractedSet) {
+    if (expectedSet.has(signal)) matched++;
+  }
   return {
     matched,
-    expected: expected.length,
-    extracted: extracted.length,
-    recall: expected.length ? matched / expected.length : null,
-    precision: extracted.length ? matched / extracted.length : null,
+    expected: expectedSet.size,
+    extracted: extractedSet.size,
+    recall: expectedSet.size ? matched / expectedSet.size : null,
+    precision: extractedSet.size ? matched / extractedSet.size : null,
   };
 }
 

@@ -55,4 +55,32 @@ test('delivery commitment verification', async (t) => {
     assert.equal(result.satisfied, true);
     assert.deepEqual(result.violations, []);
   });
+
+  await t.test('rejects a non-terminal status value', () => {
+    const delivery = { trace: { source: 'fixture', calls: [{ type: 'CALL', status: 'pending' }] } };
+    const result = verifyDeliveryCommitment(delivery, traceDeliveryCommitment);
+    assert.equal(result.satisfied, false);
+    assert.deepEqual(result.violations, ['trace.calls[0] status is not a terminal outcome']);
+  });
+
+  await t.test('rejects a null status', () => {
+    const delivery = { trace: { source: 'fixture', calls: [{ type: 'CALL', status: null }] } };
+    const result = verifyDeliveryCommitment(delivery, traceDeliveryCommitment);
+    assert.equal(result.satisfied, false);
+    assert.deepEqual(result.violations, ['trace.calls[0] status is not a terminal outcome']);
+  });
+
+  await t.test('rejects an empty error string', () => {
+    const delivery = { trace: { source: 'fixture', calls: [{ type: 'CALL', error: '' }] } };
+    const result = verifyDeliveryCommitment(delivery, traceDeliveryCommitment);
+    assert.equal(result.satisfied, false);
+    assert.deepEqual(result.violations, ['trace.calls[0] error must be a non-empty string']);
+  });
+
+  await t.test('rejects a call reporting both status and error', () => {
+    const delivery = { trace: { source: 'fixture', calls: [{ type: 'CALL', status: 'success', error: 'execution reverted' }] } };
+    const result = verifyDeliveryCommitment(delivery, traceDeliveryCommitment);
+    assert.equal(result.satisfied, false);
+    assert.deepEqual(result.violations, ['trace.calls[0] reports both status and error']);
+  });
 });

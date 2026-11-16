@@ -28,7 +28,7 @@ The three candidates, ordered by how testable they are:
 
 ## Method boundary: development, not held-out
 
-The datasets below are development sets: the signal definitions and prompts were tuned against them, so the numbers carry an optimistic bias and must not be read as held-out generalization. A frozen test set, built after the implementation stopped changing, is the required next step before claiming held-out results. What the numbers do show honestly is whether a model can even reach the rules on the exact inputs that shaped the prompt — a necessary first check, not a production guarantee.
+The datasets below are development sets: the signal definitions and prompts were tuned against them, so the numbers carry an optimistic bias and must not be read as held-out generalization. A frozen test set (`gateway-evidence-test-v1`, ten strings authored after the prompt freeze) is measured separately; its ten samples support method/model comparison but are too small to claim held-out generalization to production traffic. What the numbers do show honestly is whether a model can even reach the rules on the exact inputs that shaped the prompt — a necessary first check, not a production guarantee.
 
 ## Results
 
@@ -106,7 +106,7 @@ The three results reduce to one sentence:
 
 **Not claimable:**
 
-- No held-out generalization. The datasets are development sets tuned in the loop; a frozen test set has not been measured, so the recall/precision gains cannot yet be attributed to out-of-distribution behavior.
+- Held-out generalization is limited. The development sets were tuned in the loop; the frozen `gateway-evidence-test-v1` set is now measured (rules 0.50 recall, 0.5b 0.30, 1.5b 0.80, 3b 0.70), but at ten synthetic strings it supports method/model comparison, not production operator-time or review-rate claims.
 - No production operator-time reduction is shown. The evaluations measure decision correctness and evidence, not minutes saved; an operator pilot exists as a harness but real timing data is not collected.
 - No claim that "the agent reduces human review" in production — the datasets are synthetic fixtures, and the models add latency.
 - No claim that the agent beats the rules everywhere — it wins on two semantic tasks and ties/loses on the structured one.

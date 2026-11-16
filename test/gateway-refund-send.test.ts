@@ -12,7 +12,9 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { migrate } from '../src/migrate.js';
 import { seedGateway } from '../src/seed.js';
 import { decideGatewayRefund, requestGatewayRefund } from '../src/gateway-refund-requests.js';
-import { recoverGatewayRefundSubmission, resolveRefundTransaction } from '../src/gateway-refund-send.js';
+import { recoverGatewayRefund, recoverGatewayRefundSubmission, resolveRefundTransaction } from '../src/gateway-refund-send.js';
+import type { GatewayRefundChain } from '../src/gateway-refunds.js';
+import { arcTestnetUsdc } from '../src/gateway-x402.js';
 
 async function availablePort() {
   const probe = createServer();
@@ -190,5 +192,51 @@ test('gateway refund broadcast never repeats across a crash', { timeout: 30_000 
       })(),
       (error: Error) => error.message.includes('already resolved'),
     );
+  });
+
+  await t.test('recovery rejects a stale refund hash before committing any state', async () => {
+    const requestId = await makeApprovedRefund('delivery never arrived');
+    await pool.query(
+      "INSERT INTO gateway_refund_authorizations (request_id, reason, status) VALUES ($1, $2, 'submitting')",
+      [requestId, 'delivery never arrived'],
+    );
+
+    const { rows: [payment] } = await pool.query<{ payer: string; recipient: string; batchHash: Hash; amount: string }>(`
+      SELECT p.payer, p.recipient, j.batch_hash AS "batchHash", j.amount::text AS amount
+      FROM gateway_payment_journal j JOIN gateway_demo_purchases p ON p.request_id = j.request_id
+      WHERE j.request_id = $1
+    `, [requestId]);
+    assert.ok(payment);
+
+    // The supplied hash is the right from/to/amount but belongs to an OLDER
+    // transaction than the original batch, so the full check must reject it.
+    const staleHash = refundHash();
+    const blockHash = async (block: bigint) => `0x${block.toString(16).padStart(64, '0')}` as Hash;
+    const chain: GatewayRefundChain = {
+      async finalized() { return 1000n; },
+      blockHash,
+      async receipt(hash) {
+        if (hash === staleHash) {
+          return { blockNumber: 100n, blockHash: await blockHash(100n), transactionIndex: 0, status: 'success',
+            logs: [{ address: arcTestnetUsdc, logIndex: 0, from: payment.recipient,
+              to: payment.payer, amount: BigInt(payment.amount) }] };
+        }
+        if (hash === payment.batchHash) {
+          return { blockNumber: 500n, blockHash: await blockHash(500n), transactionIndex: 0, status: 'success', logs: [] };
+        }
+        throw new Error('unexpected hash');
+      },
+    };
+
+    await assert.rejects(
+      recoverGatewayRefund(pool, chain, requestId, staleHash, 'delivery never arrived'),
+      (error: Error & { code?: string }) => error.code === 'INVALID_REFUND_EVIDENCE',
+    );
+
+    // The intent is still retryable, not stuck in `submitted` with a bad hash.
+    const { rows: [auth] } = await pool.query(
+      'SELECT status, transaction_hash AS "transactionHash" FROM gateway_refund_authorizations WHERE request_id = $1', [requestId]);
+    assert.equal(auth.status, 'submitting');
+    assert.equal(auth.transactionHash, null);
   });
 });
