@@ -118,7 +118,8 @@ actually ran the thing:
   scores 0.67, the small models 0.83, and qwen2.5:7b reads all six correctly (1.00). The
   rule of thumb the three increments establish: the model adds value on semantic tasks
   (extract signals, cluster paraphrases) and none on structured mappings (choose the next
-  check).
+  check). The full design-and-validation narrative is in
+  [agent-increment-findings.md](agent-increment-findings.md).
 
 ## Not done (and why)
 
