@@ -238,6 +238,8 @@ The first pass over-claimed: with a loose signal list the weak models hallucinat
 
 The rule baseline and the scoring are covered by a unit test, so the half-recall baseline and the direct/paraphrase split are reproducible without Ollama. The model results above are a measurement on this fixture set, not a production claim.
 
+The extraction is wired into the triage path. `prepareGatewayTriage` collects any free-text `reason` that is not one of the three structured conflict reasons, reduces the keyword signals into `evidence-*` facts synchronously, and `reviewGatewayTriage` recovers the remaining signals as `evidence-model-*` facts before action selection, so the finance console can cite evidence the structured rules never encoded. A separate unit test walks the direct-keyword, paraphrase-model, and conflict-reason-exclusion paths.
+
 ```sh
 npm run build
 npm run --silent eval:gateway-evidence -- --rules-only

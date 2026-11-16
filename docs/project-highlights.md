@@ -92,7 +92,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 81/81.
+- `npm test` passes 84/84.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
@@ -104,7 +104,9 @@ actually ran the thing:
   (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with
   precision 1.00 — it catches every direct phrase and misses every paraphrase. The models
   recover the paraphrases (qwen2.5:3b recall 0.95 / precision 0.95; 1.5b and 0.5b 0.85)
-  at a small precision cost. The baseline and split are locked by a unit test.
+  at a small precision cost. The baseline and split are locked by a unit test, and the
+  signals are wired into `prepareGatewayTriage` as citable facts, so the finance console
+  surfaces evidence the structured rules never encoded.
 
 ## Not done (and why)
 

@@ -20,6 +20,17 @@ export const evidenceSignals = [
 ] as const;
 export type EvidenceSignal = (typeof evidenceSignals)[number];
 
+export const evidenceSignalDescriptions: Record<EvidenceSignal, string> = {
+  'nonce-reused': 'Free-text failure reason indicates the authorization identifier was reused.',
+  'insufficient-funds': 'Free-text failure reason indicates the wallet lacked funds to settle.',
+  'recipient-not-whitelisted': 'Free-text failure reason indicates the destination was not allowed.',
+  'invalid-signature': 'Free-text failure reason indicates the authorization signature failed to verify.',
+  'batch-already-processed': 'Free-text failure reason indicates the batch was already settled.',
+  'authorization-expired': 'Free-text failure reason indicates the authorization window has passed.',
+  'rpc-unavailable': 'Free-text failure reason indicates the node or API was unreachable.',
+  'unknown-error': 'Free-text failure reason did not match a known failure mode.',
+};
+
 export type ExtractedEvidence = { signal: EvidenceSignal; quote: string };
 
 const rulePatterns: Array<{ signal: EvidenceSignal; pattern: RegExp }> = [

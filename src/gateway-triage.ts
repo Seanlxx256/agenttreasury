@@ -1,4 +1,7 @@
 import { resolveTriageModelProfile, type TriageModelProfile } from './gateway-triage-models.js';
+import {
+  evidenceSignalDescriptions, extractEvidenceRules, extractEvidenceWithModel,
+} from './gateway-evidence-extraction.js';
 
 export type TriageObservation = { id: string; evidence: { status: string; reason?: string } };
 
@@ -37,6 +40,22 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
     if (!gatewayStatuses.has(evidence.status)) continue;
     const reason = evidence.reason && conflictReasons.has(evidence.reason) ? ' (' + evidence.reason + ')' : '';
     facts.push({ id: 'observation-' + id, description: 'Gateway observation: ' + evidence.status + reason });
+  }
+
+  // Free-text failure reasons that are not one of the three structured conflict
+  // reasons. The keyword rules recover the signals they can; the model fills the
+  // rest asynchronously in reviewGatewayTriage.
+  const unstructured = observations
+    .map(({ evidence }) => evidence.reason)
+    .filter((reason): reason is string => !!reason && !conflictReasons.has(reason));
+  const ruleSignals = new Set<string>();
+  for (const text of unstructured) {
+    for (const { signal } of extractEvidenceRules(text)) {
+      if (!ruleSignals.has(signal)) {
+        ruleSignals.add(signal);
+        facts.push({ id: 'evidence-' + signal, description: evidenceSignalDescriptions[signal] });
+      }
+    }
   }
 
   const latest = observations[0];
@@ -115,7 +134,7 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
     allowed.push({ action: 'escalate', rationale: 'Ask an operator to assess the existing evidence.',
       citations: rules.citations });
   }
-  return { facts, rules, allowed };
+  return { facts, rules, allowed, unstructured };
 }
 
 export async function reviewGatewayTriage(
@@ -127,6 +146,24 @@ export async function reviewGatewayTriage(
   const allowed = supportingRules ? [rules] : input.allowed;
   const maxCitations = supportingRules ? rules.citations.length + 2 : 8;
   if (!model) return { facts, rules, agent: { status: 'disabled' as const } };
+
+  // The model reads the free-text reasons the keyword table could not reduce and
+  // surfaces any additional signal as a fact, so the console shows evidence the
+  // structured rules never encoded. This runs before action selection so the
+  // extra facts are citable.
+  if (input.unstructured.length > 0) {
+    const { status, signals } = await extractEvidenceWithModel(input.unstructured.join('\n'), model, request);
+    if (status === 'ready') {
+      for (const signal of signals) {
+        const alreadyPresent = facts.some((fact) =>
+          fact.id === 'evidence-' + signal || fact.id === 'evidence-model-' + signal);
+        if (!alreadyPresent) {
+          facts.push({ id: 'evidence-model-' + signal, description: evidenceSignalDescriptions[signal] });
+        }
+      }
+    }
+  }
+
   const resolvedProfile = profile ?? resolveTriageModelProfile(model);
   const schema = {
     type: 'object', required: ['action', 'citations'], additionalProperties: false,

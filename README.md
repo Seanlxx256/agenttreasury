@@ -318,7 +318,7 @@ npm run eval:gateway-evidence -- --rules-only
 npm run eval:gateway-evidence -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
 ```
 
-On `gateway-evidence-v1` (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with precision 1.00 — it misses every paraphrase. See the [evaluation report](docs/gateway-triage-evaluation.md) for the per-model recall and precision.
+On `gateway-evidence-v1` (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with precision 1.00 — it misses every paraphrase. See the [evaluation report](docs/gateway-triage-evaluation.md) for the per-model recall and precision. The signals are also surfaced as triage facts, so a purchase whose saved observation carries a free-text failure reason gets the recovered evidence in the finance console.
 
 ### Send a testnet refund from the console
 
