@@ -1,3 +1,4 @@
+import type { Pool } from 'pg';
 import { resolveTriageModelProfile } from './gateway-triage-models.js';
 import { extractEvidenceRules, type EvidenceSignal } from './gateway-evidence-extraction.js';
 
@@ -99,4 +100,37 @@ export async function recognizePatternsWithModel(
   } catch {
     return { status: 'unavailable', pattern: recognizePatternsRules(cases) };
   }
+}
+
+export interface CollectedGatewayPattern {
+  merchantId: string | null;
+  pattern: SystemicPattern;
+  cases: PatternCase[];
+  status: 'disabled' | 'ready' | 'unavailable' | 'rejected';
+}
+
+// Operational entry point: collect failed payment reasons from the observation
+// log, grouped by merchant, and reduce each group to one systemic pattern. The
+// finance console calls this to surface cross-case patterns from the data that
+// already flows through the payment path, rather than from the evaluator.
+export async function collectGatewayPatterns(
+  pool: Pool, model?: string, request: typeof fetch = fetch,
+): Promise<CollectedGatewayPattern[]> {
+  const { rows } = await pool.query<{ merchantId: string | null; reasons: string[] }>(`
+    SELECT g.merchant_id AS "merchantId",
+           array_agg(o.evidence->>'reason' ORDER BY o.id) AS reasons
+    FROM gateway_payment_observations o
+    JOIN gateway_demo_purchases p ON p.request_id = o.request_id
+    JOIN gateway_task_grants g ON g.task_id = p.task_id
+    WHERE o.evidence->>'status' = 'failed' AND o.evidence->>'reason' IS NOT NULL
+      AND o.evidence->>'reason' <> ''
+    GROUP BY g.merchant_id
+  `);
+  const collected: CollectedGatewayPattern[] = [];
+  for (const { merchantId, reasons } of rows) {
+    const cases = reasons.map((text) => ({ text, dimension: merchantId ?? 'unattributed' }));
+    const result = await recognizePatternsWithModel(cases, model, request);
+    collected.push({ merchantId, pattern: result.pattern, cases, status: result.status });
+  }
+  return collected;
 }

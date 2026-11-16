@@ -79,3 +79,37 @@ export async function confirmGatewayMerchantRecipientChange(
     return updated!;
   });
 }
+
+// Re-authorize a task grant after the merchant payout address it was bound to
+// changed. The operator names the address it reviewed (the merchant's current
+// recipient); the grant's recipient moves only when they match, so a stale
+// approval cannot point the grant at an address the operator did not see.
+export async function reauthorizeGatewayGrantRecipient(
+  pool: Pool, taskId: string, expectedRecipient: string, actor: string,
+) {
+  const expected = expectedRecipient.toLowerCase();
+  if (!recipientPattern.test(expected)) throw new PaymentError(400, 'INVALID_RECIPIENT');
+  return transaction(pool, async (client) => {
+    const { rows: [grant] } = await client.query<{ merchantId: string | null; recipient: string }>(
+      'SELECT merchant_id AS "merchantId", recipient FROM gateway_task_grants WHERE task_id = $1 FOR UPDATE',
+      [taskId],
+    );
+    if (!grant) throw new PaymentError(404, 'GATEWAY_GRANT_NOT_FOUND');
+    if (!grant.merchantId) throw new PaymentError(409, 'GRANT_NOT_MERCHANT_BOUND');
+    const { rows: [merchant] } = await client.query<{ recipient: string }>(
+      'SELECT recipient FROM gateway_merchants WHERE id = $1 FOR UPDATE', [grant.merchantId],
+    );
+    if (!merchant) throw new PaymentError(404, 'MERCHANT_NOT_FOUND');
+    if (merchant.recipient !== expected) throw new PaymentError(409, 'RECIPIENT_CHANGE_STALE');
+    if (grant.recipient === expected) throw new PaymentError(409, 'RECIPIENT_UNCHANGED');
+    const { rows: [updated] } = await client.query(
+      'UPDATE gateway_task_grants SET recipient = $2 WHERE task_id = $1 RETURNING recipient',
+      [taskId, expected],
+    );
+    await recordAudit(client, {
+      actor, action: 'gateway.grant.recipient-reauthorized',
+      entity: `gateway_task_grant:${taskId}`, stateBefore: grant.recipient, stateAfter: expected,
+    });
+    return updated!;
+  });
+}

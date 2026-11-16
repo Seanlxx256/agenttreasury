@@ -7,6 +7,8 @@ import type { Address, Hash, Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { arcRefundChain, recordGatewayRefund, type GatewayRefundChain } from './gateway-refunds.js';
 import { arcTestnetUsdc, gatewayChainConfig, gatewayRpcUrl } from './gateway-x402.js';
+import { PaymentError } from './payments.js';
+import { transaction } from './db.js';
 
 export class GatewayRefundCommandError extends Error {}
 
@@ -66,6 +68,36 @@ export async function resolveRefundTransaction(
   return saved.transactionHash;
 }
 
+// Controlled recovery of an unresolved refund submission. A previous run
+// broadcast the transfer but crashed before persisting its hash, leaving a
+// `submitting` row with no hash. The operator supplies the hash it verified
+// onchain, and we persist it WITHOUT broadcasting a second time. Call this
+// inside the caller's transaction; the caller must still prove the hash with
+// recordGatewayRefund before the refund is treated as posted.
+export async function recoverGatewayRefundSubmission(
+  client: PoolClient, requestId: string, transactionHash: Hash, reason: string,
+): Promise<Hash> {
+  const hash = transactionHash.toLowerCase() as Hash;
+  if (!/^0x[0-9a-f]{64}$/.test(hash)) throw new PaymentError(400, 'INVALID_REFUND_REQUEST');
+  const { rows: [saved] } = await client.query<{ status: string; transactionHash: Hash | null; reason: string }>(
+    'SELECT status, transaction_hash AS "transactionHash", reason FROM gateway_refund_authorizations WHERE request_id = $1',
+    [requestId],
+  );
+  if (!saved) throw new GatewayRefundCommandError('No refund submission intent found for this request');
+  if (saved.reason !== reason) throw new GatewayRefundCommandError('Resume with the original refund reason');
+  if (saved.status !== 'submitting' || saved.transactionHash !== null) {
+    throw new GatewayRefundCommandError('Refund submission is already resolved');
+  }
+  const { rowCount } = await client.query(
+    `UPDATE gateway_refund_authorizations
+     SET transaction_hash = $2, status = 'submitted'
+     WHERE request_id = $1 AND status = 'submitting' AND transaction_hash IS NULL`,
+    [requestId, hash],
+  );
+  if (rowCount !== 1) throw new GatewayRefundCommandError('Refund submission is already resolved');
+  return hash;
+}
+
 async function waitForReceipt(chain: GatewayRefundChain, hash: Hash) {
   for (let attempt = 0; attempt < 240; attempt++) {
     try {
@@ -83,13 +115,14 @@ async function waitForReceipt(chain: GatewayRefundChain, hash: Hash) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { DATABASE_URL, ARC_TESTNET_RPC_URL = gatewayRpcUrl, GATEWAY_MERCHANT_KEY } = process.env;
-  const [requestId, inputReason] = process.argv.slice(2);
+  const [requestId, inputReason, inputHash] = process.argv.slice(2);
   const reason = inputReason?.trim();
+  const recoveryHash = inputHash?.trim();
   const isKey = (value: string | undefined): value is Hex => /^0x[0-9a-fA-F]{64}$/.test(value ?? '');
   if (!DATABASE_URL || !isKey(GATEWAY_MERCHANT_KEY) || !requestId ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(requestId) ||
-      !reason || reason.length > 500) {
-    throw new Error('Configure the database, merchant key and RPC, then supply a request ID and refund reason.');
+      !reason || reason.length > 500 || (recoveryHash !== undefined && !isKey(recoveryHash))) {
+    throw new Error('Configure the database, merchant key and RPC, then supply a request ID, refund reason, and (for recovery) the onchain refund hash.');
   }
 
   const account = privateKeyToAccount(GATEWAY_MERCHANT_KEY);
@@ -126,24 +159,36 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       let hash = payment.refund_hash;
       if (hash && payment.refund_reason !== reason) throw new GatewayRefundCommandError('Refund already recorded with a different reason');
       if (!hash) {
-        // A plain USDC transfer back to the payer. The Gateway refund is the
-        // inverse of the batched charge, so no EIP-3009 authorization is needed.
-        hash = await resolveRefundTransaction(lock, requestId, reason, async () => {
-          const txHash = await wallet.writeContract({
-            address: arcTestnetUsdc,
-            abi: erc20Abi,
-            functionName: 'transfer',
-            args: [payment.payer, BigInt(payment.amount)],
+        if (recoveryHash) {
+          // Controlled recovery: a previous run broadcast but never persisted the
+          // hash. Verify the supplied hash onchain, persist it, and post — never
+          // broadcast a second transfer.
+          const receipt = await waitForReceipt(chain, recoveryHash);
+          const transfer = receipt.logs.find((log) => log.from.toLowerCase() === merchant &&
+            log.to.toLowerCase() === payment.payer && log.amount === BigInt(payment.amount));
+          if (!transfer) throw new GatewayRefundCommandError('Matching refund transfer missing from receipt');
+          hash = await recoverGatewayRefundSubmission(lock, requestId, recoveryHash, reason);
+          await recordGatewayRefund(pool, chain, requestId, hash, transfer.logIndex, reason);
+        } else {
+          // A plain USDC transfer back to the payer. The Gateway refund is the
+          // inverse of the batched charge, so no EIP-3009 authorization is needed.
+          hash = await resolveRefundTransaction(lock, requestId, reason, async () => {
+            const txHash = await wallet.writeContract({
+              address: arcTestnetUsdc,
+              abi: erc20Abi,
+              functionName: 'transfer',
+              args: [payment.payer, BigInt(payment.amount)],
+            });
+            console.error('Gateway refund submitted', txHash);
+            return txHash;
           });
-          console.error('Gateway refund submitted', txHash);
-          return txHash;
-        });
 
-        const receipt = await waitForReceipt(chain, hash);
-        const transfer = receipt.logs.find((log) => log.from.toLowerCase() === merchant &&
-          log.to.toLowerCase() === payment.payer && log.amount === BigInt(payment.amount));
-        if (!transfer) throw new GatewayRefundCommandError('Matching refund transfer missing from receipt');
-        await recordGatewayRefund(pool, chain, requestId, hash, transfer.logIndex, reason);
+          const receipt = await waitForReceipt(chain, hash);
+          const transfer = receipt.logs.find((log) => log.from.toLowerCase() === merchant &&
+            log.to.toLowerCase() === payment.payer && log.amount === BigInt(payment.amount));
+          if (!transfer) throw new GatewayRefundCommandError('Matching refund transfer missing from receipt');
+          await recordGatewayRefund(pool, chain, requestId, hash, transfer.logIndex, reason);
+        }
       }
 
       const explorer = gatewayChainConfig.blockExplorers?.default?.url;

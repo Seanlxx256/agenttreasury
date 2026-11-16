@@ -12,6 +12,7 @@ import { migrate } from '../src/migrate.js';
 import { seedGateway } from '../src/seed.js';
 import {
   confirmGatewayMerchantRecipientChange, requestGatewayMerchantRecipientChange,
+  reauthorizeGatewayGrantRecipient,
 } from '../src/gateway-merchant-recipient.js';
 
 async function availablePort() {
@@ -59,7 +60,7 @@ test('merchant payout address changes require a human review', { timeout: 30_000
     const payer = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
     const recipient = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
     const seeded = await seedGateway(pool, { origin: 'http://127.0.0.1:3002', payer, recipient });
-    return { merchantId: seeded.merchantId, recipient };
+    return { merchantId: seeded.merchantId, recipient, taskId: seeded.taskId };
   };
 
   await t.test('requesting a change stages the address without moving the live recipient', async () => {
@@ -93,6 +94,28 @@ test('merchant payout address changes require a human review', { timeout: 30_000
     await requestGatewayMerchantRecipientChange(pool, merchantId, second, 'ops');
     await assert.rejects(
       confirmGatewayMerchantRecipientChange(pool, merchantId, stagedFirst.pendingRecipientVersion!, first),
+      (error: Error & { code?: string }) => error.code === 'RECIPIENT_CHANGE_STALE',
+    );
+  });
+
+  await t.test('reauthorizing a grant moves it to the reviewed recipient', async () => {
+    const { merchantId, recipient, taskId } = await newMerchant();
+    const next = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const staged = await requestGatewayMerchantRecipientChange(pool, merchantId, next, 'ops');
+    await confirmGatewayMerchantRecipientChange(pool, merchantId, staged.pendingRecipientVersion!, next);
+    const updated = await reauthorizeGatewayGrantRecipient(pool, taskId, next, 'finance-operator');
+    assert.equal(updated.recipient, next);
+    assert.notEqual(updated.recipient, recipient);
+  });
+
+  await t.test('reauthorization is rejected when the reviewed recipient is stale', async () => {
+    const { merchantId, taskId } = await newMerchant();
+    const next = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const staged = await requestGatewayMerchantRecipientChange(pool, merchantId, next, 'ops');
+    await confirmGatewayMerchantRecipientChange(pool, merchantId, staged.pendingRecipientVersion!, next);
+    const stale = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    await assert.rejects(
+      reauthorizeGatewayGrantRecipient(pool, taskId, stale, 'finance-operator'),
       (error: Error & { code?: string }) => error.code === 'RECIPIENT_CHANGE_STALE',
     );
   });

@@ -63,8 +63,8 @@ finance?*
   recognizes a delivered-but-commitment-violating payment and recommends raising a dispute,
   and a merchant payout address can never change silently — it is staged, confirmed by a
   finance operator against the exact version the operator reviewed, and any task grant that
-  predates the change is rejected at payment time, closing the "change the bank account"
-  B2B fraud vector.
+  predates the change is rejected at payment time until it is explicitly re-authorized for
+  the reviewed address, closing the "change the bank account" B2B fraud vector.
 - **Multi-network, multi-merchant, multi-process.** The network is a column on each
   purchase, resolved through a per-network config factory derived from Circle's official
   SDK, so one worker pool spans testnet and mainnet. Merchants are first-class entities
@@ -95,7 +95,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 107/107.
+- `npm test` passes 112/112.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
@@ -127,8 +127,10 @@ actually ran the thing:
   scores 0.67, the small models 0.83, and qwen2.5:7b reads all six correctly (1.00). The
   rule of thumb the three increments establish: the model adds value on semantic tasks
   (extract signals, cluster paraphrases) and none on structured mappings (choose the next
-  check). The full design-and-validation narrative is in
-  [agent-increment-findings.md](agent-increment-findings.md).
+  check). The recognition is wired into the finance console at `/finance/gateway-patterns`,
+  which groups the failure reasons the payment path already recorded by merchant and
+  reduces each group to one systemic pattern. The full design-and-validation narrative is
+  in [agent-increment-findings.md](agent-increment-findings.md).
 
 ## Not done (and why)
 

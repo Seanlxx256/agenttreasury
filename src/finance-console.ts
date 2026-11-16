@@ -7,8 +7,9 @@ import { getPaymentLedger } from './ledger.js';
 import { checkGatewayPayment } from './gateway-payment-evidence.js';
 import type { ExpectedGatewayPayment } from './gateway-reconciliation.js';
 import { prepareGatewayTriage, reviewGatewayTriage, type TriageObservation } from './gateway-triage.js';
-import { confirmGatewayMerchantRecipientChange, requestGatewayMerchantRecipientChange } from './gateway-merchant-recipient.js';
+import { confirmGatewayMerchantRecipientChange, requestGatewayMerchantRecipientChange, reauthorizeGatewayGrantRecipient } from './gateway-merchant-recipient.js';
 import { decideGatewayDeliveryDispute } from './gateway-delivery-disputes.js';
+import { collectGatewayPatterns } from './gateway-patterns.js';
 import { PaymentError } from './payments.js';
 
 const orderFields = `i.id, i.task_id AS "taskId", i.amount::text, i.status, i.payee,
@@ -167,6 +168,14 @@ export function registerFinanceConsole(
     },
   );
 
+  app.get('/finance/gateway-patterns', async (request, reply) => {
+    authenticateConsole(request);
+    reply.header('Cache-Control', 'no-store');
+    // Cross-case pattern recognition reads the failure reasons the payment path
+    // already recorded; it is read-only and defaults to the deterministic rules.
+    return collectGatewayPatterns(pool, process.env.GATEWAY_PATTERN_MODEL, fetch);
+  });
+
   app.post<{ Params: { id: string }; Body: { recipient: string } }>('/finance/merchants/:id/recipient-change', {
     schema: {
       params: merchantParams,
@@ -191,6 +200,21 @@ export function registerFinanceConsole(
     reply.header('Cache-Control', 'no-store');
     return confirmGatewayMerchantRecipientChange(
       pool, request.params.id, request.body.version, request.body.expectedRecipient);
+  });
+
+  app.post<{ Params: { taskId: string }; Body: { expectedRecipient: string } }>('/finance/gateway-grants/:taskId/recipient-reauthorize', {
+    preHandler: async (request) => { authenticate(request); },
+    schema: {
+      params: { type: 'object', required: ['taskId'],
+        properties: { taskId: { type: 'string',
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } } },
+      body: { type: 'object', required: ['expectedRecipient'], additionalProperties: false,
+        properties: { expectedRecipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' } } },
+    },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return reauthorizeGatewayGrantRecipient(
+      pool, request.params.taskId, request.body.expectedRecipient, 'finance-operator');
   });
 
   for (const [path, file, type] of [

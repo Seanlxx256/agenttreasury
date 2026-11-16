@@ -12,7 +12,7 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { migrate } from '../src/migrate.js';
 import { seedGateway } from '../src/seed.js';
 import { decideGatewayRefund, requestGatewayRefund } from '../src/gateway-refund-requests.js';
-import { resolveRefundTransaction } from '../src/gateway-refund-send.js';
+import { recoverGatewayRefundSubmission, resolveRefundTransaction } from '../src/gateway-refund-send.js';
 
 async function availablePort() {
   const probe = createServer();
@@ -145,5 +145,50 @@ test('gateway refund broadcast never repeats across a crash', { timeout: 30_000 
       (error: Error) => error.message.includes('unresolved'),
     );
     assert.equal(broadcasts, 0);
+  });
+
+  await t.test('controlled recovery persists the onchain hash without broadcasting', async () => {
+    const requestId = await makeApprovedRefund('delivery never arrived');
+    await pool.query(
+      "INSERT INTO gateway_refund_authorizations (request_id, reason, status) VALUES ($1, $2, 'submitting')",
+      [requestId, 'delivery never arrived'],
+    );
+    const hash = refundHash();
+    const client = await pool.connect();
+    try {
+      const recovered = await recoverGatewayRefundSubmission(client, requestId, hash, 'delivery never arrived');
+      assert.equal(recovered, hash);
+    } finally {
+      client.release();
+    }
+    const { rows: [row] } = await pool.query(
+      'SELECT transaction_hash AS "transactionHash", status FROM gateway_refund_authorizations WHERE request_id = $1', [requestId]);
+    assert.equal(row.transactionHash, hash);
+    assert.equal(row.status, 'submitted');
+
+    // A wrong reason is rejected without touching the intent.
+    const wrong = await makeApprovedRefund('wrong reason');
+    await pool.query(
+      "INSERT INTO gateway_refund_authorizations (request_id, reason, status) VALUES ($1, $2, 'submitting')",
+      [wrong, 'wrong reason'],
+    );
+    await assert.rejects(
+      (async () => {
+        const c = await pool.connect();
+        try { await recoverGatewayRefundSubmission(c, wrong, refundHash(), 'different reason'); }
+        finally { c.release(); }
+      })(),
+      (error: Error) => error.message.includes('original refund reason'),
+    );
+
+    // A second recovery of the already-resolved row is rejected.
+    await assert.rejects(
+      (async () => {
+        const c = await pool.connect();
+        try { await recoverGatewayRefundSubmission(c, requestId, refundHash(), 'delivery never arrived'); }
+        finally { c.release(); }
+      })(),
+      (error: Error) => error.message.includes('already resolved'),
+    );
   });
 });

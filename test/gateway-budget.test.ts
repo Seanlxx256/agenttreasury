@@ -14,6 +14,7 @@ import { lockGatewayGrant } from '../src/gateway-budget.js';
 import { transaction } from '../src/db.js';
 import {
   confirmGatewayMerchantRecipientChange, requestGatewayMerchantRecipientChange,
+  reauthorizeGatewayGrantRecipient,
 } from '../src/gateway-merchant-recipient.js';
 
 async function availablePort() {
@@ -99,5 +100,17 @@ test('gateway grant authorization requires the matching network', { timeout: 30_
       )),
       (error: Error & { code?: string }) => error.code === 'GATEWAY_RECIPIENT_SUPERSEDED',
     );
+  });
+
+  await t.test('a reauthorized grant is accepted for the new recipient', async () => {
+    const next = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const staged = await requestGatewayMerchantRecipientChange(pool, seeded.merchantId, next, 'ops');
+    await confirmGatewayMerchantRecipientChange(pool, seeded.merchantId, staged.pendingRecipientVersion!, next);
+    await reauthorizeGatewayGrantRecipient(pool, seeded.taskId, next, 'finance-operator');
+    const terms = termsFor('arcTestnet');
+    const grant = await transaction(pool, (client) => lockGatewayGrant(
+      client, { taskId: seeded.taskId, agentToken: seeded.token }, { ...terms, recipient: next },
+    ));
+    assert.ok(grant.day);
   });
 });
