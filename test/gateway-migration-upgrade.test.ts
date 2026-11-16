@@ -144,4 +144,31 @@ test('legacy data is upgraded correctly when the new migrations run', { timeout:
   const { rows: [merchant] } = await pool.query(
     'SELECT pending_recipient_version FROM gateway_merchants WHERE id = $1', [merchantId]);
   assert.ok(merchant.pending_recipient_version >= 1);
+
+  // Upgrade grants from version 031: a changed merchant's matching address is
+  // not proof of which version was approved. Only unchanged grants carry over.
+  const changedMerchant = randomUUID();
+  const changedAddress = address();
+  await pool.query(`INSERT INTO gateway_merchants
+    (id, recipient, endpoint_origin, network, recipient_change_version)
+    VALUES ($1, $2, 'https://api.example/changed', 'arcTestnet', 2)`, [changedMerchant, changedAddress]);
+  const { rows: [unchanged] } = await pool.query('SELECT recipient FROM gateway_merchants WHERE id = $1', [merchantId]);
+  const tasks: string[] = [];
+  for (const [id, recipient] of [[merchantId, unchanged.recipient], [changedMerchant, changedAddress]]) {
+    const taskId = randomUUID();
+    tasks.push(taskId);
+    await pool.query(`INSERT INTO research_tasks (id, agent_id, active_until, budget, daily_limit)
+      VALUES ($1, $2, now() + interval '1 day', 3000, 3000)`, [taskId, agentId]);
+    await pool.query(`INSERT INTO gateway_task_grants (task_id, origin, payer, recipient, network, merchant_id)
+      VALUES ($1, 'https://api.example', $2, $3, 'arcTestnet', $4)`, [taskId, payer, recipient, id]);
+  }
+  await runFiles(pool, ['032_grant_recipient_approval.sql', '033_triage_review_snapshots.sql']);
+  const version = async (taskId: string) => (await pool.query(
+    'SELECT approved_recipient_version FROM gateway_task_grants WHERE task_id = $1', [taskId])).rows[0].approved_recipient_version;
+  assert.equal(await version(tasks[0]!), 0);
+  assert.equal(await version(tasks[1]!), null);
+  const { rows: [counter] } = await pool.query(
+    'SELECT recipient_request_version, pending_recipient_version FROM gateway_merchants WHERE id = $1', [merchantId]);
+  assert.equal(counter.recipient_request_version, counter.pending_recipient_version);
+
 });

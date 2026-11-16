@@ -106,11 +106,30 @@ test('gateway grant authorization requires the matching network', { timeout: 30_
     const next = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
     const staged = await requestGatewayMerchantRecipientChange(pool, seeded.merchantId, next, 'ops');
     await confirmGatewayMerchantRecipientChange(pool, seeded.merchantId, staged.pendingRecipientVersion!, next);
-    await reauthorizeGatewayGrantRecipient(pool, seeded.taskId, next, 'finance-operator');
+    await reauthorizeGatewayGrantRecipient(pool, seeded.taskId, next, staged.pendingRecipientVersion!, 'finance-operator');
     const terms = termsFor('arcTestnet');
     const grant = await transaction(pool, (client) => lockGatewayGrant(
       client, { taskId: seeded.taskId, agentToken: seeded.token }, { ...terms, recipient: next },
     ));
     assert.ok(grant.day);
   });
+
+  await t.test('A -> B -> A does not reactivate an old grant; only current-version approval does', async () => {
+    const original = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const replacement = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const task = await seedGateway(pool, { origin, payer, recipient: original });
+    const terms = { ...termsFor('arcTestnet'), recipient: original };
+    const credentials = { taskId: task.taskId, agentToken: task.token };
+    for (const address of [replacement, original]) {
+      const staged = await requestGatewayMerchantRecipientChange(pool, task.merchantId, address, 'ops');
+      await confirmGatewayMerchantRecipientChange(pool, task.merchantId, staged.pendingRecipientVersion, address);
+    }
+    await assert.rejects(transaction(pool, (client) => lockGatewayGrant(client, credentials, terms)),
+      (error: Error & { code?: string }) => error.code === 'GATEWAY_RECIPIENT_SUPERSEDED');
+    await assert.rejects(reauthorizeGatewayGrantRecipient(pool, task.taskId, original, 0, 'finance-operator'),
+      (error: Error & { code?: string }) => error.code === 'RECIPIENT_CHANGE_STALE');
+    await reauthorizeGatewayGrantRecipient(pool, task.taskId, original, 2, 'finance-operator');
+    assert.ok((await transaction(pool, (client) => lockGatewayGrant(client, credentials, terms))).day);
+  });
+
 });

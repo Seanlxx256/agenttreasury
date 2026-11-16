@@ -110,4 +110,19 @@ test('merchant payout address changes flow through the finance console', { timeo
     assert.equal(audits[1].stateBefore, recipient);
     assert.equal(audits[1].stateAfter, next);
   });
+
+  await t.test('reauthorization requires finance and the exact reviewed version', async () => {
+    const url = `/finance/gateway-grants/${seeded.taskId}/recipient-reauthorize`;
+    const send = (headers: typeof finance, payload: unknown) => app.inject({ method: 'POST', url, headers, payload: payload as object });
+    const approved = { expectedRecipient: next, expectedVersion: pendingVersion };
+    assert.equal((await send(operations, approved)).statusCode, 403);
+    assert.equal((await send(finance, { expectedRecipient: next })).statusCode, 400);
+    const stale = await send(finance, { ...approved, expectedVersion: 0 });
+    assert.equal(stale.statusCode, 409);
+    assert.equal(stale.json().code, 'RECIPIENT_CHANGE_STALE');
+    const response = await send(finance, approved);
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().approvedRecipientVersion, pendingVersion);
+  });
+
 });

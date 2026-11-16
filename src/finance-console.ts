@@ -49,6 +49,8 @@ export function registerFinanceConsole(
       refundHash: string | null;
       disputeStatus: string | null; disputeRaisedAt: Date | null;
       grantRecipient: string | null; merchantRecipient: string | null;
+      grantRecipientVersion: number | null; merchantRecipientVersion: number | null;
+      disputeReason: string | null; disputeEvidence: unknown; disputeAssessment: unknown;
     }>(`
       SELECT p.nonce, p.payer, p.recipient, p.amount_units::text AS "amountUnits", p.network,
              p.task_id AS "taskId", p.budget_status AS "budgetStatus",
@@ -60,7 +62,9 @@ export function registerFinanceConsole(
              q.status AS "refundStatus", q.reason AS "refundReason", q.decided_at AS "refundDecidedAt",
              r.transaction_hash AS "refundHash",
              ds.status AS "disputeStatus", ds.raised_at AS "disputeRaisedAt",
+             ds.reason AS "disputeReason", ds.evidence AS "disputeEvidence", ds.delivery_assessment AS "disputeAssessment",
              g.recipient AS "grantRecipient", m.recipient AS "merchantRecipient",
+             g.approved_recipient_version AS "grantRecipientVersion", m.recipient_change_version AS "merchantRecipientVersion",
              CASE WHEN j.request_id IS NOT NULL THEN jsonb_build_object(
                'transferId', j.transfer_id, 'batchHash', j.batch_hash, 'postedAt', j.posted_at,
                'lines', (SELECT jsonb_agg(jsonb_build_object('account', l.account, 'side', l.side,
@@ -105,14 +109,15 @@ export function registerFinanceConsole(
           WHERE request_id = p.request_id AND evidence->>'status' IN ('charged', 'failed', 'conflict')
           ORDER BY id DESC LIMIT 1
         ) latest ON true
-        WHERE NOT EXISTS (
+        -- Closing a delivery case never resolves a payment-evidence conflict.
+        WHERE latest.status = 'conflict' OR (NOT EXISTS (
           SELECT 1 FROM gateway_delivery_disputes d
           WHERE d.request_id = p.request_id AND d.status IN ('DISMISSED', 'REFUNDED')
         )
         AND NOT EXISTS (SELECT 1 FROM gateway_payment_refunds r WHERE r.request_id = p.request_id)
         AND NOT EXISTS (
           SELECT 1 FROM gateway_refund_requests q WHERE q.request_id = p.request_id AND q.status = 'REFUNDED'
-        )
+        ))
       )
       SELECT id, "amountUnits", "issuedAt", reason FROM cases WHERE reason IS NOT NULL
       ORDER BY CASE reason
@@ -151,7 +156,7 @@ export function registerFinanceConsole(
   app.post<{ Params: { id: string } }>('/finance/gateway-purchases/:id/triage', {
     schema: { params: paymentParams },
   }, async (request, reply) => {
-    authenticateConsole(request);
+    const actor = authenticateConsole(request);
     reply.header('Cache-Control', 'no-store');
     const { id } = request.params;
     const purchase = await gatewayPurchase(id);
@@ -166,7 +171,27 @@ export function registerFinanceConsole(
       ) observations
       ORDER BY observations.id DESC
     `, [id]);
-    return reviewGatewayTriage(prepareGatewayTriage(purchase, rows), process.env.GATEWAY_TRIAGE_MODEL, fetch, 'support-rules');
+    const model = process.env.GATEWAY_TRIAGE_MODEL;
+    const result = await reviewGatewayTriage(prepareGatewayTriage(purchase, rows), model, fetch, 'support-rules');
+    const { rows: [saved] } = await pool.query(`
+      INSERT INTO gateway_triage_reviews (request_id, actor, model, facts, inferences, rules, agent)
+      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id::text AS id, reviewed_at AS "reviewedAt"
+    `, [id, actor, model ?? null, JSON.stringify(result.facts), JSON.stringify(result.inferences),
+        JSON.stringify(result.rules), JSON.stringify(result.agent)]);
+    return { ...result, reviewId: saved.id, reviewedAt: saved.reviewedAt };
+  });
+
+  app.get<{ Params: { id: string } }>('/finance/gateway-purchases/:id/triage', {
+    schema: { params: paymentParams },
+  }, async (request, reply) => {
+    authenticateConsole(request);
+    reply.header('Cache-Control', 'no-store');
+    const { rows: [review] } = await pool.query(`
+      SELECT id::text AS "reviewId", reviewed_at AS "reviewedAt", facts, inferences, rules, agent
+      FROM gateway_triage_reviews WHERE request_id = $1 ORDER BY id DESC LIMIT 1
+    `, [request.params.id]);
+    if (!review) throw new PaymentError(404, 'TRIAGE_REVIEW_NOT_FOUND');
+    return review;
   });
 
   app.post<{ Params: { id: string }; Body: { decision: 'REFUND' | 'DISMISS' } }>(
@@ -219,19 +244,20 @@ export function registerFinanceConsole(
       pool, request.params.id, request.body.version, request.body.expectedRecipient);
   });
 
-  app.post<{ Params: { taskId: string }; Body: { expectedRecipient: string } }>('/finance/gateway-grants/:taskId/recipient-reauthorize', {
+  app.post<{ Params: { taskId: string }; Body: { expectedRecipient: string; expectedVersion: number } }>('/finance/gateway-grants/:taskId/recipient-reauthorize', {
     preHandler: async (request) => { authenticate(request); },
     schema: {
       params: { type: 'object', required: ['taskId'],
         properties: { taskId: { type: 'string',
           pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } } },
-      body: { type: 'object', required: ['expectedRecipient'], additionalProperties: false,
-        properties: { expectedRecipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' } } },
+      body: { type: 'object', required: ['expectedRecipient', 'expectedVersion'], additionalProperties: false,
+        properties: { expectedRecipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
+          expectedVersion: { type: 'integer', minimum: 0 } } },
     },
   }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     return reauthorizeGatewayGrantRecipient(
-      pool, request.params.taskId, request.body.expectedRecipient, 'finance-operator');
+      pool, request.params.taskId, request.body.expectedRecipient, request.body.expectedVersion, 'finance-operator');
   });
 
   for (const [path, file, type] of [

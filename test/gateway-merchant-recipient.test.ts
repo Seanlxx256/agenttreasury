@@ -103,7 +103,7 @@ test('merchant payout address changes require a human review', { timeout: 30_000
     const next = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
     const staged = await requestGatewayMerchantRecipientChange(pool, merchantId, next, 'ops');
     await confirmGatewayMerchantRecipientChange(pool, merchantId, staged.pendingRecipientVersion!, next);
-    const updated = await reauthorizeGatewayGrantRecipient(pool, taskId, next, 'finance-operator');
+    const updated = await reauthorizeGatewayGrantRecipient(pool, taskId, next, staged.pendingRecipientVersion!, 'finance-operator');
     assert.equal(updated.recipient, next);
     assert.notEqual(updated.recipient, recipient);
   });
@@ -115,7 +115,7 @@ test('merchant payout address changes require a human review', { timeout: 30_000
     await confirmGatewayMerchantRecipientChange(pool, merchantId, staged.pendingRecipientVersion!, next);
     const stale = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
     await assert.rejects(
-      reauthorizeGatewayGrantRecipient(pool, taskId, stale, 'finance-operator'),
+      reauthorizeGatewayGrantRecipient(pool, taskId, stale, staged.pendingRecipientVersion!, 'finance-operator'),
       (error: Error & { code?: string }) => error.code === 'RECIPIENT_CHANGE_STALE',
     );
   });
@@ -137,4 +137,18 @@ test('merchant payout address changes require a human review', { timeout: 30_000
     await assert.rejects(confirmGatewayMerchantRecipientChange(pool, merchantId, 1, recipient),
       (error: Error & { code?: string }) => error.code === 'NO_PENDING_RECIPIENT');
   });
+
+  await t.test('replacing a pending proposal twice invalidates its original version even at the same address', async () => {
+    const { merchantId } = await newMerchant();
+    const first = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const second = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    const reviewed = await requestGatewayMerchantRecipientChange(pool, merchantId, first, 'ops');
+    await requestGatewayMerchantRecipientChange(pool, merchantId, second, 'ops');
+    const latest = await requestGatewayMerchantRecipientChange(pool, merchantId, first, 'ops');
+    assert.ok(latest.pendingRecipientVersion > reviewed.pendingRecipientVersion);
+    await assert.rejects(confirmGatewayMerchantRecipientChange(pool, merchantId, reviewed.pendingRecipientVersion, first),
+      (error: Error & { code?: string }) => error.code === 'RECIPIENT_CHANGE_STALE');
+    await confirmGatewayMerchantRecipientChange(pool, merchantId, latest.pendingRecipientVersion, first);
+  });
+
 });

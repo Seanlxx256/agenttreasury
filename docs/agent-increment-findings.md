@@ -45,7 +45,7 @@ Measured on 2026-11-16 on an Apple Silicon Mac, local Ollama, temperature zero.
 | `qwen2.5:1.5b` | 0.85 | 0.94 |
 | `qwen2.5:3b` | 0.95 | 0.95 |
 
-The keyword table catches every direct phrase and misses every paraphrase. `3b` recovers the paraphrases at a small precision cost. This is wired into `prepareGatewayTriage`: free-text observation reasons become `evidence-*` facts (rules) and `evidence-model-*` facts (model), citable in the finance console.
+The keyword table catches every direct phrase and misses every paraphrase. `3b` recovers the paraphrases at a small precision cost. This is wired into triage as separate, unverified keyword/model interpretations with source observation references. Stage 0 keeps them out of recorded facts and action citations, and saves both categories in the advisory review snapshot.
 
 The numbers above were tuned in the loop, so they overstate generalization. After freezing the prompt, a separate ten-string held-out set (`gateway-evidence-test-v1`) was authored and measured once, without touching the prompt:
 
@@ -102,7 +102,7 @@ The three results reduce to one sentence:
 
 - The agent's value is demonstrated on two specific development-set tasks (signal extraction, cross-case clustering), with rule baselines and per-model recall/precision.
 - The failure is demonstrated too: the agent is *not* used where a deterministic mapping is exact, and that decision is backed by a 7b comparison rather than intuition.
-- Every agent output is a closed-set, read-only suggestion whose signal must carry a verbatim source quote, and the backend rejects any signal whose quote is not in the source text.
+- Extracted signals are closed-set, read-only interpretations with source quotes. The backend checks quote provenance, not semantic truth; interpretations remain unverified and cannot satisfy action citations. Cross-case pattern outputs remain advisory labels.
 
 **Not claimable:**
 

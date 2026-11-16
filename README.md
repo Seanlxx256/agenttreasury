@@ -2,6 +2,9 @@
 
 > For a hiring-focused two-minute summary, see [project highlights](docs/project-highlights.md). For how the agent's value over the rules is designed and measured, see [the agent increment findings](docs/agent-increment-findings.md).
 
+Stage 0 approval and evidence boundaries, regression invariants, and migration
+`032`/`033` upgrade instructions are in [the acceptance checklist](docs/stage-0-acceptance.md).
+
 AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The TypeScript, Fastify, and PostgreSQL backend is built around an Arc testnet purchase flow using Circle Gateway Nanopayments, with budget reservations, idempotent recovery, a balanced payment ledger, and an evidence-backed operations agent. An earlier Base Sepolia direct-settlement flow is retained as legacy reference material.
 
 ## Buyer-side payment recovery
@@ -292,7 +295,7 @@ Apply migration `016` and set `GATEWAY_OPERATIONS_TOKEN` to a secret distinct fr
 
 The review queue puts conflicting payment evidence first, confirmed charges without buyer delivery next, and paused automatic checks last. A Gateway outage does not clear an earlier conflict. A recovered delivery leaves the queue once the payment evidence agrees.
 
-Open a purchase and select **Triage purchase** to review its saved evidence. The console displays the rule action, its explanation, and the required facts. To enable optional evidence selection, run a model locally in Ollama and set `GATEWAY_TRIAGE_MODEL` to its installed name before starting the API. The model can select up to two additional saved facts to support the rule action. The server validates its references before displaying them separately. Recommendations are advisory and the triage endpoint reads saved records without making a Gateway request. [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
+Open a purchase and select **Triage purchase** to review its saved evidence. The console displays the rule action, its explanation, and the required facts. To enable optional evidence selection, run a model locally in Ollama and set `GATEWAY_TRIAGE_MODEL` to its installed name before starting the API. The model can select up to two additional saved facts to support the rule action. The server validates its references before displaying them separately. Recommendations are advisory: triage reads saved records without making a Gateway request and persists a review snapshot. Extracted interpretations are shown separately as unverified, with their source observation references; they cannot satisfy action citations. [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
 
 ### Evaluate Gateway triage
 
@@ -318,7 +321,7 @@ npm run eval:gateway-evidence -- --rules-only
 npm run eval:gateway-evidence -- --models qwen2.5:0.5b,qwen2.5:1.5b,qwen2.5:3b
 ```
 
-On `gateway-evidence-v1` (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with precision 1.00 — it misses every paraphrase. See the [evaluation report](docs/gateway-triage-evaluation.md) for the per-model recall and precision. The signals are also surfaced as triage facts, so a purchase whose saved observation carries a free-text failure reason gets the recovered evidence in the finance console.
+On `gateway-evidence-v1` (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with precision 1.00 — it misses every paraphrase. See the [evaluation report](docs/gateway-triage-evaluation.md) for the per-model recall and precision. Signals are surfaced separately as unverified interpretations, with source observation references and quotes. A quote proves provenance, not semantic correctness; it does not promote an interpretation into a record fact.
 
 ### Evaluate read-only investigation suggestions
 

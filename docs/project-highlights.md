@@ -95,7 +95,7 @@ actually ran the thing:
 
 - Two real Arc testnet payments, including one lost-response recovery, with verified
   batch receipts.
-- `npm test` passes 122/122.
+- `npm test` passes 132/132.
 - Triage evaluation is honest about model limits: the rule baseline is exact, and a
   per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
   escalations — measured, not assumed, with the failures (a principles prompt collapsing
@@ -108,10 +108,10 @@ actually ran the thing:
   precision 1.00 — it catches every direct phrase and misses every paraphrase. The models
   recover the paraphrases (qwen2.5:3b recall 0.95 / precision 0.95; 1.5b and 0.5b 0.85)
   at a small precision cost. The baseline and split are locked by a unit test, and the
-  signals are wired into `prepareGatewayTriage` as citable facts, so the finance console
-  surfaces evidence the structured rules never encoded. Every model signal must carry a
-  verbatim source quote that the server checks against the input text, so an unsupported
-  signal is rejected rather than accepted as a fact. The numbers are development-set
+  signals are displayed as unverified interpretations, separate from recorded facts.
+  Every model signal carries a source quote and observation references. A quote match
+  checks provenance only; it does not prove that the signal is true. Interpretations
+  cannot satisfy action citations, and reviews persist the two categories separately. The numbers are development-set
   results (the prompts were tuned against them), not held-out generalization. On a
   frozen ten-string held-out set (`gateway-evidence-test-v1`), the best model reaches
   0.80 recall (1.5b, 3b 0.70) while 0.5b drops to 0.30 below the rules' 0.50 — the

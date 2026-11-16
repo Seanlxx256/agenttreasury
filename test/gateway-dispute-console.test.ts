@@ -134,4 +134,73 @@ test('disputes reach the console and commitment violations reach the review queu
     assert.ok(row);
     assert.equal(row.reason, 'delivery-commitment-violated');
   });
+
+  await t.test('closed delivery cases cannot hide later payment conflicts', async () => {
+    for (const closeState of ['DISMISSED', 'REFUNDED']) {
+      const { requestId } = await makePurchase({ charged: true, delivered: true, commitmentViolated: true });
+      await app.inject({ method: 'POST', url: `/gateway-purchases/${requestId}/dispute`, headers: agentAuth,
+        payload: { reason: 'wrong content', evidence: { claim: 'mismatch' } } });
+      await app.inject({ method: 'POST', url: `/finance/gateway-purchases/${requestId}/dispute-decision`,
+        headers: financeAuth, payload: { decision: 'DISMISS' } });
+      if (closeState === 'REFUNDED') {
+        await pool.query("UPDATE gateway_delivery_disputes SET status = 'REFUNDED' WHERE request_id = $1", [requestId]);
+        await pool.query(`INSERT INTO gateway_payment_refunds
+          (request_id, network, transaction_hash, log_index, block_number, block_hash, reason)
+          VALUES ($1, 'arcTestnet', $2, 0, 1, $3, 'wrong content')`,
+          [requestId, `0x${randomBytes(32).toString('hex')}`, `0x${randomBytes(32).toString('hex')}`]);
+      }
+      const queue = () => app.inject({ url: '/finance/gateway-purchases/review-queue', headers: financeAuth });
+      assert.ok(!(await queue()).json().some((row: { id: string }) => row.id === requestId));
+      await pool.query(`INSERT INTO gateway_payment_observations (request_id, source, evidence)
+        VALUES ($1, 'operations', $2)`, [requestId, { status: 'conflict', reason: 'multiple-transfers' }]);
+      // A later outage must not hide the last decisive conflict either.
+      await pool.query(`INSERT INTO gateway_payment_observations (request_id, source, evidence)
+        VALUES ($1, 'operations', $2)`, [requestId, { status: 'unavailable' }]);
+      assert.equal((await queue()).json().find((row: { id: string }) => row.id === requestId)?.reason, 'payment-conflict');
+    }
+  });
+
+  await t.test('finance receives the dispute assertion, assessment and exact approval versions', async () => {
+    const { requestId } = await makePurchase({ charged: true, delivered: true, commitmentViolated: true });
+    const assertion = { expected: 'CALL', actual: '<script>not trusted</script>' };
+    await app.inject({ method: 'POST', url: `/gateway-purchases/${requestId}/dispute`, headers: agentAuth,
+      payload: { reason: 'Review the incorrect call type', evidence: assertion } });
+    const response = await app.inject({ url: `/finance/gateway-purchases/${requestId}`, headers: financeAuth });
+    assert.equal(response.statusCode, 200);
+    const detail = response.json();
+    assert.equal(detail.disputeReason, 'Review the incorrect call type');
+    assert.deepEqual(detail.disputeEvidence, assertion);
+    assert.equal(detail.disputeAssessment.satisfied, false);
+    assert.equal(detail.grantRecipientVersion, 0);
+    assert.equal(detail.merchantRecipientVersion, 0);
+  });
+
+  await t.test('triage persists fact and inference snapshots separately and exposes the saved review', async () => {
+    const { requestId } = await makePurchase({ charged: true });
+    await pool.query(`INSERT INTO gateway_payment_observations (request_id, source, evidence)
+      VALUES ($1, 'operations', $2)`, [requestId, { status: 'unavailable', reason: 'RPC timeout' }]);
+    const previousModel = process.env.GATEWAY_TRIAGE_MODEL;
+    delete process.env.GATEWAY_TRIAGE_MODEL;
+    try {
+      const response = await app.inject({ method: 'POST', url: `/finance/gateway-purchases/${requestId}/triage`, headers: financeAuth });
+      assert.equal(response.statusCode, 200);
+      const review = response.json();
+      assert.ok(review.reviewId);
+      assert.equal(review.inferences[0].verification, 'unverified');
+      assert.ok(review.facts.every((fact: { id: string }) => !fact.id.startsWith('inference-')));
+      const saved = await app.inject({ url: `/finance/gateway-purchases/${requestId}/triage`, headers: financeAuth });
+      assert.equal(saved.statusCode, 200);
+      assert.deepEqual(saved.json().facts, review.facts);
+      assert.deepEqual(saved.json().inferences, review.inferences);
+      const unauthorized = await app.inject({ url: `/finance/gateway-purchases/${requestId}/triage` });
+      assert.equal(unauthorized.statusCode, 401);
+      const { rows: [row] } = await pool.query('SELECT facts, inferences, actor FROM gateway_triage_reviews WHERE id = $1', [review.reviewId]);
+      assert.deepEqual(row.inferences, review.inferences);
+      assert.equal(row.actor, 'finance');
+    } finally {
+      if (previousModel === undefined) delete process.env.GATEWAY_TRIAGE_MODEL;
+      else process.env.GATEWAY_TRIAGE_MODEL = previousModel;
+    }
+  });
+
 });

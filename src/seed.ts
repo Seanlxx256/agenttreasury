@@ -44,17 +44,18 @@ export async function seedGateway(
   const network = grant.network ?? 'arcTestnet';
   return transaction(pool, async (client) => {
     const task = await createDemoTask(client, budget, dailyLimit);
-    const merchant = await client.query<{ id: string }>(
+    const merchant = await client.query<{ id: string; version: number }>(
       `INSERT INTO gateway_merchants (id, recipient, endpoint_origin, network)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (recipient, network) DO UPDATE SET endpoint_origin = EXCLUDED.endpoint_origin
-       RETURNING id`,
+       RETURNING id, recipient_change_version AS version`,
       [randomUUID(), grant.recipient.toLowerCase(), grant.origin, network],
     );
     const merchantId = merchant.rows[0]!.id;
     await client.query(
-      'INSERT INTO gateway_task_grants (task_id, origin, payer, recipient, network, merchant_id) VALUES ($1, $2, $3, $4, $5, $6)',
-      [task.taskId, grant.origin, grant.payer.toLowerCase(), grant.recipient.toLowerCase(), network, merchantId],
+      `INSERT INTO gateway_task_grants (task_id, origin, payer, recipient, network, merchant_id, approved_recipient_version)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [task.taskId, grant.origin, grant.payer.toLowerCase(), grant.recipient.toLowerCase(), network, merchantId, merchant.rows[0]!.version],
     );
     return { ...task, merchantId };
   });

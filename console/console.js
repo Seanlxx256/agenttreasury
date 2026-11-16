@@ -73,6 +73,12 @@ function metadata(pairs) {
   return dl;
 }
 
+function evidenceBlock(title, value) {
+  const section = element('section');
+  section.append(element('h3', title), element('pre', JSON.stringify(value ?? null, null, 2)));
+  return section;
+}
+
 function showGatewayPurchase(purchase, path, session) {
   const check = element('button', 'Check Gateway');
   check.type = 'button';
@@ -106,11 +112,46 @@ function showGatewayPurchase(purchase, path, session) {
   }));
   const actions = element('div', undefined, 'actions');
   actions.append(check, review);
+  const approvalEvidence = element('section');
+  approvalEvidence.append(element('h3', 'Approval evidence'), metadata([
+    ['Dispute status', purchase.disputeStatus], ['Dispute reason', purchase.disputeReason],
+    ['Dispute raised', timestamp(purchase.disputeRaisedAt)],
+    ['Original payment recipient', purchase.recipient],
+    ['Currently authorized recipient', purchase.grantRecipient],
+    ['Grant approval version', purchase.grantRecipientVersion ?? 'Requires explicit approval'],
+    ['Merchant current recipient', purchase.merchantRecipient],
+    ['Merchant approved version', purchase.merchantRecipientVersion],
+    ['Commitment satisfied', purchase.commitmentSatisfied ?? 'Not assessed'],
+    ['Refund transaction', purchase.refundHash],
+  ]));
+  if (purchase.disputeStatus) {
+    approvalEvidence.append(evidenceBlock('Buyer assertion (not independently verified)', purchase.disputeEvidence),
+      evidenceBlock('Delivery assessment at dispute creation', purchase.disputeAssessment));
+  }
+  if (purchase.commitmentViolations?.length) {
+    approvalEvidence.append(evidenceBlock('Recorded commitment violations', purchase.commitmentViolations));
+  }
+  const superseded = purchase.taskId && purchase.grantRecipient && purchase.merchantRecipient &&
+    (purchase.grantRecipient.toLowerCase() !== purchase.merchantRecipient.toLowerCase() ||
+      purchase.grantRecipientVersion !== purchase.merchantRecipientVersion);
+  const approvalButtons = [];
+  if (role === 'finance' && (purchase.disputeStatus === 'OPEN' || superseded)) {
+    const acknowledge = element('input');
+    acknowledge.type = 'checkbox';
+    const label = element('label');
+    label.append(acknowledge, ' I reviewed the dispute evidence and the recipient address/version shown above.');
+    approvalEvidence.append(label);
+    acknowledge.addEventListener('change', () => {
+      for (const button of approvalButtons) button.disabled = !acknowledge.checked;
+    });
+  }
   // Dispute arbitration: once a dispute is OPEN, finance refunds or dismisses it.
-  if (purchase.disputeStatus === 'OPEN') {
+  if (role === 'finance' && purchase.disputeStatus === 'OPEN') {
     for (const [decision, label] of [['REFUND', 'Approve refund'], ['DISMISS', 'Dismiss dispute']]) {
       const button = element('button', label, decision === 'REFUND' ? 'primary' : undefined);
       button.type = 'button';
+      button.disabled = true;
+      approvalButtons.push(button);
       button.addEventListener('click', () => showErrors(async () => {
         button.disabled = true;
         try {
@@ -129,16 +170,17 @@ function showGatewayPurchase(purchase, path, session) {
   }
   // A superseded grant: the merchant's payout address moved after this grant was
   // issued, so finance re-authorizes it against the reviewed address.
-  if (purchase.taskId && purchase.grantRecipient && purchase.merchantRecipient &&
-      purchase.grantRecipient.toLowerCase() !== purchase.merchantRecipient.toLowerCase()) {
+  if (role === 'finance' && superseded) {
     const reauthorize = element('button', 'Reauthorize recipient', 'primary');
     reauthorize.type = 'button';
+    reauthorize.disabled = true;
+    approvalButtons.push(reauthorize);
     reauthorize.addEventListener('click', () => showErrors(async () => {
       reauthorize.disabled = true;
       try {
         await financeApi('/gateway-grants/' + encodeURIComponent(purchase.taskId) + '/recipient-reauthorize', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ expectedRecipient: purchase.merchantRecipient }),
+          body: JSON.stringify({ expectedRecipient: purchase.merchantRecipient, expectedVersion: purchase.merchantRecipientVersion }),
         });
         if (session !== generation || !reauthorize.isConnected) return;
         const [updated] = await Promise.all([financeApi(path), refreshGatewayQueue()]);
@@ -156,7 +198,7 @@ function showGatewayPurchase(purchase, path, session) {
     ['Task', purchase.taskId], ['Task budget', purchase.budgetStatus ?? 'Untracked'],
     ['Seller delivery', purchase.sellerHasDelivery ? 'Saved' : 'Missing'],
     ['Buyer delivery', purchase.buyerHasDelivery ? 'Saved' : 'Missing'],
-  ]), actions, element('h3', 'Gateway observations'));
+  ]), approvalEvidence, actions, element('h3', 'Gateway observations'));
   if (purchase.reviewRequired) {
     actions.after(element('p', 'Automatic checks paused. Review the Gateway observations.', 'muted'));
   }
@@ -188,7 +230,7 @@ function showGatewayPurchase(purchase, path, session) {
   gatewayDetail.append(history);
 }
 
-function showTriage(container, { facts, rules, agent }) {
+function showTriage(container, { facts, inferences = [], rules, agent, reviewId, reviewedAt }) {
   const byRef = new Map(facts.map(({ id, description }) => [id, description]));
   const evidenceList = (citations) => {
     const evidence = element('ul', undefined, 'reports');
@@ -197,9 +239,31 @@ function showTriage(container, { facts, rules, agent }) {
   };
   container.replaceChildren(element('h3', 'Recommended action'), element('strong', rules.action.replaceAll('-', ' ')),
     element('p', rules.rationale), evidenceList(rules.citations));
+  if (reviewId) container.append(element('p', `Saved review ${reviewId} · ${timestamp(reviewedAt)}`, 'muted'));
+  container.append(element('h3', 'Verified record facts'),
+    element('p', 'These facts describe saved records and reported statuses. Vendor explanations are not verified causes.', 'muted'));
+  const recorded = element('ul', undefined, 'reports');
+  for (const fact of facts) {
+    const row = element('li', fact.id + ' · ' + fact.description);
+    if (fact.sourceText) row.append(element('pre', 'Reported text: ' + fact.sourceText));
+    recorded.append(row);
+  }
+  container.append(recorded);
+  if (inferences.length) {
+    container.append(element('h3', 'Unverified interpretations'),
+      element('p', 'Quoted text proves the source exists, not that the interpretation is correct. These suggestions cannot authorize payment or close a case.', 'muted'));
+    const interpretations = element('ul', undefined, 'reports');
+    for (const inference of inferences) {
+      const row = element('li', `${inference.origin === 'model' ? 'Model inference' : 'Keyword inference'} · ${inference.signal}`);
+      row.append(element('p', inference.description));
+      for (const source of inference.sources) row.append(element('pre', `${source.observationId}: "${source.quote}"`));
+      interpretations.append(row);
+    }
+    container.append(interpretations);
+  }
   if (agent.status === 'ready') {
     const extra = agent.recommendation.citations.filter((id) => !rules.citations.includes(id));
-    if (extra.length) container.append(element('h3', 'Additional evidence selected by the agent'), evidenceList(extra));
+    if (extra.length) container.append(element('h3', 'Additional record facts selected by the agent'), evidenceList(extra));
   } else {
     const messages = {
       unavailable: 'Agent evidence selection is unavailable.',

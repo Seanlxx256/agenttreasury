@@ -48,3 +48,6 @@ td,th{border-bottom:1px solid var(--line);padding:7px 5px;font-size:.83rem}
 td:last-child,th:last-child{text-align:right}
 .reports{padding-left:20px}
 @media(max-width:740px){.workspace{grid-template-columns:1fr}.orders ul{max-height:30vh}.form-actions{flex-wrap:wrap}}
+
+pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:18rem;overflow:auto;font-size:.82rem}
+input[type=checkbox]{flex:none;min-width:auto}

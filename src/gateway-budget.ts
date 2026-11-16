@@ -18,7 +18,9 @@ export async function lockGatewayGrant(
       FROM research_tasks WHERE id = $1 FOR UPDATE`, [taskId]);
   const { rows: [grant] } = await client.query<{
     origin: string; payer: string; recipient: string; network: GatewayNetworkName; merchantId: string | null;
-  }>(`SELECT g.origin, g.payer, g.recipient, g.network, g.merchant_id AS "merchantId"
+    approvedRecipientVersion: number | null;
+  }>(`SELECT g.origin, g.payer, g.recipient, g.network, g.merchant_id AS "merchantId",
+            g.approved_recipient_version AS "approvedRecipientVersion"
      FROM research_tasks t JOIN agents a ON a.id = t.agent_id JOIN gateway_task_grants g ON g.task_id = t.id
      WHERE t.id = $1 AND a.token_digest = $2 AND a.enabled FOR SHARE OF a, g`,
     [taskId, tokenDigest(agentToken)],
@@ -33,10 +35,10 @@ export async function lockGatewayGrant(
   // payout address. A recipient change supersedes the grant: the agent must be
   // re-authorized for the new address rather than paying the superseded one.
   if (grant.merchantId) {
-    const { rows: [merchant] } = await client.query<{ recipient: string }>(
-      'SELECT recipient FROM gateway_merchants WHERE id = $1 FOR SHARE', [grant.merchantId],
+    const { rows: [merchant] } = await client.query<{ recipient: string; version: number }>(
+      'SELECT recipient, recipient_change_version AS version FROM gateway_merchants WHERE id = $1 FOR SHARE', [grant.merchantId],
     );
-    if (!merchant || merchant.recipient !== grant.recipient) {
+    if (!merchant || merchant.recipient !== grant.recipient || merchant.version !== grant.approvedRecipientVersion) {
       throw new PaymentError(403, 'GATEWAY_RECIPIENT_SUPERSEDED');
     }
   }

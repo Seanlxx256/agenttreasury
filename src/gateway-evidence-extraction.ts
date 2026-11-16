@@ -130,7 +130,7 @@ function isExtractedEvidence(value: unknown): value is ExtractedEvidence {
     typeof quote === 'string' && quote.trim().length > 0 && quote.length <= 200;
 }
 
-function quoteMatchesText(quote: string, text: string): boolean {
+export function quoteMatchesText(quote: string, text: string): boolean {
   const normalize = (value: string) =>
     value.trim().replace(/^["'`]+|["'`]+$/g, '').toLowerCase().replace(/\s+/g, ' ');
   const normalizedQuote = normalize(quote);

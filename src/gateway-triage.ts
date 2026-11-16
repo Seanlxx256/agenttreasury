@@ -1,6 +1,6 @@
 import { resolveTriageModelProfile, type TriageModelProfile } from './gateway-triage-models.js';
 import {
-  evidenceSignalDescriptions, extractEvidenceRules, extractEvidenceWithModel,
+  evidenceSignalDescriptions, extractEvidenceRules, extractEvidenceWithModel, quoteMatchesText, type EvidenceSignal,
 } from './gateway-evidence-extraction.js';
 
 export type TriageObservation = { id: string; evidence: { status: string; reason?: string } };
@@ -14,7 +14,13 @@ type TriagePurchase = {
   commitmentSatisfied?: boolean | null;
 };
 
-type Fact = { id: string; description: string };
+// Facts assert what a local record or a Gateway observation says, not that a
+// vendor's free-text explanation is true. Interpretations live separately.
+type Fact = { id: string; description: string; sourceText?: string };
+export type TriageInference = {
+  id: string; signal: EvidenceSignal; description: string; origin: 'rule' | 'model';
+  verification: 'unverified'; sources: { observationId: string; quote: string }[];
+};
 export type TriageAction = 'review-conflict' | 'retrieve-delivery' | 'contact-merchant' |
   'check-gateway' | 'wait-for-gateway' | 'close-case' | 'escalate' | 'raise-dispute';
 export type TriageRecommendation = { action: TriageAction; rationale: string; citations: string[] };
@@ -39,22 +45,20 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
   for (const { id, evidence } of observations) {
     if (!gatewayStatuses.has(evidence.status)) continue;
     const reason = evidence.reason && conflictReasons.has(evidence.reason) ? ' (' + evidence.reason + ')' : '';
-    facts.push({ id: 'observation-' + id, description: 'Gateway observation: ' + evidence.status + reason });
+    facts.push({ id: 'observation-' + id, description: 'Gateway observation: ' + evidence.status + reason,
+      ...(evidence.reason ? { sourceText: evidence.reason } : {}) });
   }
 
-  // Free-text failure reasons that are not one of the three structured conflict
-  // reasons. The keyword rules recover the signals they can; the model fills the
-  // rest asynchronously in reviewGatewayTriage.
-  const unstructured = observations
-    .map(({ evidence }) => evidence.reason)
-    .filter((reason): reason is string => !!reason && !conflictReasons.has(reason));
-  const ruleSignals = new Set<string>();
-  for (const text of unstructured) {
-    for (const { signal } of extractEvidenceRules(text)) {
-      if (!ruleSignals.has(signal)) {
-        ruleSignals.add(signal);
-        facts.push({ id: 'evidence-' + signal, description: evidenceSignalDescriptions[signal] });
-      }
+  const evidenceSources = observations
+    .filter(({ evidence }) => gatewayStatuses.has(evidence.status) && evidence.reason && !conflictReasons.has(evidence.reason))
+    .map(({ id, evidence }) => ({ observationId: 'observation-' + id, text: evidence.reason! }));
+  const unstructured = evidenceSources.map(({ text }) => text);
+  const inferences: TriageInference[] = [];
+  for (const { observationId, text } of evidenceSources) {
+    for (const { signal, quote } of extractEvidenceRules(text)) {
+      inferences.push({ id: `inference-rule-${observationId}-${signal}`, signal,
+        description: evidenceSignalDescriptions[signal], origin: 'rule', verification: 'unverified',
+        sources: [{ observationId, quote }] });
     }
   }
 
@@ -134,7 +138,7 @@ export function prepareGatewayTriage(purchase: TriagePurchase, observations: Tri
     allowed.push({ action: 'escalate', rationale: 'Ask an operator to assess the existing evidence.',
       citations: rules.citations });
   }
-  return { facts, rules, allowed, unstructured };
+  return { facts, rules, allowed, unstructured, evidenceSources, inferences };
 }
 
 export async function reviewGatewayTriage(
@@ -142,25 +146,23 @@ export async function reviewGatewayTriage(
   mode: 'choose-action' | 'support-rules' = 'choose-action', profile?: TriageModelProfile,
 ) {
   const { facts, rules } = input;
+  const inferences = [...input.inferences];
   const supportingRules = mode === 'support-rules';
   const allowed = supportingRules ? [rules] : input.allowed;
   const maxCitations = supportingRules ? rules.citations.length + 2 : 8;
-  if (!model) return { facts, rules, agent: { status: 'disabled' as const } };
+  if (!model) return { facts, inferences, rules, agent: { status: 'disabled' as const } };
 
-  // The model reads the free-text reasons the keyword table could not reduce and
-  // surfaces any additional signal as a fact, so the console shows evidence the
-  // structured rules never encoded. This runs before action selection so the
-  // extra facts are citable.
+  // A quote check proves provenance, never semantic correctness. Model signals
+  // cannot enter facts, required action citations, or the execution policy.
   if (input.unstructured.length > 0) {
     const { status, signals } = await extractEvidenceWithModel(input.unstructured.join('\n'), model, request);
     if (status === 'ready') {
       for (const { signal, quote } of signals) {
-        const alreadyPresent = facts.some((fact) =>
-          fact.id === 'evidence-' + signal || fact.id === 'evidence-model-' + signal);
-        if (!alreadyPresent) {
-          facts.push({ id: 'evidence-model-' + signal,
-            description: `${evidenceSignalDescriptions[signal]} (source: "${quote}")` });
-        }
+        const sources = input.evidenceSources.filter(({ text }) => quoteMatchesText(quote, text))
+          .map(({ observationId }) => ({ observationId, quote }));
+        if (!sources.length) continue;
+        inferences.push({ id: `inference-model-${inferences.length}`, signal,
+          description: evidenceSignalDescriptions[signal], origin: 'model', verification: 'unverified', sources });
       }
     }
   }
@@ -193,7 +195,7 @@ export async function reviewGatewayTriage(
     });
     if (!response.ok) {
       await response.body?.cancel();
-      return { facts, rules, agent: { status: 'unavailable' as const } };
+      return { facts, inferences, rules, agent: { status: 'unavailable' as const } };
     }
     const envelope = await response.json();
     const content = envelope?.message?.content;
@@ -201,7 +203,7 @@ export async function reviewGatewayTriage(
       try { result = JSON.parse(content); } catch { /* The output is rejected below. */ }
     }
   } catch {
-    return { facts, rules, agent: { status: 'unavailable' as const } };
+    return { facts, inferences, rules, agent: { status: 'unavailable' as const } };
   }
 
   if (result && typeof result === 'object' && 'action' in result && 'citations' in result) {
@@ -210,9 +212,9 @@ export async function reviewGatewayTriage(
     if (option && Array.isArray(citations) && citations.length <= maxCitations && new Set(citations).size === citations.length &&
         citations.every((id) => facts.some((fact) => fact.id === id)) &&
         option.citations.every((id) => citations.includes(id))) {
-      return { facts, rules, agent: { status: 'ready' as const, model,
+      return { facts, inferences, rules, agent: { status: 'ready' as const, model,
         recommendation: { ...option, citations } } };
     }
   }
-  return { facts, rules, agent: { status: 'rejected' as const } };
+  return { facts, inferences, rules, agent: { status: 'rejected' as const } };
 }
