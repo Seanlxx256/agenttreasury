@@ -1,3 +1,4 @@
+import { recordGatewayCase } from './gateway-cases.js';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { Pool } from 'pg';
@@ -30,6 +31,9 @@ export async function runGatewayBalanceScan(
   const network = chain.network;
   const finalized = await chain.finalized();
 
+  await pool.query(`INSERT INTO gateway_balance_heads(network,payer,finalized_block)
+    VALUES($1,$2,$3) ON CONFLICT(network,payer) DO UPDATE
+    SET finalized_block=EXCLUDED.finalized_block, observed_at=now()`, [network,wallet,String(finalized)]);
   const claim = await claimScan(pool, network, wallet, finalized, leaseSeconds);
   if (claim.status === 'already-running' || claim.status === 'already-scanned') {
     return { status: claim.status, scanId: claim.scanId, network, payer: wallet, window: claim.window };
@@ -208,11 +212,7 @@ async function persistScanResult(
       throw new Error('Balance scan was reclaimed before its result could be persisted');
     }
     for (const { kind, detail } of discrepancies) {
-      await client.query(`
-        INSERT INTO gateway_balance_discrepancies (id, scan_id, kind, detail)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (scan_id, kind, detail) DO NOTHING
-      `, [randomUUID(), scanId, kind, JSON.stringify(detail)]);
+      await recordGatewayCase(client, scanId, kind, detail);
     }
     // GREATEST makes the cursor monotonic: even if a stale runner somehow
     // persists after a newer window advanced it, the cursor never rewinds.
@@ -249,8 +249,8 @@ export async function gatewayBalanceScanMetrics(pool: Pool, payer?: Address) {
   `, latestParams);
   const { rows: openByKind } = await pool.query(`
     SELECT d.kind, count(*)::int AS count
-    FROM gateway_balance_discrepancies d JOIN gateway_balance_scans s ON s.id = d.scan_id
-    ${payer ? "WHERE d.status = 'open' AND s.payer = $1" : "WHERE d.status = 'open'"}
+    FROM gateway_reconciliation_cases d
+    ${payer ? "WHERE d.status <> 'resolved' AND d.payer = $1" : "WHERE d.status <> 'resolved'"}
     GROUP BY d.kind ORDER BY d.kind
   `, openParams);
   return {

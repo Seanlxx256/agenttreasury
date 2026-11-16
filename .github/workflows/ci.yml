@@ -1,0 +1,29 @@
+name: Verification
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # Includes legacy upgrades, concurrency and the cold-backup restore drill.
+      # All providers are fixtures; no secrets, RPC or funds are required.
+      - run: npm test
+      - run: docker build --tag agenttreasury:ci .
+      - name: Validate compose and boot the isolated API
+        env:
+          OPS_DB_PASSWORD: ci_only_database_password
+          FINANCE_APPROVAL_TOKEN: ci_finance_token
+          GATEWAY_OPERATIONS_TOKEN: ci_operations_token
+        run: |
+          docker compose -f compose.operations.yaml config --quiet
+          docker compose -f compose.operations.yaml up --build --detach --wait api
+          curl --fail http://127.0.0.1:3000/health/ready
+          docker compose -f compose.operations.yaml down --volumes

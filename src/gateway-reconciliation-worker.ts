@@ -10,7 +10,8 @@ type Claim = ExpectedGatewayPayment & {
   requestId: string; taskId: string; submitted: boolean; leaseUntil: string; attempts: number;
 };
 
-export async function processGatewayReconciliation(pool: Pool, request: typeof fetch = fetch) {
+export async function processGatewayReconciliation(pool: Pool, request: typeof fetch = fetch,
+  observe: (event: { event: string; requestId: string; status?: string }) => void = () => {}) {
   const { rows: [claim] } = await pool.query<Claim>(`
     WITH candidate AS (
       SELECT request_id FROM gateway_demo_purchases
@@ -26,6 +27,7 @@ export async function processGatewayReconciliation(pool: Pool, request: typeof f
               p.reconcile_after::text AS "leaseUntil", p.reconcile_attempts AS attempts
   `);
   if (!claim) return false;
+  observe({ event: 'gateway_recovery_claimed', requestId: claim.requestId });
 
   if (!claim.submitted) {
     await transaction(pool, async (client) => {
@@ -47,6 +49,7 @@ export async function processGatewayReconciliation(pool: Pool, request: typeof f
   }
 
   const evidence = await checkGatewayPayment(pool, claim.requestId, claim, 'worker', request);
+  observe({ event: 'gateway_recovery_observed', requestId: claim.requestId, status: evidence.status });
   const attempts = claim.attempts + 1;
   const review = evidence.status === 'conflict' || attempts >= maxAttempts;
   const delay = Math.min(300, 5 * 2 ** (attempts - 1));

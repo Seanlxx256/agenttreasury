@@ -37,6 +37,15 @@
           </div>
         </form>
         <div id="gateway-detail" aria-live="polite"></div>
+        <h3>Operations health</h3>
+        <div id="operations-metrics"></div>
+        <h3>Balance reconciliation cases</h3>
+        <label for="case-filter">Case status</label>
+        <select id="case-filter"><option value="all">All</option><option value="open">Open</option>
+          <option value="investigating">Investigating</option><option value="resolved">Resolved</option></select>
+        <ul id="reconciliation-cases" class="review-queue"></ul>
+        <button id="cases-more" hidden>Load more cases</button>
+        <div id="reconciliation-case-detail" aria-live="polite"></div>
         <h3>Cross-case patterns</h3>
         <ul id="gateway-patterns" class="review-queue"></ul>
       </section>

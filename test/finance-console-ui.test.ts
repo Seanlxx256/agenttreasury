@@ -12,6 +12,7 @@ class Element {
   type = '';
   disabled = false;
   checked = false;
+  value = '';
   isConnected = true;
   constructor(public tag: string) {}
   set textContent(value: string) { this.children = [value]; }
@@ -33,7 +34,7 @@ class Element {
   all(): Element[] { return [this, ...this.children.flatMap((child) => child instanceof Element ? child.all() : [])]; }
 }
 
-async function consoleHarness(role: string) {
+async function consoleHarness(role: string, reconciliationCase?: Record<string, unknown>) {
   const elements = new Map<string, Element>();
   const byId = (id: string) => {
     if (!elements.has(id)) elements.set(id, new Element('div'));
@@ -51,13 +52,35 @@ async function consoleHarness(role: string) {
     Node: Element, setTimeout, clearTimeout, purchase,
     fetch: async (path: string, init?: { method?: string; body?: string }) => {
       if (init?.method === 'POST') posts.push({ path, payload: JSON.parse(init.body ?? '{}') });
+      if (path.includes('/reconciliation-cases')) return Response.json(path.endsWith('?status=all')
+        ? { cases: [], next:null } : reconciliationCase);
+      if (path.endsWith('/operations/metrics')) return Response.json({ cases:{},recovery:{},scans:{},wallets:[],workers:[] });
       return Response.json(path.endsWith('review-queue') ? [] : purchase);
     },
   });
   runInContext(await readFile(new URL('../../console/console.js', import.meta.url), 'utf8'), context);
   runInContext(`role = ${JSON.stringify(role)}; showGatewayPurchase(purchase, '/gateway-purchases/case-1', generation)`, context);
-  return { context, root: byId('gateway-detail'), posts };
+  return { context, root: byId('gateway-detail'), caseRoot:byId('reconciliation-case-detail'), posts };
 }
+
+test('case console requires an outcome and binds resolution to displayed evidence/version', async () => {
+  const { context,caseRoot,posts }=await consoleHarness('operations', {
+    id:'case-1',status:'investigating',version:7,latest_discrepancy_id:'evidence-1',occurrenceCount:2,
+    evidence:{ id:'evidence-1',detail:'<script>untrusted()</script>' },events:[],
+  });
+  await runInContext("openCase('case-1')",context);
+  assert.match(caseRoot.textContent,/<script>untrusted\(\)<\/script>/);
+  assert.match(caseRoot.textContent,/does not release a budget/);
+  const button=caseRoot.all().find((node)=>node.tag==='button' && node.textContent==='Resolve with evidence')!;
+  const note=caseRoot.all().find((node)=>node.tag==='textarea')!;
+  assert.equal(button.disabled,true);
+  await button.fire('click'); assert.equal(posts.length,0);
+  note.value='Confirmed duplicate observation; original payment remains reserved.';
+  await note.fire('input'); await button.fire('click');
+  assert.deepEqual(posts[0],{ path:'/finance/reconciliation-cases/case-1/transitions',payload:{
+    expectedVersion:7,evidenceId:'evidence-1',status:'resolved',note:note.value,
+  } });
+});
 
 test('finance sees evidence before approving and submits the exact displayed version', async () => {
   const { root, posts } = await consoleHarness('finance');

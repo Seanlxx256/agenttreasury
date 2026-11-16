@@ -1,4 +1,5 @@
-import { timingSafeEqual } from 'node:crypto';
+import { schemaVersion } from './migrate.js';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import Fastify from 'fastify';
 import type { FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
@@ -28,6 +29,7 @@ export function buildApp(
   }
   const app = Fastify({
     logger,
+    genReqId: () => randomUUID(),
     bodyLimit: 8192,
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
   });
@@ -52,17 +54,22 @@ export function buildApp(
         error.statusCode >= 400 && error.statusCode < 500) {
       return reply.code(error.statusCode).send({ code: 'INVALID_REQUEST' });
     }
-    request.log.error({ err: error }, 'Request failed');
+    request.log.error({ errorType: error instanceof Error ? error.name : 'unknown' }, 'Request failed');
     return reply.code(500).send({ code: 'INTERNAL_ERROR' });
   });
 
+  app.addHook('onResponse', async (request, reply) => {
+    const params = request.params as { id?: string } | undefined;
+    request.log.info({ event: 'http_completed', route: request.routeOptions.url,
+      resourceId: params?.id, statusCode: reply.statusCode, durationMs: reply.elapsedTime }, 'Request completed');
+  });
   app.get('/health/live', async () => ({ status: 'ok' }));
   app.get('/health/ready', async (request, reply) => {
     try {
-      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = 10');
+      const { rowCount } = await pool.query('SELECT 1 FROM schema_migrations WHERE version = $1', [schemaVersion]);
       if (rowCount === 1) return { status: 'ready' };
     } catch (error) {
-      request.log.warn({ err: error }, 'Database readiness check failed');
+      request.log.warn({ errorType: error instanceof Error ? error.name : 'unknown' }, 'Database readiness check failed');
     }
     return reply.code(503).send({ status: 'unavailable' });
   });

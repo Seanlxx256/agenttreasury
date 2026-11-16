@@ -7,3 +7,6 @@ dist/
 .gateway-offline/
 *-evidence.json
 operator-A01.json
+
+*.dump
+.operations-local/

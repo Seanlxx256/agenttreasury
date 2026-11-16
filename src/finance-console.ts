@@ -1,3 +1,4 @@
+import { registerGatewayOperations } from './gateway-operations.js';
 import { readFile } from 'node:fs/promises';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
@@ -39,6 +40,7 @@ export function registerFinanceConsole(
   app: FastifyInstance, pool: Pool, authenticateConsole: (request: FastifyRequest) => 'finance' | 'operations',
   authenticate: (request: FastifyRequest) => void, localDemo: boolean,
 ) {
+  registerGatewayOperations(app, pool, authenticateConsole);
   async function gatewayPurchase(id: string) {
     const { rows: [purchase] } = await pool.query<ExpectedGatewayPayment & {
       issuedAt: Date; buyerHasDelivery: boolean; sellerHasDelivery: boolean;

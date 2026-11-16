@@ -1,5 +1,7 @@
 # AgentTreasury
 
+For durable reconciliation cases, operations metrics, deployment and recovery drills, see [Stage 1 operations](docs/stage-1-operations.md).
+
 > For a hiring-focused two-minute summary, see [project highlights](docs/project-highlights.md). For how the agent's value over the rules is designed and measured, see [the agent increment findings](docs/agent-increment-findings.md).
 
 Stage 0 approval and evidence boundaries, regression invariants, and migration

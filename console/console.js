@@ -510,7 +510,7 @@ async function showErrors(action) {
 }
 
 async function refreshConsole() {
-  await Promise.all([refreshGatewayQueue(), refreshGatewayPatterns(), role === 'finance' ? refresh() : undefined]);
+  await Promise.all([refreshGatewayQueue(), refreshGatewayPatterns(), refreshOperations(), role === 'finance' ? refresh() : undefined]);
 }
 
 login.addEventListener('submit', (event) => {
@@ -554,6 +554,9 @@ byId('logout').addEventListener('click', () => {
   list.replaceChildren();
   detail.replaceChildren();
   gatewayLookup.reset();
+  caseSelection++;
+  for (const id of ['operations-metrics', 'reconciliation-cases', 'reconciliation-case-detail']) byId(id).replaceChildren();
+  byId('cases-more').hidden = true;
   gatewayDetail.replaceChildren();
   gatewayQueue.replaceChildren();
   workspace.hidden = true;
@@ -563,3 +566,69 @@ byId('logout').addEventListener('click', () => {
   notice.textContent = '';
   byId('token').focus();
 });
+
+let caseSelection = 0;
+let casePage = null;
+let caseListGeneration = 0;
+
+async function refreshOperations() {
+  const session = generation;
+  const [metrics] = await Promise.all([financeApi('/operations/metrics'), loadCases()]);
+  if (session !== generation) return;
+  byId('operations-metrics').replaceChildren(metadata([
+    ['Open cases', metrics.cases.open], ['Investigating', metrics.cases.investigating],
+    ['Oldest unresolved (seconds)', metrics.cases.oldestUnresolvedSeconds],
+    ['Recovery due', metrics.recovery.due], ['Paused for review', metrics.recovery.pausedForReview],
+    ['Failed scans', metrics.scans.failed], ['Expired scan leases', metrics.scans.expiredLeases],
+  ]), evidenceBlock('Scanner lag and observation age', metrics.wallets), evidenceBlock('Worker health', metrics.workers), evidenceBlock('Latest recovery evidence', metrics.latestRecoveryEvidence));
+}
+async function loadCases(more = false) {
+  const session = generation;
+  const load = ++caseListGeneration;
+  const status = byId('case-filter').value || 'all';
+  const page = await financeApi('/reconciliation-cases?status=' + status + (more && casePage ? '&before=' + casePage : ''));
+  if (session !== generation || load !== caseListGeneration) return;
+  const root = byId('reconciliation-cases');
+  if (!more) root.replaceChildren();
+  casePage = page.next;
+  byId('cases-more').hidden = !casePage;
+  for (const item of page.cases) {
+    const row = element('li');
+    const button = element('button', item.kind + ' · ' + item.status + ' · ' + item.subject);
+    button.addEventListener('click', () => showErrors(() => openCase(item.id)));
+    row.append(button); root.append(row);
+  }
+  if (!more && !page.cases.length) root.append(element('li', 'No reconciliation cases.'));
+}
+async function openCase(id) {
+  const session = generation;
+  const choice = ++caseSelection;
+  const value = await financeApi('/reconciliation-cases/' + id);
+  if (session !== generation || choice !== caseSelection) return;
+  const root = byId('reconciliation-case-detail');
+  root.replaceChildren(element('h3', 'Case ' + value.id), metadata([
+    ['Status', value.status], ['Version', value.version], ['Occurrences', value.occurrenceCount],
+    ['First seen', timestamp(value.first_seen_at)], ['Last seen', timestamp(value.last_seen_at)],
+  ]), evidenceBlock('Latest original scan evidence', value.evidence), evidenceBlock('Recent case history', value.events),
+  element('p', 'Resolving a case records an operational conclusion. It does not release a budget, refund, or adjust a ledger.'));
+  const note = element('textarea');
+  note.maxLength = 2000;
+  note.setAttribute('aria-label', 'Investigation outcome and supporting evidence');
+  note.placeholder = 'Record your investigation outcome and supporting evidence.';
+  const action = value.status === 'investigating' ? 'resolved' : 'investigating';
+  const button = element('button', action === 'resolved' ? 'Resolve with evidence' : 'Start investigation');
+  button.disabled = true;
+  note.addEventListener('input', () => { button.disabled = !note.value.trim(); });
+  button.addEventListener('click', () => showErrors(async () => {
+    button.disabled = true;
+    try {
+      await financeApi('/reconciliation-cases/' + id + '/transitions', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedVersion: value.version,
+          evidenceId: value.latest_discrepancy_id, status: action, note: note.value.trim() }) });
+      if (session === generation && choice === caseSelection) await Promise.all([openCase(id), refreshOperations()]);
+    } finally { if (button.isConnected) button.disabled = !note.value.trim(); }
+  }));
+  root.append(note, button);
+}
+byId('case-filter').addEventListener('change', () => showErrors(() => loadCases()));
+byId('cases-more').addEventListener('click', () => showErrors(() => loadCases(true)));
