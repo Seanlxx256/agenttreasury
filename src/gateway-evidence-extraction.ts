@@ -43,18 +43,19 @@ export function extractEvidenceRules(text: string): ExtractedEvidence[] {
 }
 
 const extractSystemPrompt = [
-  'Read the payment error text and list which of the following failure signals it shows.',
+  'Read the payment error text and list which of the following failure signals it states.',
   'Return JSON with one field "signals": an array of signal names only.',
   'Signal meanings:',
-  '- nonce-reused: the same authorization identifier was submitted twice.',
+  '- nonce-reused: the same authorization signature identifier (nonce) was submitted twice.',
+  '  Do NOT use this merely because something happened twice or a past record was referenced again.',
   '- insufficient-funds: the wallet did not have enough balance to settle.',
-  '- recipient-not-whitelisted: the destination address was not allowed.',
-  '- invalid-signature: the authorization signature did not verify.',
-  '- batch-already-processed: the batch was already settled before.',
-  '- authorization-expired: the authorization window has already passed.',
-  '- rpc-unavailable: the node or API could not be reached.',
+  '- recipient-not-whitelisted: the destination address was not on the allowed list.',
+  '- invalid-signature: the authorization signature did not verify against the key.',
+  '- batch-already-processed: the batch or settlement was already booked before.',
+  '- authorization-expired: the authorization window (its valid-before deadline) has passed.',
+  '- rpc-unavailable: the node or API could not be reached, including timeout, connection refused, rate limiting (429), throttling, or no response.',
   '- unknown-error: none of the above clearly applies.',
-  'Do not invent signals that the text does not support. Prefer fewer, correct signals.',
+  'List a signal ONLY when the text states its condition directly. If no signal clearly applies, prefer unknown-error. Never list a signal the text does not support.',
 ].join('\n');
 
 export async function extractEvidenceWithModel(

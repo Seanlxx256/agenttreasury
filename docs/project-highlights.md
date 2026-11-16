@@ -103,8 +103,8 @@ actually ran the thing:
   do: extracting failure signals from free-text error strings. On `gateway-evidence-v1`
   (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with
   precision 1.00 — it catches every direct phrase and misses every paraphrase. The models
-  recover the paraphrases (1.5B recall 0.90, 3B 0.85, 0.5B 0.75) at a small precision cost
-  (0.71–0.94). The baseline and split are locked by a unit test.
+  recover the paraphrases (qwen2.5:3b recall 0.95 / precision 0.95; 1.5b and 0.5b 0.85)
+  at a small precision cost. The baseline and split are locked by a unit test.
 
 ## Not done (and why)
 

@@ -228,11 +228,13 @@ Measured on 2026-11-16 on an Apple Silicon Mac with Ollama, temperature zero:
 | Method | Overall recall | Overall precision | Direct recall | Paraphrase recall |
 | --- | ---: | ---: | ---: | ---: |
 | Rules (keyword table) | 0.50 | 1.00 | 1.00 | 0.00 |
-| `qwen2.5:0.5b` | 0.75 | 0.71 | — | — |
-| `qwen2.5:1.5b` | 0.90 | 0.82 | 0.90 | 0.90 |
-| `qwen2.5:3b` | 0.85 | 0.94 | — | — |
+| `qwen2.5:0.5b` | 0.85 | 0.85 | 1.00 | 0.70 |
+| `qwen2.5:1.5b` | 0.85 | 0.94 | 0.90 | 0.80 |
+| `qwen2.5:3b` | 0.95 | 0.95 | 1.00 | 0.90 |
 
-This is the first dataset on which **the agent beats the rules**, and it does so exactly where the architecture predicted: the rules score 0 on the 10 paraphrases, and `qwen2.5:1.5b` recovers 9 of them. The increment is not free — the models' precision stays below 1.0 (they occasionally over-claim a signal the text does not support), and every model adds a local generation delay. The honest framing is therefore "the agent reads what the keyword table cannot, at a small false-positive cost," not "the agent is uniformly better."
+This is the first dataset on which **the agent beats the rules**, and it does so exactly where the architecture predicted: the rules score 0 on the 10 paraphrases, and `qwen2.5:3b` recovers 9 of them. The increment is not free — the models' precision stays below 1.0 (they occasionally over-claim a signal the text does not support), and every model adds a local generation delay. The honest framing is therefore "the agent reads what the keyword table cannot, at a small false-positive cost," not "the agent is uniformly better."
+
+The first pass over-claimed: with a loose signal list the weak models hallucinated `nonce-reused` on any text about something happening twice, and `1.5b` misread rate limiting. Tightening the signal definitions — a negative boundary on `nonce-reused`, an explicit `rpc-unavailable` list (timeout, connection refused, 429, throttling), and "list a signal only when the text states its condition directly" — raised the best model from 0.85/0.94 to 0.95/0.95 recall/precision without touching the closed signal set. One paraphrase ("booked earlier under a different reference") remains misread by `3b` as nonce reuse; it is kept as an honest residual rather than over-fitting the prompt to the fixture.
 
 The rule baseline and the scoring are covered by a unit test, so the half-recall baseline and the direct/paraphrase split are reproducible without Ollama. The model results above are a measurement on this fixture set, not a production claim.
 
