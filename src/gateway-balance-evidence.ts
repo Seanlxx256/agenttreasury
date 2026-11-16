@@ -14,7 +14,11 @@ export function evidenceDigest(value: unknown): string {
       .map(([key, val]) => `${JSON.stringify(key)}:${canonical(val)}`).join(',')}}`;
     return JSON.stringify(item);
   }
-  return createHash('sha256').update(canonical(value)).digest('hex');
+  // Hash JSON semantics, including Date.toJSON(), omitted object undefined and
+  // null array holes, exactly as the persisted/exported representation.
+  const encoded = JSON.stringify(value);
+  if (encoded === undefined) throw new Error('Evidence must have a JSON representation');
+  return createHash('sha256').update(canonical(JSON.parse(encoded))).digest('hex');
 }
 
 // Called inside the scanner transaction after its attempt fencing check.

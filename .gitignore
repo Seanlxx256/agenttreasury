@@ -10,3 +10,5 @@ operator-A01.json
 
 *.dump
 .operations-local/
+
+.gateway-acceptance/

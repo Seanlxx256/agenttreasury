@@ -1,5 +1,10 @@
 # Stage 2: constrained Gateway signing service
 
+Follow-up: [Stage 6 real testnet acceptance](stage-6-signing-acceptance.md) validates
+the separate signer with a new order. The verification section below describes
+the initial Stage 2 fixture-only checkpoint.
+
+
 The executable Gateway buyer no longer reads a private key or invokes Circle
 CLI signing. It calls a separate signer process with a request ID and task ID.
 The signer reconstructs an already-reserved authorization from PostgreSQL,

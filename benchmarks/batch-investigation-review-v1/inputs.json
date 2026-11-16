@@ -1,0 +1,1109 @@
+[
+  {
+    "id": "case-01",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-02",
+    "input": {
+      "purchase": {
+        "id": "0c7b7fbc-e93b-4fa4-a297-373ea8852b90",
+        "nonce": "0x36e16e8713302949b94814340a476e236d0d932fe83cb9f9c0dd6aea57219fb0",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": null
+      },
+      "journal": {
+        "batchHash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+        "amount": "1000",
+        "transferId": "8e23024a-b7e3-4d63-8123-325281051ef5"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "8e23024a-b7e3-4d63-8123-325281051ef5",
+            "txHash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72412969",
+        "to": "72412969",
+        "finalized": "72585273",
+        "openingHash": "0x8be9baf8047da1b94568d1564683b626d280ac9cc0f154c7c00bdbe06f6cc781",
+        "closingHash": "0x53f87bd72cd236561d2db6883f94771c6d83e44651c2280950f957646393e9e1",
+        "opening": "499000",
+        "closing": "498000",
+        "purchases": [
+          {
+            "requestId": "0c7b7fbc-e93b-4fa4-a297-373ea8852b90",
+            "nonce": "0x36e16e8713302949b94814340a476e236d0d932fe83cb9f9c0dd6aea57219fb0",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+            "journalAmount": "1000"
+          },
+          {
+            "requestId": "794d6990-afe6-42b1-9f2f-df9c32535693",
+            "nonce": "0x0c0c403bc69e69692aafa1adbd70384f206d2b631894d9963d24c50442ca4863",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x1823231fd53d743db147b8c445b90940e1671f526302921b1423794faf13a6c4",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {
+          "0x1823231fd53d743db147b8c445b90940e1671f526302921b1423794faf13a6c4": "72411592"
+        },
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0xd9f44121ba01e996fd38319dddad6e2a77d366e95e99e6889c183c7acf780ebe",
+              "id": "0xedbd65e4ed9224e569b2a0ad9dd6b6c1249396e232928e458d974e16a66f87d8",
+              "logIndex": 13,
+              "evidence": {
+                "blockNumber": "72412969",
+                "blockHash": "0x53f87bd72cd236561d2db6883f94771c6d83e44651c2280950f957646393e9e1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xedbd65e4ed9224e569b2a0ad9dd6b6c1249396e232928e458d974e16a66f87d8",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0edbd65e4ed9224e569b2a0ad9dd6b6c1249396e232928e458d974e16a66f87d8000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeb80000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5c0000000000000000000000000000000000000000000000000000000000001472000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42a000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000041e62a507ad8f817270c182128a4b3cfe7434e04fa3159e54d504b8269b71d7021537073f97be1c6a7218221d5626e016c2d59bc9724e81cf5753936059bd844611b00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-03",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-04",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1001",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-05",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-06",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0xdddddddddddddddddddddddddddddddddddddddd",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-07",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-08",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-999"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-09",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-10",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        },
+        {
+          "id": "synthetic-failed",
+          "evidence": {
+            "status": "failed"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-11",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "reserved",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "case-12",
+    "input": {
+      "purchase": {
+        "id": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+        "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+        "network": "arcTestnet",
+        "amountUnits": "1000",
+        "authorization": {
+          "to": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+          "from": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+          "value": "1000"
+        }
+      },
+      "journal": {
+        "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+        "amount": "1000",
+        "transferId": "66f6f97e-538e-4597-8ebe-2a0c1f181a22"
+      },
+      "observations": [
+        {
+          "id": "live-gateway-1",
+          "evidence": {
+            "status": "charged",
+            "id": "66f6f97e-538e-4597-8ebe-2a0c1f181a22",
+            "txHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57"
+          }
+        }
+      ],
+      "snapshot": {
+        "version": 1,
+        "ledgerScope": "wallet",
+        "network": "arcTestnet",
+        "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+        "from": "72586717",
+        "to": "72586717",
+        "finalized": "72587050",
+        "openingHash": "0x1331e21df05e044ba9ed1139e6b0a586d84884a0da335b8376b5d4881192d8db",
+        "closingHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+        "opening": "498000",
+        "closing": "497000",
+        "purchases": [
+          {
+            "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+            "nonce": "0x0c9d939e02e1dc5033d1f51fa0c80cc158980ab9f498cac2374a5cada2c09757",
+            "payer": "0x998f3d76bff494ae8bdbbde4b778fd42a1b2be54",
+            "recipient": "0x34f7d07855e1b9a25eea238229169378af3fbfe3",
+            "network": "arcTestnet",
+            "amountUnits": "1000",
+            "budgetStatus": "spent",
+            "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+            "journalAmount": "1000"
+          }
+        ],
+        "receiptBlocks": {},
+        "unsettled": [],
+        "source": {
+          "kind": "rpc",
+          "chainId": 5042002,
+          "endpointFingerprint": "972afa8ac972978fb21e38914831248d4000524cc3238a488c7938673d13b43c"
+        },
+        "movements": {
+          "deposits": [],
+          "withdrawals": [],
+          "burns": [],
+          "batches": [
+            {
+              "hash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+              "id": "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+              "logIndex": 0,
+              "evidence": {
+                "blockNumber": "72586717",
+                "blockHash": "0xa1df53e5757fa0fc2f8b0331e7880203b838807517cb2b45e47289aa17bcf3d1",
+                "address": "0x0077777d7eba4688bdef3e311b846f25870a19b9",
+                "topics": [
+                  "0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670",
+                  "0xd85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9",
+                  "0x0000000000000000000000001b2ccad4a2ff088868600a006859b5bfcd338457",
+                  "0x0000000000000000000000003600000000000000000000000000000000000000"
+                ],
+                "data": "0x",
+                "transactionInput": "0xc9486c8b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a0d85922dd23999ee7f7401c45163ad5c8cd1ae7437a63ce5d090b64fd95c448f9000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000036000000000000000000000000000000000000000000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000034f7d07855e1b9a25eea238229169378af3fbfe300000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000998f3d76bff494ae8bdbbde4b778fd42a1b2be54fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc18000000000000000000000000c6e770f3f9e6c2c5aa7e53e8caed86016759eaa700000000000000000000000000000000000000000000000000000000000013a1000000000000000000000000ec3fc32431aa97d28897b571731975bdaef56e5cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1f000000000000000000000000fd8389b123e2c29a7c126b94b82a2c5a6660e42afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2400000000000000000000000000000000000000000000000000000000000000041c3c659c19311689affafbe11152146ec48e3a9bbb809208f0184050b08e0eaef238b8135a34a9c0612490e0e8cef470cb233e5fa2d17f3ad68f17c52e70003f61c00000000000000000000000000000000000000000000000000000000000000"
+              },
+              "delta": "-1000"
+            }
+          ]
+        }
+      }
+    }
+  }
+]

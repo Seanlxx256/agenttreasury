@@ -1,3 +1,4 @@
+import { collectSigningAcceptance } from '../src/gateway-signing-acceptance.js';
 import assert from 'node:assert/strict';
 import { fork, type ChildProcess } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -103,6 +104,24 @@ test('isolated signer only issues approved testnet authorizations and retains un
     const tight=buildGatewaySigner(pool,{...policy,maxAmountUnits:999n},serviceToken,directSign);
     try { assert.equal((await invoke(await fixture(),tight)).statusCode,403); } finally { await tight.close(); }
     assert.equal(signingCalls,before);
+  });
+  await t.test('acceptance audit verifies the stored signature without exporting bearer credentials',async()=>{
+    const f=await fixture();
+    const unsigned=await collectSigningAcceptance(pool,f.requestId);
+    assert.equal(unsigned.signingVerified,false);assert.equal(unsigned.signatureRows,0);
+    const signed=await invoke(f);assert.equal(signed.statusCode,200);
+    const report=await collectSigningAcceptance(pool,f.requestId);
+    assert.equal(report.signingVerified,true);assert.equal(report.termsMatch,true);
+    assert.equal(report.digestMatches,true);assert.equal(report.signatureMatches,true);
+    assert.equal(report.signatureRows,1);assert.equal(report.journalRows,0);
+    const serialized=JSON.stringify(report);
+    for(const secret of [signed.json().signature,key,f.task.token,serviceToken])assert.ok(!serialized.includes(secret));
+    await pool.query('UPDATE gateway_signatures SET signature=$2 WHERE request_id=$1',[f.requestId,`0x${'0'.repeat(130)}`]);
+    const corrupted=await collectSigningAcceptance(pool,f.requestId);
+    assert.equal(corrupted.signingVerified,false);assert.equal(corrupted.signatureMatches,false);
+    const malformed=await fixture();
+    await pool.query(`UPDATE gateway_demo_purchases SET signing_authorization='{"from":null}' WHERE request_id=$1`,[malformed.requestId]);
+    assert.equal((await collectSigningAcceptance(pool,malformed.requestId)).termsMatch,false);
   });
   await t.test('concurrent retries bind one authorization and cache the signature; revocation denies cached access',async ()=>{
     const f=await fixture();const responses=await Promise.all([invoke(f),invoke(f)]);

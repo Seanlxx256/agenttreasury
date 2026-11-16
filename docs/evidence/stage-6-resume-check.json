@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "source": "local acceptance status after purchase entrypoint re-run",
+  "checkedAt": "2026-11-16T18:48:27.684Z",
+  "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+  "authorizationHash": "0xe1d7df89b13c2d442d1427ca7a4da978dfe1bb2aaade3d1bc2e9314d8404be7b",
+  "signatureIssuedAt": "2026-11-16T18:34:28.853Z",
+  "signatureRows": 1,
+  "journalRows": 1,
+  "budget": {
+    "limit": "1000",
+    "reserved": "0",
+    "spent": "1000",
+    "status": "spent"
+  },
+  "digest": "2e596b017b597471e362a458e67b908e623fcf589c77dd40337f082269e4c716"
+}

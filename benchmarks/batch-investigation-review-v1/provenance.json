@@ -1,0 +1,62 @@
+[
+  {
+    "id": "case-01",
+    "kind": "captured",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-02",
+    "kind": "captured",
+    "baseArtifact": "docs/evidence/stage-5-project-batch.json"
+  },
+  {
+    "id": "case-03",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-04",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-05",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-06",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-07",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-08",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-09",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-10",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-11",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  },
+  {
+    "id": "case-12",
+    "kind": "synthetic-variation",
+    "baseArtifact": "docs/evidence/stage-6-modern-signing.json"
+  }
+]

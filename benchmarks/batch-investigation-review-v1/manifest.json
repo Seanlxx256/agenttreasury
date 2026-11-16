@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "cases": 12,
+  "capturedCases": 2,
+  "syntheticVariations": 10,
+  "frozenAt": "2026-11-16T18:41:49.384Z",
+  "purpose": "Review packet; not a blind benchmark",
+  "annotationStatus": "single-author; independent review pending",
+  "modelEvaluationRun": false,
+  "files": {
+    "inputs.json": "4d3e0f2199aba3f9056651ca05c7361ec362948197508663bdde17f9ac0d146a",
+    "labels.json": "8b302725e7caa44723e5d992361d442052a345d6b26bd885057b831dada0043a",
+    "provenance.json": "ebd286fa5de658e6713174bcc55e7191e15195304894752310bed60575685530"
+  },
+  "sourceFiles": {
+    "docs/evidence/stage-5-project-batch.json": "95b6e9d623b93708487e51cecab4661bddc5631057cbf930def8f210800c6a26",
+    "docs/evidence/stage-6-modern-signing.json": "4c5cf3f0d76671c2459782d2ceca1945f92325d01e1422d8a4be815aded69652"
+  }
+}

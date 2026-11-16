@@ -1,0 +1,149 @@
+[
+  {
+    "id": "case-01",
+    "expectedStatus": "corroborated",
+    "requiredChecks": [
+      "read-balance-evidence"
+    ],
+    "evidencePaths": [
+      "/purchase/authorization",
+      "/journal",
+      "/observations",
+      "/snapshot/movements/batches"
+    ],
+    "rationale": "Recorded request fields, Gateway reference and aggregate batch accounting agree; individual nonce inclusion is not proven."
+  },
+  {
+    "id": "case-02",
+    "expectedStatus": "incomplete",
+    "requiredChecks": [
+      "read-original-authorization"
+    ],
+    "evidencePaths": [
+      "/purchase/authorization"
+    ],
+    "rationale": "The real legacy purchase lacks its original signing authorization."
+  },
+  {
+    "id": "case-03",
+    "expectedStatus": "incomplete",
+    "requiredChecks": [
+      "read-gateway-status"
+    ],
+    "evidencePaths": [
+      "/observations"
+    ],
+    "rationale": "A journal and a matching wallet delta cannot replace missing per-transfer Gateway evidence."
+  },
+  {
+    "id": "case-04",
+    "expectedStatus": "conflict",
+    "requiredChecks": [
+      "read-local-journal",
+      "compare-transfer-terms"
+    ],
+    "evidencePaths": [
+      "/journal/amount",
+      "/purchase/amountUnits"
+    ],
+    "rationale": "The journal amount differs from the request."
+  },
+  {
+    "id": "case-05",
+    "expectedStatus": "conflict",
+    "requiredChecks": [
+      "read-original-authorization",
+      "compare-transfer-terms"
+    ],
+    "evidencePaths": [
+      "/purchase/authorization/nonce",
+      "/purchase/nonce"
+    ],
+    "rationale": "The saved authorization nonce does not bind this request."
+  },
+  {
+    "id": "case-06",
+    "expectedStatus": "conflict",
+    "requiredChecks": [
+      "read-original-authorization",
+      "compare-transfer-terms"
+    ],
+    "evidencePaths": [
+      "/purchase/authorization/to",
+      "/purchase/recipient"
+    ],
+    "rationale": "The authorization payee differs from the request recipient."
+  },
+  {
+    "id": "case-07",
+    "expectedStatus": "conflict",
+    "requiredChecks": [
+      "read-chain-receipt",
+      "compare-transfer-terms"
+    ],
+    "evidencePaths": [
+      "/observations/0/evidence/txHash",
+      "/journal/batchHash"
+    ],
+    "rationale": "The Gateway assertion refers to a different transaction."
+  },
+  {
+    "id": "case-08",
+    "expectedStatus": "conflict",
+    "requiredChecks": [
+      "read-batch-calldata",
+      "read-balance-evidence"
+    ],
+    "evidencePaths": [
+      "/snapshot/movements/batches/0/delta",
+      "/snapshot/movements/batches/0/evidence/transactionInput"
+    ],
+    "rationale": "The normalized delta contradicts the archived raw calldata."
+  },
+  {
+    "id": "case-09",
+    "expectedStatus": "incomplete",
+    "requiredChecks": [
+      "read-batch-calldata"
+    ],
+    "evidencePaths": [
+      "/snapshot/movements/batches/0"
+    ],
+    "rationale": "The normalized batch entry lacks raw evidence for validation."
+  },
+  {
+    "id": "case-10",
+    "expectedStatus": "conflict",
+    "requiredChecks": [
+      "read-gateway-status",
+      "read-local-journal"
+    ],
+    "evidencePaths": [
+      "/observations",
+      "/journal"
+    ],
+    "rationale": "A failure assertion conflicts with charged and journaled evidence; it is not permission to refund or release budget."
+  },
+  {
+    "id": "case-11",
+    "expectedStatus": "conflict",
+    "requiredChecks": [
+      "read-local-journal"
+    ],
+    "evidencePaths": [
+      "/snapshot/purchases"
+    ],
+    "rationale": "The captured journal posting has not consumed its reservation."
+  },
+  {
+    "id": "case-12",
+    "expectedStatus": "incomplete",
+    "requiredChecks": [
+      "read-original-authorization"
+    ],
+    "evidencePaths": [
+      "/purchase/authorization"
+    ],
+    "rationale": "A partially recorded authorization is missing evidence, not evidence of a wrong nonce."
+  }
+]

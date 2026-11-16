@@ -46,6 +46,8 @@
     "worker:refund": "node dist/src/finance-refund-worker.js",
     "worker:gateway-balances": "node dist/src/scan-gateway-balances.js",
     "test:operations": "npm run build && node --test --test-concurrency=1 dist/test/gateway-operations.test.js dist/test/gateway-balance-scan.test.js",
+    "verify:gateway-signing": "node dist/src/verify-gateway-signing-acceptance.js",
+    "acceptance:gateway-signing": "node scripts/gateway-signing-acceptance.mjs",
     "signer:gateway": "node dist/src/gateway-signer-server.js",
     "test:signer": "npm run build && node --test dist/test/gateway-signer.test.js",
     "test:investigation": "npm run build && node --test --test-concurrency=1 dist/test/gateway-investigation.test.js dist/test/gateway-investigation-run.test.js",

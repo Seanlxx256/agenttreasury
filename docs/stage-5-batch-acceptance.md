@@ -1,5 +1,10 @@
 # Stage 5 batch acceptance and request linkage
 
+Follow-up: [Stage 6](stage-6-signing-acceptance.md) validates a new order with
+original authorization fields. The legacy missing-authorization result below
+remains unchanged.
+
+
 This step captures two actual Arc testnet batches and replays their raw event
 logs, calldata and wallet balances. One sample is public chain-only evidence;
 the other joins an existing project journal with a fresh Gateway observation.
