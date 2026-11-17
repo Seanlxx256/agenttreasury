@@ -211,6 +211,51 @@ test('case packets bind real database records without financial mutation and pre
     const results = await Promise.all([1, 2].map(() => app.inject({ method: 'POST', url: `/finance/gateway-purchases/${other}/case-packet`, headers, payload: statements })));
     assert.deepEqual(results.map((r) => r.statusCode).sort(), [200, 409]);
   });
+  await t.test('effort is derived from saved revisions, scoped, authenticated and separate from financial state', async () => {
+    const metricsId = await make(), metricUrl = `/finance/gateway-purchases/${metricsId}/case-packet`;
+    const before = await state();
+    const root = (await app.inject({ method: 'POST', url: metricUrl, headers, payload: statements })).json();
+    const payload = { expectedPacketId: root.packetId, topics: ['delivery-unusable'], note: 'Synthetic review fixture.', supplements: [],
+      timing: { origin: 'simulation-declared', elapsedMs: 75 } };
+    for (const timing of [{ origin: 'human-verified', elapsedMs: 10 }, { origin: 'simulation-declared', elapsedMs: -1 },
+      { origin: 'simulation-declared', elapsedMs: 3600001 }, { origin: 'simulation-declared', elapsedMs: 1.5 },
+      { origin: 'simulation-declared', elapsedMs: 1, topicsRemoved: 0 }, { origin: 'simulation-declared' }]) {
+      assert.equal((await app.inject({ method: 'POST', url: metricUrl + '/revisions', headers, payload: { ...payload, timing } })).statusCode, 400);
+    }
+    assert.equal((await app.inject({ method: 'POST', url: metricUrl + '/revisions', headers,
+      payload: { ...payload, reviewEffort: { modelStatus: 'ready', topicsAdded: 0 } } })).statusCode, 400);
+    const response = await app.inject({ method: 'POST', url: metricUrl + '/revisions', headers, payload });
+    assert.equal(response.statusCode, 200, response.body);
+    const saved = response.json(); assert.equal(saved.reviewEffort.phase, 'first-review');
+    assert.equal(saved.reviewEffort.topicsRemoved, 2); assert.equal(saved.reviewEffort.topicsAdded, 0);
+    assert.equal(saved.reviewEffort.modelStatus, 'disabled'); assert.equal(saved.reviewEffort.elapsedMs, 75);
+    assert.equal((await app.inject({ method: 'POST', url: metricUrl + '/revisions', headers, payload })).statusCode, 409);
+    assert.equal((await app.inject({ method: 'POST', url: metricUrl + '/revisions', headers, payload: { ...payload,
+      expectedPacketId: saved.packetId, timing: { origin: 'interactive-declared', elapsedMs: null } } })).statusCode, 200);
+    const summary = await app.inject({ url: metricUrl + '/effort', headers }); assert.equal(summary.statusCode, 200);
+    assert.equal(summary.headers['cache-control'], 'no-store');
+    assert.equal(summary.json().window.savedRevisions, 2); assert.equal(summary.json().groups.length, 2);
+    const simulated = summary.json().groups.find((g: { origin: string }) => g.origin === 'simulation-declared');
+    assert.equal(simulated.savedReviews, 1); assert.equal(simulated.medianElapsedMs, 75);
+    const interactive = summary.json().groups.find((g: { origin: string }) => g.origin === 'interactive-declared');
+    assert.equal(interactive.phase, 'follow-up'); assert.equal(interactive.medianElapsedMs, null);
+    for (const secret of ['PRIVATE_', statements.customerStatement, 'Synthetic review fixture.', 'approve()']) assert.ok(!summary.body.includes(secret));
+    assert.equal((await app.inject({ url: metricUrl + '/effort' })).statusCode, 401);
+    assert.equal((await app.inject({ url: metricUrl + '/effort', headers: { authorization: `Bearer ${task.token}` } })).statusCode, 401);
+    assert.equal((await app.inject({ url: `/finance/gateway-purchases/${randomUUID()}/case-packet/effort`, headers })).statusCode, 404);
+    const otherSummary = (await app.inject({ url: `/finance/gateway-purchases/${other}/case-packet/effort`, headers })).json();
+    assert.equal(otherSummary.window.savedRevisions, 0);
+    assert.deepEqual(await state(), before);
+  });
+  await t.test('effort window exposes truncation and does not turn old unmeasured reviews into zero-time results', async () => {
+    const metricId = await make();
+    await pool.query(`INSERT INTO gateway_case_packets(request_id,actor,report)
+      SELECT $1,'operations','{"operatorReview":{}}'::jsonb FROM generate_series(1,201)`, [metricId]);
+    const result = (await app.inject({ url: `/finance/gateway-purchases/${metricId}/case-packet/effort`, headers })).json();
+    assert.equal(result.window.savedRevisions, 200); assert.equal(result.window.truncated, true);
+    assert.equal(result.unmeasuredReviews, 200); assert.deepEqual(result.groups, []);
+    assert.ok(BigInt(result.window.newestPacketId) > BigInt(result.window.oldestPacketId));
+  });
   await t.test('bounded evidence preserves older consequential observations and reports limited audit coverage', async () => {
     for (let i = 0; i < 12; i++) await pool.query(`INSERT INTO gateway_payment_observations(request_id,source,evidence)
       VALUES($1,'worker','{"status":"unavailable","reason":"<script>refund()</script>"}')`, [id]);

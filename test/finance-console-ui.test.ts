@@ -47,11 +47,14 @@ async function consoleHarness(role: string, reconciliationCase?: Record<string, 
     disputeStatus: 'OPEN', disputeReason: 'Incorrect trace', disputeEvidence: { claim: '<script>malicious()</script>' },
     disputeAssessment: { satisfied: false }, commitmentSatisfied: false, commitmentViolations: ['Missing CALL'], observations: [],
   };
+  let clockMs = 0;
   const context = createContext({
+    performance: { now: () => clockMs },
     document: { getElementById: byId, createElement: (tag: string) => new Element(tag) },
     Node: Element, setTimeout, clearTimeout, purchase,
     fetch: async (path: string, init?: { method?: string; body?: string }) => {
       if (init?.method === 'POST') posts.push({ path, payload: JSON.parse(init.body ?? '{}') });
+      if (path.endsWith('/case-packet/effort')) return Response.json({ groups: [], conclusion: 'No causal time savings established.' });
       if (path.endsWith('/case-packet/history')) return Response.json({ packets: [{ packetId: '1', actor: 'operations' }], nextBefore: null });
       if (path.endsWith('/case-packet') || path.endsWith('/case-packet/revisions') || path.endsWith('/case-packet/history/1')) return Response.json({
         ...(path.endsWith('/revisions') ? { operatorReview: { topics: ['delivery-unusable'] }, changes: { topicsRemoved: ['refund-claimed'] } } : {}),
@@ -67,7 +70,7 @@ async function consoleHarness(role: string, reconciliationCase?: Record<string, 
   });
   runInContext(await readFile(new URL('../../console/console.js', import.meta.url), 'utf8'), context);
   runInContext(`role = ${JSON.stringify(role)}; showGatewayPurchase(purchase, '/gateway-purchases/case-1', generation)`, context);
-  return { context, root: byId('gateway-detail'), caseRoot:byId('reconciliation-case-detail'), posts };
+  return { context, root: byId('gateway-detail'), caseRoot:byId('reconciliation-case-detail'), posts, advanceTime: (ms: number) => { clockMs += ms; } };
 }
 
 test('case console requires an outcome and binds resolution to displayed evidence/version', async () => {
@@ -116,7 +119,7 @@ test('case packet console submits party claims separately, renders text safely a
 });
 
 test('case packet review requires rationale and source, submits selected topics and browses read-only history', async () => {
-  const { root, posts } = await consoleHarness('operations');
+  const { root, posts, advanceTime } = await consoleHarness('operations');
   const button = (text: string) => root.all().find((n) => n.tag === 'button' && n.textContent === text)!;
   await button('View saved case packet').fire('click');
   assert.equal(button('Prepare case packet').disabled, true);
@@ -131,15 +134,33 @@ test('case packet review requires rationale and source, submits selected topics 
     const checkbox = root.all().find((n) => n.type === 'checkbox' && n.parent?.textContent === topic)!;
     checkbox.checked = topic === 'delivery-unusable';
   }
+  advanceTime(5300);
   await submit.fire('click');
   assert.deepEqual(posts[0], { path: '/finance/gateway-purchases/case-1/case-packet/revisions', payload: {
+    timing: { origin: 'interactive-declared', elapsedMs: 5300 },
     expectedPacketId: '1', topics: ['delivery-unusable'], note: note.value,
     supplements: [{ kind: 'merchant-reply', reference: 'ticket-42', text: '<script>untrusted()</script>' }],
   } });
   assert.match(root.textContent, /Changes from previous packet/);
+  await button('View review effort').fire('click');
+  assert.match(root.textContent, /No causal time savings established/);
   await button('Browse packet history').fire('click'); await button('View packet 1 (operations)').fire('click');
   assert.match(root.textContent, /Historical version — read only/);
   assert.equal(button('Save reviewed version'), undefined); assert.equal(posts.length, 1);
+});
+
+test('review display timing restarts on reload and long sessions are missing rather than capped', async () => {
+  const { root, posts, advanceTime } = await consoleHarness('operations');
+  const button = (text: string) => root.all().find((n) => n.tag === 'button' && n.textContent === text)!;
+  await button('View saved case packet').fire('click'); advanceTime(5000);
+  await button('View saved case packet').fire('click'); advanceTime(100);
+  let note = root.all().find((n) => n.tag === 'textarea' && n.parent?.textContent === 'Review rationale (required)')!;
+  note.value = 'Fixture.'; await note.fire('input'); await button('Save reviewed version').fire('click');
+  assert.deepEqual((posts[0]!.payload as { timing: unknown }).timing, { origin: 'interactive-declared', elapsedMs: 100 });
+  advanceTime(3600001);
+  note = root.all().find((n) => n.tag === 'textarea' && n.parent?.textContent === 'Review rationale (required)')!;
+  note.value = 'Long idle fixture.'; await note.fire('input'); await button('Save reviewed version').fire('click');
+  assert.deepEqual((posts[1]!.payload as { timing: unknown }).timing, { origin: 'interactive-declared', elapsedMs: null });
 });
 
 test('finance sees evidence before approving and submits the exact displayed version', async () => {

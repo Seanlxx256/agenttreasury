@@ -721,7 +721,16 @@ function casePacketPanel(path, session) {
       before = page.nextBefore; completed = true; history.textContent = before ? 'Load older packets' : 'History loaded';
     } finally { history.disabled = completed && !before; }
   }));
-  root.append(customerLabel, merchantLabel, create, saved, history, historyOutput, output);
+  const effort = element('button', 'View review effort'), effortOutput = element('section'); effort.type = 'button';
+  effort.addEventListener('click', () => showErrors(async () => {
+    effort.disabled = true;
+    try {
+      const summary = await financeApi(path + '/case-packet/effort');
+      if (session !== generation || !effort.isConnected) return;
+      effortOutput.replaceChildren(evidenceBlock('Review effort — descriptive, not verified time savings', summary));
+    } finally { effort.disabled = false; }
+  }));
+  root.append(customerLabel, merchantLabel, create, saved, history, historyOutput, effort, effortOutput, output);
   return root;
 }
 
@@ -732,6 +741,7 @@ function showCasePacket(container, report) {
   if (report.staleAtCompletion || report.staleNow) container.append(element('p',
     'Records changed after this snapshot. Prepare a fresh packet before acting.', 'muted'));
   if (report.historicalView) container.append(element('p', 'Historical version — read only. Load the latest saved packet to review.'));
+  if (report.reviewEffort) container.append(evidenceBlock('Saved review effort — client timing is unverified', report.reviewEffort));
   if (report.operatorReview) container.append(evidenceBlock('Operator topic review — not claim verification', report.operatorReview));
   if (report.changes) container.append(evidenceBlock('Changes from previous packet', report.changes));
   container.append(evidenceBlock('Party statements — unverified', report.partyStatements),
@@ -747,6 +757,7 @@ function showCasePacket(container, report) {
 
 
 function casePacketReview(report, path, session, render) {
+  const displayedAt = performance.now();
   const root = element('section');
   root.append(element('h4', 'Review topics and append evidence'), element('p',
     'Select the topics to investigate. Clearing a topic rejects its classification only; it does not prove the claim false. Saving refreshes local records and retains earlier versions.'));
@@ -773,15 +784,17 @@ function casePacketReview(report, path, session, render) {
   for (const field of [note, reference, text]) field.addEventListener('input', validate);
   save.addEventListener('click', () => showErrors(async () => {
     saving = true; validate();
+    const elapsed = Math.round(performance.now() - displayedAt);
+    const timing = { origin: 'interactive-declared', elapsedMs: Number.isFinite(elapsed) && elapsed >= 0 && elapsed <= 3600000 ? elapsed : null };
     try {
       const packet = await financeApi(path + '/case-packet/revisions', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expectedPacketId: report.packetId, topics: choices.filter((c) => c.input.checked).map((c) => c.topic),
+        body: JSON.stringify({ timing, expectedPacketId: report.packetId, topics: choices.filter((c) => c.input.checked).map((c) => c.topic),
           note: note.value.trim(), supplements: text.value.trim() ? [{ kind: kind.value, reference: reference.value.trim(), text: text.value.trim() }] : [] }) });
       if (session !== generation || !save.isConnected) return;
       render(packet);
     } finally { saving = false; validate(); }
   }));
   root.append(noteLabel, kindLabel, referenceLabel, textLabel, save, element('p',
-    'Supplemental material is operator-entered and unverified. References are stored as text, never fetched. On a version conflict, load the latest saved packet and review again.'));
+    'Supplemental material is operator-entered and unverified. References are stored as text, never fetched. On a version conflict, load the latest saved packet and review again. This form records client-reported time since display, including idle time; reloads restart timing and sessions over one hour are untimed. It does not prove human work or time savings.'));
   return root;
 }

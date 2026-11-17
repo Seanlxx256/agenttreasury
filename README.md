@@ -12,6 +12,8 @@ For durable reconciliation cases, operations metrics, deployment and recovery dr
 
 [Stage 11 operator review](docs/stage-11-case-packet-review.md) adds corrected topic selection, source-labelled supplemental material, immutable packet revisions, concurrency conflicts and a paginated history browser. Operator selections never verify claims or authorize funds.
 
+[Stage 12 review effort](docs/stage-12-case-packet-effort.md) records server-derived topic/material edits and separately labelled client timing, with request-scoped summaries and a controlled evaluation protocol. These measurements do not establish human time savings.
+
 Stage 0 approval and evidence boundaries, regression invariants, and migration
 `032`/`033` upgrade instructions are in [the acceptance checklist](docs/stage-0-acceptance.md).
 

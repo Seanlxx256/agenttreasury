@@ -2,10 +2,11 @@ import { isDeepStrictEqual } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 import { assembleCasePacket, type PacketIssue, type PacketSource, type collectPacketSources } from './gateway-case-packet.js';
+import type { ReviewEffort, ReviewTiming } from './gateway-case-packet-effort.js';
 import { PaymentError } from './payments.js';
 
 type Packet = ReturnType<typeof assembleCasePacket>;
-export type PacketReview = { expectedPacketId: string; topics: PacketIssue['topic'][]; note: string;
+export type PacketReview = { timing?: ReviewTiming; expectedPacketId: string; topics: PacketIssue['topic'][]; note: string;
   supplements: Array<{ kind: 'merchant-reply' | 'customer-reply' | 'operator-observation'; reference: string; text: string }> };
 
 export function reviseCasePacket(previous: Packet & { operatorReview?: { topics: PacketIssue['topic'][] } },
@@ -23,16 +24,23 @@ export function reviseCasePacket(previous: Packet & { operatorReview?: { topics:
   const oldTopics = previous.operatorReview?.topics ?? [...new Set([...previous.ruleIssues.issues, ...previous.modelInterpretation.issues].map((i) => i.topic))];
   const oldSources = new Map(previous.snapshot.sources.map((s) => [s.id, s]));
   const newSources = new Map(snapshot.sources.map((s) => [s.id, s]));
-  return { ...report,
+  const topicsAdded = input.topics.filter((topic) => !oldTopics.includes(topic));
+  const topicsRemoved = oldTopics.filter((topic) => !input.topics.includes(topic));
+  const recordsAdded = [...newSources.keys()].filter((id) => !oldSources.has(id));
+  const recordsRemoved = [...oldSources.keys()].filter((id) => !newSources.has(id));
+  const recordsChanged = [...newSources.keys()].filter((id) => oldSources.has(id) && !isDeepStrictEqual(
+    JSON.parse(JSON.stringify(oldSources.get(id))), JSON.parse(JSON.stringify(newSources.get(id)))));
+  const reviewEffort: ReviewEffort = { version: 1, origin: input.timing?.origin ?? 'unclassified', elapsedMs: input.timing?.elapsedMs ?? null,
+    phase: previous.operatorReview ? 'follow-up' : 'first-review', model: previous.modelInterpretation.model,
+    modelStatus: previous.modelInterpretation.status, topicsAdded: topicsAdded.length, topicsRemoved: topicsRemoved.length,
+    supplementsAdded: added.length, localRecordsChanged: recordsAdded.length + recordsRemoved.length + recordsChanged.length,
+    timingScope: 'latest-display-to-submit', timingTrust: 'client-reported-unverified' };
+  return { ...report, reviewEffort,
     interpretationSources: previous.interpretationSources ?? previous.partyStatements,
     operatorReview: { topics: input.topics, note: input.note.trim(), reviewedByRole: actor, reviewedAt: enteredAt,
       verification: 'topic-selection-only', modelInterpretationReused: true },
     changes: { parentPacketId: input.expectedPacketId,
-      topicsAdded: input.topics.filter((topic) => !oldTopics.includes(topic)), topicsRemoved: oldTopics.filter((topic) => !input.topics.includes(topic)),
-      supplementsAdded: added.map((s) => s.id),
-      recordsAdded: [...newSources.keys()].filter((id) => !oldSources.has(id)),
-      recordsRemoved: [...oldSources.keys()].filter((id) => !newSources.has(id)),
-      recordsChanged: [...newSources.keys()].filter((id) => oldSources.has(id) && !isDeepStrictEqual(JSON.parse(JSON.stringify(oldSources.get(id))), JSON.parse(JSON.stringify(newSources.get(id))))),
+      topicsAdded, topicsRemoved, supplementsAdded: added.map((s) => s.id), recordsAdded, recordsRemoved, recordsChanged,
       limitation: 'Record changes compare bounded local snapshots; removal can reflect the coverage window, not deletion. Supplemental material remains unverified.' },
   };
 }

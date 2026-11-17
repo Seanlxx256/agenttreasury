@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 import { assembleCasePacket, collectPacketSources, interpretPacketClaims, statementSources, packetTopics, type PacketStatements } from './gateway-case-packet.js';
 import { appendCasePacket, reviseCasePacket, type PacketReview } from './gateway-case-packet-revision.js';
+import { readCasePacketEffort } from './gateway-case-packet-effort.js';
 import { PaymentError } from './payments.js';
 
 export function registerGatewayCasePackets(app: FastifyInstance, pool: Pool,
@@ -38,6 +39,10 @@ export function registerGatewayCasePackets(app: FastifyInstance, pool: Pool,
   app.post<{ Params: { id: string }; Body: PacketReview }>(path + '/revisions', {
     preHandler: async (request) => { authenticate(request); }, schema: { params, body: {
       type: 'object', additionalProperties: false, required: ['expectedPacketId', 'topics', 'note', 'supplements'], properties: {
+        timing: { type: 'object', additionalProperties: false, required: ['origin', 'elapsedMs'], properties: {
+          origin: { type: 'string', enum: ['interactive-declared', 'simulation-declared'] },
+          elapsedMs: { anyOf: [{ type: 'integer', minimum: 0, maximum: 3600000 }, { type: 'null' }] },
+        } },
         expectedPacketId: { type: 'string', pattern: '^[1-9][0-9]{0,17}$' },
         topics: { type: 'array', uniqueItems: true, maxItems: 4, items: { type: 'string', enum: [...packetTopics] } },
         note: { type: 'string', minLength: 1, maxLength: 1000, pattern: '\\S' },
@@ -58,6 +63,14 @@ export function registerGatewayCasePackets(app: FastifyInstance, pool: Pool,
     const current = await collectPacketSources(pool, request.params.id);
     return appendCasePacket(pool, request.params.id, actor, { ...report,
       staleAtCompletion: snapshot.fingerprint !== current.fingerprint, freshnessCheckedAt: current.capturedAt }, request.body.expectedPacketId);
+  });
+  app.get<{ Params: { id: string } }>(path + '/effort', {
+    preHandler: async (request) => { authenticate(request); }, schema: { params },
+  }, async (request, reply) => {
+    reply.header('cache-control', 'no-store');
+    const existing = await pool.query('SELECT 1 FROM gateway_case_packets WHERE request_id=$1 LIMIT 1', [request.params.id]);
+    if (!existing.rowCount) throw new PaymentError(404, 'CASE_PACKET_NOT_FOUND');
+    return readCasePacketEffort(pool, request.params.id);
   });
   app.get<{ Params: { id: string }; Querystring: { before?: string } }>(path + '/history', {
     preHandler: async (request) => { authenticate(request); }, schema: { params, querystring: {
