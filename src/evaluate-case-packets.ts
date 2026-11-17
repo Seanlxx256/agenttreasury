@@ -21,10 +21,11 @@ export function scorePacketTopics(issues: PacketIssue[], annotation: PacketEvalu
 }
 
 export function scorePacketWorkflow(packet: ReturnType<typeof assembleCasePacket>, sample: PacketEvaluationCase) {
-  const topics = scorePacketTopics([...packet.ruleIssues.issues, ...packet.modelInterpretation.issues], sample.annotation, sample.input);
+  const rawCandidateScore = scorePacketTopics([...packet.ruleIssues.issues, ...packet.modelInterpretation.issues], sample.annotation, sample.input);
+  const topics = scorePacketTopics(packet.candidateReview.eligibleIssues, sample.annotation, sample.input);
   const gaps = packet.evidenceGaps.map((gap) => gap.id);
   const missingMaterials = difference(sample.annotation.requiredGapIds, gaps), unnecessaryQuestions = difference(gaps, sample.annotation.requiredGapIds);
-  return { ...topics, missingMaterials, unnecessaryQuestions, exactMaterialSet: !missingMaterials.length && !unnecessaryQuestions.length };
+  return { ...topics, rawCandidateScore, needsOperatorReview: packet.candidateReview.needsOperatorReview, missingMaterials, unnecessaryQuestions, exactMaterialSet: !missingMaterials.length && !unnecessaryQuestions.length };
 }
 
 export async function evaluatePacketCase(sample: PacketEvaluationCase, model?: string, request: typeof fetch = fetch) {
@@ -34,10 +35,10 @@ export async function evaluatePacketCase(sample: PacketEvaluationCase, model?: s
   const baseline = assembleCasePacket(snapshot, sample.input, disabled);
   const interpretation = model ? await interpretPacketClaims(sources, model, request) : null;
   const assisted = interpretation ? assembleCasePacket(snapshot, sample.input, interpretation) : null;
-  return { id: sample.id, stratum: sample.stratum, baseline: { issues: packetRuleIssues(sources), score: scorePacketWorkflow(baseline, sample) },
+  return { id: sample.id, stratum: sample.stratum, baseline: { issues: packetRuleIssues(sources), candidateReview: baseline.candidateReview, score: scorePacketWorkflow(baseline, sample) },
     model: interpretation ? { ...interpretation,
       score: interpretation.status === 'ready' ? scorePacketTopics(interpretation.issues, sample.annotation, sample.input) : null } : null,
-    assisted: assisted ? { score: scorePacketWorkflow(assisted, sample),
+    assisted: assisted ? { candidateReview: assisted.candidateReview, score: scorePacketWorkflow(assisted, sample),
       deterministicFactsUnchanged: isDeepStrictEqual(assisted.recordedFacts, baseline.recordedFacts),
       inquiryDraft: assisted.merchantInquiryDraft } : null };
 }
@@ -45,7 +46,9 @@ export async function evaluatePacketCase(sample: PacketEvaluationCase, model?: s
 type CaseResult = Awaited<ReturnType<typeof evaluatePacketCase>>;
 export function summarizePacketEvaluation(rows: CaseResult[]) {
   const summarize = (scores: ReturnType<typeof scorePacketWorkflow>[]) => ({ cases: scores.length,
-    exactTopicSets: scores.filter((score) => score.exact).length, exactMaterialSets: scores.filter((score) => score.exactMaterialSet).length,
+    exactTopicSets: scores.filter((score) => score.exact).length,
+    exactTopicSetsWithoutReview: scores.filter((score) => score.exact && !score.needsOperatorReview).length,
+    heldForReviewCases: scores.filter((score) => score.needsOperatorReview).length, exactMaterialSets: scores.filter((score) => score.exactMaterialSet).length,
     missingMaterials: scores.reduce((n, s) => n + s.missingMaterials.length, 0), unnecessaryQuestions: scores.reduce((n, s) => n + s.unnecessaryQuestions.length, 0),
     unsupportedCandidates: scores.reduce((n, s) => n + s.unsupportedCandidates, 0), candidateCount: scores.reduce((n, s) => n + s.candidateCount, 0),
     minimumTopicSetEdits: scores.reduce((n, s) => n + s.minimumTopicSetEdits, 0) });
@@ -84,10 +87,10 @@ async function localModelIdentity(name: string, request: typeof fetch) {
 }
 
 export async function planPacketEvaluation(model: string | undefined, request: typeof fetch = fetch) {
-  return { protocol: 'case-packet-development-v1', createdAt: new Date().toISOString(), node: process.version,
+  return { protocol: 'case-packet-development-v2-context-review', createdAt: new Date().toISOString(), node: process.version,
     datasetDigest: sha(JSON.stringify(packetEvaluationCases())), files: await packetEvaluationHashes(),
     model: model ? await localModelIdentity(model, request) : null, independentReview: false, promotionEligible: false,
-    scope: 'Synthetic, author-labelled development evaluation; separate from Stage 10 smoke examples. Not held-out or independently reviewed. No wallet, database or merchant calls.',
+    scope: 'Synthetic, author-labelled development evaluation; separate from Stage 10 smoke examples. Context gating was developed after observing Stage 13 results on these same cases. Not held-out or independently reviewed. No wallet, database or merchant calls.',
     scoring: 'Unsupported means no matching topic/source and annotated span in the quote, not independent truth verification. Topic-set edits are a theoretical lower bound, not measured human edits. Material coverage counts question categories, not complete document quality.' };
 }
 
@@ -104,7 +107,7 @@ export async function runPacketEvaluation(plan: Awaited<ReturnType<typeof planPa
   }
   await checkModel();
   return { ...plan, finishedAt: new Date().toISOString(), summary: summarizePacketEvaluation(rows), cases: rows,
-    limitations: 'Model failures remain in the attempt denominator; any valid rule fallback is a workflow result, not model success. Production union cannot remove rule false positives. No human review duration, independently validated quality or ROI is measured.' };
+    limitations: 'Model failures remain in the attempt denominator; any valid rule fallback is a workflow result, not model success. Raw union candidates are retained but context holds require operator review; held cases are not autonomous successes. No human review duration, independently validated quality or ROI is measured.' };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

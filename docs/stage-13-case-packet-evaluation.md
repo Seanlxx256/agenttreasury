@@ -86,6 +86,11 @@ interpretation remains disabled by default.
 
 ## Reproduce or review
 
+The captured results below belong to protocol v1 at commit `ddebe79`. After
+[Stage 14](stage-14-case-packet-context.md), current CLI runs use v2 context review
+and separately report held cases. Old reports remain unchanged; current runs are
+not exact re-executions of the v1 workflow.
+
 Use a new output filename. Existing files are never overwritten.
 
 ```sh

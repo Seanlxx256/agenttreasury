@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Pool } from 'pg';
+import { reviewPacketContext } from './gateway-case-packet-context.js';
 import { PaymentError } from './payments.js';
 
 export type PacketSource = { id: string; kind: 'local-record' | 'provider-report' | 'party-claim' | 'audit-event';
@@ -147,15 +148,17 @@ export async function interpretPacketClaims(sources: PacketSource[], model?: str
 
 export function assembleCasePacket(snapshot: Awaited<ReturnType<typeof collectPacketSources>>, statements: PacketStatements,
   interpretation: Awaited<ReturnType<typeof interpretPacketClaims>>, review?: {
-    topics: PacketIssue['topic'][]; supplements: PacketSource[];
+    topics: PacketIssue['topic'][]; supplements: PacketSource[]; interpretationSources?: PacketSource[];
   }) {
   const sources = [...snapshot.sources, ...statementSources(statements), ...(review?.supplements ?? [])];
   const purchase = sources.find((row) => row.id === 'purchase')!.data;
   const journal = sources.find((row) => row.id === 'journal')!.data;
   const refund = sources.find((row) => row.id === 'refund')!.data;
   const rules = packetRuleIssues(sources);
-  // Operator topic selection replaces suggestions; it does not verify the underlying claim.
-  const topics = new Set(review?.topics ?? [...rules, ...interpretation.issues].map((issue) => issue.topic));
+  const candidateReview = reviewPacketContext(sources, rules, interpretation, review?.interpretationSources ?? sources);
+  // Explicit operator selection can include held topics, but never verifies a claim.
+  const selectedTopics = review?.topics ?? [...new Set(candidateReview.eligibleIssues.map((issue) => issue.topic))];
+  const topics = new Set(selectedTopics);
   const facts = [
     { text: `Local request amount: ${purchase.amountUnits} USDC base units on ${purchase.network}. Budget state: ${purchase.budgetStatus ?? 'unrecorded'}.`, citations: ['purchase'] },
     { text: journal.present ? `Local payment journal contains one posting of ${journal.amount} base units. This does not exclude another charge elsewhere.`
@@ -174,15 +177,20 @@ export function assembleCasePacket(snapshot: Awaited<ReturnType<typeof collectPa
     ? 'A refund is recorded locally; the party statement still needs to be linked to this exact refund and request.'
     : 'The refund-related statement is unverified; no corresponding local refund posting was found.', ['refund'],
   'Provide the refund transaction hash, original request reference, amount, network and recipient for reconciliation.');
-  if ((!topics.size && !review) || topics.has('other')) add('clarify-claim', 'The concern needs operator clarification before a targeted investigation.', ['purchase'],
-    'Describe the specific issue and expected outcome, with relevant order or transaction references.');
+  if ((!review && (!topics.size || candidateReview.needsOperatorReview)) || topics.has('other')) add('clarify-claim', 'The concern needs operator clarification before a targeted investigation.', ['purchase'],
+    candidateReview.needsOperatorReview && !review
+      ? 'Operator review required before sending: read the complete statements and held candidates, distinguish current assertions from denied, hypothetical, retracted or quoted content, and select the topics to investigate.'
+      : 'Describe the specific issue and expected outcome, with relevant order or transaction references.');
   return { version: 1, advisoryOnly: true, financialAuthority: false, snapshot,
     partyStatements: sources.filter((row) => row.kind === 'party-claim'), sources,
     interpretationSources: sources.filter((row) => row.kind === 'party-claim'),
+    candidateReview, selectedTopics, topicSelectionSource: review ? 'operator' : 'context-screened-candidates',
     recordedFacts: facts, ruleIssues: { verification: 'unverified', issues: rules }, modelInterpretation: interpretation,
     evidenceGaps: gaps, merchantInquiryDraft: {
-      status: 'draft-not-sent', requestId: snapshot.requestId,
-      text: gaps.length ? `Regarding request ${snapshot.requestId}, please help verify the following points:\n${gaps.map((gap, index) => `${index + 1}. ${gap.question}`).join('\n')}`
+      status: 'draft-not-sent', requestId: snapshot.requestId, reviewRequired: !review && candidateReview.needsOperatorReview,
+      text: !review && candidateReview.needsOperatorReview
+        ? 'Draft withheld pending operator context review. Read the complete source statements and explicitly select follow-up topics before preparing a merchant inquiry.'
+        : gaps.length ? `Regarding request ${snapshot.requestId}, please help verify the following points:\n${gaps.map((gap, index) => `${index + 1}. ${gap.question}`).join('\n')}`
         : 'No follow-up topics selected by the operator. This does not resolve the case or verify any claim.',
       citations: [...new Set(gaps.flatMap((gap) => gap.citations))],
     }, limitation: 'Statements are operator-entered assertions, not authenticated party messages. Quote matching checks provenance, not semantic truth. Recorded facts describe local records, not independent chain verification. No refund entitlement, payment conclusion, case closure or message submission is authorized.' };

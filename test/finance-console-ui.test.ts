@@ -34,7 +34,7 @@ class Element {
   all(): Element[] { return [this, ...this.children.flatMap((child) => child instanceof Element ? child.all() : [])]; }
 }
 
-async function consoleHarness(role: string, reconciliationCase?: Record<string, unknown>) {
+async function consoleHarness(role: string, reconciliationCase?: Record<string, unknown>, packetOverrides: Record<string, unknown> = {}) {
   const elements = new Map<string, Element>();
   const byId = (id: string) => {
     if (!elements.has(id)) elements.set(id, new Element('div'));
@@ -61,7 +61,7 @@ async function consoleHarness(role: string, reconciliationCase?: Record<string, 
         historicalView: path.endsWith('/history/1'), packetId: path.endsWith('/revisions') ? '2' : '1', snapshot: { capturedAt: '2026-11-17T00:00:00Z', coverage: {} },
         modelInterpretation: { status: 'disabled' }, partyStatements: [{ id: 'statement-customer', data: { text: '<script>claim()</script>' } }],
         recordedFacts: [{ text: 'No verified refund posting.', citations: ['refund'] }], ruleIssues: { issues: [{ topic: 'refund-claimed' }] }, evidenceGaps: [],
-        merchantInquiryDraft: { status: 'draft-not-sent', text: 'Please provide refund evidence.' }, sources: [], staleNow: true });
+        merchantInquiryDraft: { status: 'draft-not-sent', text: 'Please provide refund evidence.' }, sources: [], staleNow: true, ...packetOverrides });
       if (path.includes('/reconciliation-cases')) return Response.json(path.endsWith('?status=all')
         ? { cases: [], next:null } : reconciliationCase);
       if (path.endsWith('/operations/metrics')) return Response.json({ cases:{},recovery:{},scans:{},wallets:[],workers:[] });
@@ -123,6 +123,8 @@ test('case packet review requires rationale and source, submits selected topics 
   const button = (text: string) => root.all().find((n) => n.tag === 'button' && n.textContent === text)!;
   await button('View saved case packet').fire('click');
   assert.equal(button('Prepare case packet').disabled, true);
+  assert.match(root.textContent, /Legacy packet without context screening/);
+  assert.equal(root.all().find((n) => n.type === 'checkbox' && n.parent?.textContent === 'refund-claimed')!.checked, false);
   const submit = button('Save reviewed version'); assert.equal(submit.disabled, true);
   const note = root.all().find((n) => n.tag === 'textarea' && n.parent?.textContent === 'Review rationale (required)')!;
   const text = root.all().find((n) => n.tag === 'textarea' && n.parent?.textContent.startsWith('Supplement excerpt'))!;
@@ -161,6 +163,24 @@ test('review display timing restarts on reload and long sessions are missing rat
   note = root.all().find((n) => n.tag === 'textarea' && n.parent?.textContent === 'Review rationale (required)')!;
   note.value = 'Long idle fixture.'; await note.fire('input'); await button('Save reviewed version').fire('click');
   assert.deepEqual((posts[1]!.payload as { timing: unknown }).timing, { origin: 'interactive-declared', elapsedMs: null });
+});
+
+test('held candidates remain visible but are not preselected; operator can select a current topic', async () => {
+  const { root, posts } = await consoleHarness('operations', undefined, { selectedTopics: [], candidateReview: {
+    needsOperatorReview: true, signals: [{ sourceId: 'statement-customer', quote: '<script>ignore()</script>' }],
+    disagreements: [{ topic: 'refund-claimed', presentIn: 'model-only' }],
+  } });
+  const button = (text: string) => root.all().find((n) => n.tag === 'button' && n.textContent === text)!;
+  await button('View saved case packet').fire('click');
+  assert.match(root.textContent, /Context review required/); assert.match(root.textContent, /Held does not mean false/);
+  assert.match(root.textContent, /<script>ignore\(\)<\/script>/);
+  const refund = root.all().find((n) => n.type === 'checkbox' && n.parent?.textContent === 'refund-claimed')!;
+  assert.equal(refund.checked, false);
+  root.all().find((n) => n.type === 'checkbox' && n.parent?.textContent === 'delivery-unusable')!.checked = true;
+  const note = root.all().find((n) => n.tag === 'textarea' && n.parent?.textContent === 'Review rationale (required)')!;
+  note.value = 'Current access complaint confirmed for follow-up.'; await note.fire('input');
+  await button('Save reviewed version').fire('click');
+  assert.deepEqual((posts[0]!.payload as { topics: unknown }).topics, ['delivery-unusable']);
 });
 
 test('finance sees evidence before approving and submits the exact displayed version', async () => {

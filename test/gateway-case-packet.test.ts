@@ -211,6 +211,28 @@ test('case packets bind real database records without financial mutation and pre
     const results = await Promise.all([1, 2].map(() => app.inject({ method: 'POST', url: `/finance/gateway-purchases/${other}/case-packet`, headers, payload: statements })));
     assert.deepEqual(results.map((r) => r.statusCode).sort(), [200, 409]);
   });
+  await t.test('context-held packets require explicit topic selection while preserving every financial record', async () => {
+    const contextId = await make(), contextUrl = `/finance/gateway-purchases/${contextId}/case-packet`;
+    const before = await state();
+    const created = await app.inject({ method: 'POST', url: contextUrl, headers, payload: {
+      customerStatement: 'I was not charged twice on invoice X-90. The data is unusable.', merchantStatement: '',
+    } });
+    assert.equal(created.statusCode, 200, created.body); const packet = created.json();
+    assert.deepEqual(packet.selectedTopics, []); assert.equal(packet.merchantInquiryDraft.reviewRequired, true);
+    assert.equal(packet.candidateReview.needsOperatorReview, true);
+    assert.ok(packet.ruleIssues.issues.some((i: { topic: string }) => i.topic === 'delivery-unusable'));
+    const reviewed = await app.inject({ method: 'POST', url: contextUrl + '/revisions', headers, payload: {
+      expectedPacketId: packet.packetId, topics: ['delivery-unusable'], supplements: [], note: 'The access complaint remains current; duplicate claim is denied.',
+    } });
+    assert.equal(reviewed.statusCode, 200, reviewed.body);
+    assert.equal(reviewed.json().merchantInquiryDraft.reviewRequired, false); assert.equal(reviewed.json().financialAuthority, false);
+    assert.equal(reviewed.json().reviewEffort.topicsAdded, 1); assert.equal(reviewed.json().reviewEffort.topicsRemoved, 0);
+    assert.deepEqual(reviewed.json().changes.topicsAdded, ['delivery-unusable']);
+    assert.equal(reviewed.json().candidateReview.needsOperatorReview, true);
+    assert.deepEqual(await state(), before);
+    const original = (await app.inject({ url: contextUrl + '/history/' + packet.packetId, headers })).json();
+    assert.equal(original.merchantInquiryDraft.reviewRequired, true); assert.deepEqual(original.selectedTopics, []);
+  });
   await t.test('effort is derived from saved revisions, scoped, authenticated and separate from financial state', async () => {
     const metricsId = await make(), metricUrl = `/finance/gateway-purchases/${metricsId}/case-packet`;
     const before = await state();

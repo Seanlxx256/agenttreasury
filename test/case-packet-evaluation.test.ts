@@ -34,7 +34,8 @@ test('only untrusted statements reach the production model adapter, never expect
     return respond(sample.annotation.issues);
   });
   assert.equal(run.model!.status, 'ready'); assert.equal(run.model!.score!.exact, true);
-  assert.equal(run.model!.score!.unsupportedCandidates, 0); assert.equal(run.assisted!.score.exactMaterialSet, true);
+  assert.equal(run.model!.score!.unsupportedCandidates, 0); assert.equal(run.assisted!.score.exactMaterialSet, false);
+  assert.equal(run.assisted!.score.needsOperatorReview, true); // Correct paraphrases still disagree with rules.
   assert.equal(run.assisted!.deterministicFactsUnchanged, true);
 });
 
@@ -49,10 +50,12 @@ test('topic scores reject fabricated provenance and unsupported interpretations 
   }
 });
 
-test('production union cannot remove rule false positives even when a model correctly returns no current topics', async () => {
+test('context gate retains raw rule false positives while holding them for review', async () => {
   const run = await evaluatePacketCase(cases[4]!, 'fixture', async () => respond([]));
-  assert.equal(run.model!.score!.exact, true); assert.equal(run.assisted!.score.exact, false);
-  assert.deepEqual(run.assisted!.score, run.baseline.score);
+  assert.equal(run.model!.score!.exact, true); assert.equal(run.assisted!.score.exact, true);
+  assert.equal(run.assisted!.score.rawCandidateScore.exact, false);
+  assert.equal(run.assisted!.score.needsOperatorReview, true);
+  assert.equal(run.assisted!.score.rawCandidateScore.minimumTopicSetEdits, run.baseline.score.rawCandidateScore.minimumTopicSetEdits);
   assert.ok(run.assisted!.score.unnecessaryQuestions.length > 0);
 });
 

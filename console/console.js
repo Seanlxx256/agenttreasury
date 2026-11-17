@@ -741,6 +741,12 @@ function showCasePacket(container, report) {
   if (report.staleAtCompletion || report.staleNow) container.append(element('p',
     'Records changed after this snapshot. Prepare a fresh packet before acting.', 'muted'));
   if (report.historicalView) container.append(element('p', 'Historical version — read only. Load the latest saved packet to review.'));
+  if (!report.candidateReview) container.append(element('p', 'Legacy packet without context screening. Read the raw statements and explicitly select topics to save an updated version.'));
+  if (report.candidateReview) {
+    if (report.candidateReview.needsOperatorReview) container.append(element('p',
+      'Context review required: some candidates are held because of statement context or rule/model disagreement. Read the complete sources before selecting topics. Held does not mean false.'));
+    container.append(evidenceBlock('Context signals and candidate disagreements', report.candidateReview));
+  }
   if (report.reviewEffort) container.append(evidenceBlock('Saved review effort — client timing is unverified', report.reviewEffort));
   if (report.operatorReview) container.append(evidenceBlock('Operator topic review — not claim verification', report.operatorReview));
   if (report.changes) container.append(evidenceBlock('Changes from previous packet', report.changes));
@@ -761,7 +767,7 @@ function casePacketReview(report, path, session, render) {
   const root = element('section');
   root.append(element('h4', 'Review topics and append evidence'), element('p',
     'Select the topics to investigate. Clearing a topic rejects its classification only; it does not prove the claim false. Saving refreshes local records and retains earlier versions.'));
-  const selected = report.operatorReview?.topics ?? [...(report.ruleIssues?.issues ?? []), ...(report.modelInterpretation?.issues ?? [])].map((i) => i.topic);
+  const selected = report.operatorReview?.topics ?? report.selectedTopics ?? [];
   const choices = ['duplicate-charge', 'delivery-unusable', 'refund-claimed', 'other'].map((topic) => {
     const input = element('input'); input.type = 'checkbox'; input.checked = selected.includes(topic);
     const label = element('label', topic); label.append(input); root.append(label); return { topic, input };

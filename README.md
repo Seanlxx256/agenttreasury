@@ -16,6 +16,8 @@ For durable reconciliation cases, operations metrics, deployment and recovery dr
 
 [Stage 13 paired packet evaluation](docs/stage-13-case-packet-evaluation.md) adds a reproducible template/model comparison, separate failure accounting and a blank annotation export. The captured 3B development run does not establish operational improvement.
 
+[Stage 14 context review](docs/stage-14-case-packet-context.md) holds ambiguous or conflicting candidates for explicit operator selection, retains original evidence and withholds merchant inquiry drafts until reviewed. This conservative English policy is not semantic truth verification.
+
 Stage 0 approval and evidence boundaries, regression invariants, and migration
 `032`/`033` upgrade instructions are in [the acceptance checklist](docs/stage-0-acceptance.md).
 

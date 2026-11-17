@@ -20,8 +20,8 @@ export function reviseCasePacket(previous: Packet & { operatorReview?: { topics:
   const statements = { customerStatement: String(previous.partyStatements.find((s) => s.id === 'statement-customer')?.data.text ?? ''),
     merchantStatement: String(previous.partyStatements.find((s) => s.id === 'statement-merchant')?.data.text ?? '') };
   const report = assembleCasePacket(snapshot, statements, previous.modelInterpretation,
-    { topics: input.topics, supplements: [...inherited, ...added] });
-  const oldTopics = previous.operatorReview?.topics ?? [...new Set([...previous.ruleIssues.issues, ...previous.modelInterpretation.issues].map((i) => i.topic))];
+    { topics: input.topics, supplements: [...inherited, ...added], interpretationSources: previous.interpretationSources ?? previous.partyStatements });
+  const oldTopics = previous.operatorReview?.topics ?? previous.selectedTopics ?? [...new Set([...previous.ruleIssues.issues, ...previous.modelInterpretation.issues].map((i) => i.topic))];
   const oldSources = new Map(previous.snapshot.sources.map((s) => [s.id, s]));
   const newSources = new Map(snapshot.sources.map((s) => [s.id, s]));
   const topicsAdded = input.topics.filter((topic) => !oldTopics.includes(topic));
