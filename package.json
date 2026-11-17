@@ -53,6 +53,8 @@
     "test:investigation": "npm run build && node --test --test-concurrency=1 dist/test/gateway-investigation.test.js dist/test/gateway-investigation-run.test.js",
     "eval:batch-investigation": "npm run --silent build && node dist/src/evaluate-batch-investigation.js",
     "eval:batch-development": "npm run --silent build && node dist/src/evaluate-batch-investigation-dev.js",
+    "eval:investigation-dialogue": "npm run --silent build && node dist/src/evaluate-investigation-dialogue-v2.js",
+    "eval:investigation-dialogue-v1": "npm run --silent build && node dist/src/evaluate-investigation-dialogue.js",
     "eval:gateway-exceptions": "npm run --silent build && node dist/src/evaluate-gateway-exceptions.js",
     "test:exceptions": "npm run build && node --test dist/test/gateway-exception-benchmark.test.js"
   },
