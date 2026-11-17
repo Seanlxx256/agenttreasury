@@ -1,0 +1,29 @@
+{
+  "protocol": "case-packet-development-v1",
+  "createdAt": "2026-11-17T10:35:06.045Z",
+  "node": "v25.2.1",
+  "datasetDigest": "125f6ccb55cb9145db3ae26803f67142f68ba25c1ff4b8ce57018484f18f5d9d",
+  "files": {
+    "dist/src/budget.js": "af1bde1d2a64dcb7d021436cd8024065704f3a47a1b1b40e8b3096be524ce7aa",
+    "dist/src/case-packet-evaluation-cases.js": "712d75485953d1b7cb89aef73bc17a28112cb3dcecac973d6d872e42eab29acd",
+    "dist/src/db.js": "29b1f502c1bfe37e68279008b9e1f5e4b4db7a8b7881861000dd9f3a3e3799a1",
+    "dist/src/evaluate-case-packets.js": "3e72edd7532fc7d76076be3a306c0b6124f51d995ca5dd5151fe3d0f143fc4d0",
+    "dist/src/gateway-case-packet.js": "7a112cc6a7469e3300b73d5e1a5567a996e1769484fdd8002ff293660d1a554c",
+    "dist/src/payments.js": "47bffd71eadaee51912b8c6ab50e975c581f0a3319cb96f2cced5e7ffefedac3",
+    "package-lock.json": "491b8fa36167cdd076555385ddf501556c86b34d1ccc8aca1b415a20fb41cd71",
+    "src/budget.ts": "264b0c6fd316f68a96143cd0c5077eb2014ce2dca455af18d18f167b9c1b8380",
+    "src/case-packet-evaluation-cases.ts": "5c016d936e974013d3a56f6b3013e9685ed4157efdb26afeacfa0580e7b4064c",
+    "src/db.ts": "aa2775606344907d082b4418b2bedd8131f52a17f11a40d28f8cddafa74608d3",
+    "src/evaluate-case-packets.ts": "55e24e29778dd14b4299f20289e8cd885650f1ee0e317538994037c9f7dea464",
+    "src/gateway-case-packet.ts": "e3c55190b89108b7e1035f3c1613efb1fa23f40511224720cc132154620be2bf",
+    "src/payments.ts": "b171fc85d4397c4afce8d34198894e1953a682b8723b9810dd3de54262f99b22"
+  },
+  "model": {
+    "name": "qwen2.5:3b",
+    "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b"
+  },
+  "independentReview": false,
+  "promotionEligible": false,
+  "scope": "Synthetic, author-labelled development evaluation; separate from Stage 10 smoke examples. Not held-out or independently reviewed. No wallet, database or merchant calls.",
+  "scoring": "Unsupported means no matching topic/source and annotated span in the quote, not independent truth verification. Topic-set edits are a theoretical lower bound, not measured human edits. Material coverage counts question categories, not complete document quality."
+}
