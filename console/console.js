@@ -677,6 +677,15 @@ function casePacketPanel(path, session) {
   const merchantLabel = element('label', 'Merchant statement'); merchantLabel.append(merchant);
   const create = element('button', 'Prepare case packet'), saved = element('button', 'View saved case packet');
   const output = element('section'); output.setAttribute('aria-live', 'polite');
+  let loaded = false;
+  const render = (packet) => {
+    loaded = true; create.disabled = true; customer.readOnly = true; merchant.readOnly = true;
+    showCasePacket(output, packet);
+    if (!packet.historicalView) {
+      output.append(casePacketReview(packet, path, session, render));
+      before = null; history.disabled = false; history.textContent = 'Browse packet history'; historyOutput.replaceChildren();
+    }
+  };
   for (const [button, fresh] of [[create, true], [saved, false]]) {
     button.type = 'button';
     button.addEventListener('click', () => showErrors(async () => {
@@ -685,29 +694,94 @@ function casePacketPanel(path, session) {
         const packet = await financeApi(path + '/case-packet', fresh ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ customerStatement: customer.value, merchantStatement: merchant.value }) } : {});
         if (session !== generation || !button.isConnected) return;
-        showCasePacket(output, packet);
+        render(packet);
         if (!fresh) {
           customer.value = packet.partyStatements.find((row) => row.id === 'statement-customer')?.data.text ?? '';
           merchant.value = packet.partyStatements.find((row) => row.id === 'statement-merchant')?.data.text ?? '';
         }
-      } finally { create.disabled = false; saved.disabled = false; }
+      } finally { create.disabled = loaded; saved.disabled = false; }
     }));
   }
-  root.append(customerLabel, merchantLabel, create, saved, output);
+  const history = element('button', 'Browse packet history'), historyOutput = element('section');
+  history.type = 'button'; let before = null;
+  history.addEventListener('click', () => showErrors(async () => {
+    history.disabled = true; let completed = false;
+    try {
+      const page = await financeApi(path + '/case-packet/history' + (before ? '?before=' + encodeURIComponent(before) : ''));
+      if (session !== generation || !history.isConnected) return;
+      for (const entry of page.packets) {
+        const view = element('button', `View packet ${entry.packetId} (${entry.actor})`); view.type = 'button';
+        view.addEventListener('click', () => showErrors(async () => {
+          const packet = await financeApi(path + '/case-packet/history/' + encodeURIComponent(entry.packetId));
+          if (session !== generation || !view.isConnected) return;
+          render(packet);
+        }));
+        historyOutput.append(view);
+      }
+      before = page.nextBefore; completed = true; history.textContent = before ? 'Load older packets' : 'History loaded';
+    } finally { history.disabled = completed && !before; }
+  }));
+  root.append(customerLabel, merchantLabel, create, saved, history, historyOutput, output);
   return root;
 }
 
 function showCasePacket(container, report) {
   container.replaceChildren(element('h3', 'Exception case packet'), element('p',
     'Recorded facts describe local records. Party statements and topic interpretations are unverified. This packet authorizes no financial or case action.'),
-  metadata([['Packet', report.packetId], ['Captured', timestamp(report.snapshot.capturedAt)], ['Model interpretation', report.modelInterpretation.status]]));
+  metadata([['Packet', report.packetId], ['Previous packet', report.parentPacketId ?? 'none'], ['Captured', timestamp(report.snapshot.capturedAt)], ['Model interpretation', report.modelInterpretation.status]]));
   if (report.staleAtCompletion || report.staleNow) container.append(element('p',
     'Records changed after this snapshot. Prepare a fresh packet before acting.', 'muted'));
+  if (report.historicalView) container.append(element('p', 'Historical version — read only. Load the latest saved packet to review.'));
+  if (report.operatorReview) container.append(evidenceBlock('Operator topic review — not claim verification', report.operatorReview));
+  if (report.changes) container.append(evidenceBlock('Changes from previous packet', report.changes));
   container.append(evidenceBlock('Party statements — unverified', report.partyStatements),
     evidenceBlock('Recorded facts and citations', report.recordedFacts),
     evidenceBlock('Candidate topics — unverified', { rules: report.ruleIssues, model: {
-      status: report.modelInterpretation.status, issues: report.modelInterpretation.issues, reason: report.modelInterpretation.reason } }),
+      status: report.modelInterpretation.status, issues: report.modelInterpretation.issues, reason: report.modelInterpretation.reason,
+      scope: 'Original generation only; not reevaluated for revised records or supplements.',
+      originalSources: report.interpretationSources ?? report.partyStatements } }),
     evidenceBlock('Missing evidence and follow-up questions', report.evidenceGaps),
     evidenceBlock('Merchant inquiry draft — not sent', report.merchantInquiryDraft),
     evidenceBlock('Source records and coverage limits', { sources: report.sources, coverage: report.snapshot.coverage }));
+}
+
+
+function casePacketReview(report, path, session, render) {
+  const root = element('section');
+  root.append(element('h4', 'Review topics and append evidence'), element('p',
+    'Select the topics to investigate. Clearing a topic rejects its classification only; it does not prove the claim false. Saving refreshes local records and retains earlier versions.'));
+  const selected = report.operatorReview?.topics ?? [...(report.ruleIssues?.issues ?? []), ...(report.modelInterpretation?.issues ?? [])].map((i) => i.topic);
+  const choices = ['duplicate-charge', 'delivery-unusable', 'refund-claimed', 'other'].map((topic) => {
+    const input = element('input'); input.type = 'checkbox'; input.checked = selected.includes(topic);
+    const label = element('label', topic); label.append(input); root.append(label); return { topic, input };
+  });
+  const note = element('textarea'); note.maxLength = 1000;
+  const noteLabel = element('label', 'Review rationale (required)'); noteLabel.append(note);
+  const kind = element('select');
+  for (const value of ['merchant-reply', 'customer-reply', 'operator-observation']) {
+    const option = element('option', value); option.value = value; kind.append(option);
+  }
+  kind.value = 'merchant-reply';
+  const kindLabel = element('label', 'Supplement source type'); kindLabel.append(kind);
+  const reference = element('input'); reference.type = 'text'; reference.maxLength = 300;
+  const referenceLabel = element('label', 'Source reference (for example, support ticket ID)'); referenceLabel.append(reference);
+  const text = element('textarea'); text.maxLength = 1500;
+  const textLabel = element('label', 'Supplement excerpt (optional, redact credentials and private data)'); textLabel.append(text);
+  const save = element('button', 'Save reviewed version'); save.type = 'button'; save.disabled = true;
+  let saving = false;
+  const validate = () => { save.disabled = saving || !note.value.trim() || (!!text.value.trim() !== !!reference.value.trim()); };
+  for (const field of [note, reference, text]) field.addEventListener('input', validate);
+  save.addEventListener('click', () => showErrors(async () => {
+    saving = true; validate();
+    try {
+      const packet = await financeApi(path + '/case-packet/revisions', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expectedPacketId: report.packetId, topics: choices.filter((c) => c.input.checked).map((c) => c.topic),
+          note: note.value.trim(), supplements: text.value.trim() ? [{ kind: kind.value, reference: reference.value.trim(), text: text.value.trim() }] : [] }) });
+      if (session !== generation || !save.isConnected) return;
+      render(packet);
+    } finally { saving = false; validate(); }
+  }));
+  root.append(noteLabel, kindLabel, referenceLabel, textLabel, save, element('p',
+    'Supplemental material is operator-entered and unverified. References are stored as text, never fetched. On a version conflict, load the latest saved packet and review again.'));
+  return root;
 }

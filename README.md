@@ -10,6 +10,8 @@ For durable reconciliation cases, operations metrics, deployment and recovery dr
 
 [Stage 10 exception case packets](docs/stage-10-case-packets.md) adds an operator workflow backed by actual database records: enter party statements, collect cited local evidence, identify missing materials, and save a merchant inquiry draft. Model interpretations remain optional and unverified.
 
+[Stage 11 operator review](docs/stage-11-case-packet-review.md) adds corrected topic selection, source-labelled supplemental material, immutable packet revisions, concurrency conflicts and a paginated history browser. Operator selections never verify claims or authorize funds.
+
 Stage 0 approval and evidence boundaries, regression invariants, and migration
 `032`/`033` upgrade instructions are in [the acceptance checklist](docs/stage-0-acceptance.md).
 

@@ -52,9 +52,12 @@ async function consoleHarness(role: string, reconciliationCase?: Record<string, 
     Node: Element, setTimeout, clearTimeout, purchase,
     fetch: async (path: string, init?: { method?: string; body?: string }) => {
       if (init?.method === 'POST') posts.push({ path, payload: JSON.parse(init.body ?? '{}') });
-      if (path.endsWith('/case-packet')) return Response.json({ packetId: 'packet-1', snapshot: { capturedAt: '2026-11-17T00:00:00Z', coverage: {} },
+      if (path.endsWith('/case-packet/history')) return Response.json({ packets: [{ packetId: '1', actor: 'operations' }], nextBefore: null });
+      if (path.endsWith('/case-packet') || path.endsWith('/case-packet/revisions') || path.endsWith('/case-packet/history/1')) return Response.json({
+        ...(path.endsWith('/revisions') ? { operatorReview: { topics: ['delivery-unusable'] }, changes: { topicsRemoved: ['refund-claimed'] } } : {}),
+        historicalView: path.endsWith('/history/1'), packetId: path.endsWith('/revisions') ? '2' : '1', snapshot: { capturedAt: '2026-11-17T00:00:00Z', coverage: {} },
         modelInterpretation: { status: 'disabled' }, partyStatements: [{ id: 'statement-customer', data: { text: '<script>claim()</script>' } }],
-        recordedFacts: [{ text: 'No verified refund posting.', citations: ['refund'] }], ruleIssues: {}, evidenceGaps: [],
+        recordedFacts: [{ text: 'No verified refund posting.', citations: ['refund'] }], ruleIssues: { issues: [{ topic: 'refund-claimed' }] }, evidenceGaps: [],
         merchantInquiryDraft: { status: 'draft-not-sent', text: 'Please provide refund evidence.' }, sources: [], staleNow: true });
       if (path.includes('/reconciliation-cases')) return Response.json(path.endsWith('?status=all')
         ? { cases: [], next:null } : reconciliationCase);
@@ -110,6 +113,33 @@ test('case packet console submits party claims separately, renders text safely a
   assert.match(root.textContent, /Merchant inquiry draft — not sent/);
   await root.all().find((node) => node.tag === 'button' && node.textContent === 'View saved case packet')!.fire('click');
   assert.equal(customer.value, '<script>claim()</script>'); assert.equal(posts.length, 1);
+});
+
+test('case packet review requires rationale and source, submits selected topics and browses read-only history', async () => {
+  const { root, posts } = await consoleHarness('operations');
+  const button = (text: string) => root.all().find((n) => n.tag === 'button' && n.textContent === text)!;
+  await button('View saved case packet').fire('click');
+  assert.equal(button('Prepare case packet').disabled, true);
+  const submit = button('Save reviewed version'); assert.equal(submit.disabled, true);
+  const note = root.all().find((n) => n.tag === 'textarea' && n.parent?.textContent === 'Review rationale (required)')!;
+  const text = root.all().find((n) => n.tag === 'textarea' && n.parent?.textContent.startsWith('Supplement excerpt'))!;
+  const reference = root.all().find((n) => n.tag === 'input' && n.parent?.textContent.startsWith('Source reference'))!;
+  note.value = 'Refund interpretation corrected to delivery problem.'; await note.fire('input');
+  text.value = '<script>untrusted()</script>'; await text.fire('input'); assert.equal(submit.disabled, true);
+  reference.value = 'ticket-42'; await reference.fire('input'); assert.equal(submit.disabled, false);
+  for (const topic of ['refund-claimed', 'delivery-unusable']) {
+    const checkbox = root.all().find((n) => n.type === 'checkbox' && n.parent?.textContent === topic)!;
+    checkbox.checked = topic === 'delivery-unusable';
+  }
+  await submit.fire('click');
+  assert.deepEqual(posts[0], { path: '/finance/gateway-purchases/case-1/case-packet/revisions', payload: {
+    expectedPacketId: '1', topics: ['delivery-unusable'], note: note.value,
+    supplements: [{ kind: 'merchant-reply', reference: 'ticket-42', text: '<script>untrusted()</script>' }],
+  } });
+  assert.match(root.textContent, /Changes from previous packet/);
+  await button('Browse packet history').fire('click'); await button('View packet 1 (operations)').fire('click');
+  assert.match(root.textContent, /Historical version — read only/);
+  assert.equal(button('Save reviewed version'), undefined); assert.equal(posts.length, 1);
 });
 
 test('finance sees evidence before approving and submits the exact displayed version', async () => {

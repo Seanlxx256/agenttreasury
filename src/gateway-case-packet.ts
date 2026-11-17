@@ -146,13 +146,16 @@ export async function interpretPacketClaims(sources: PacketSource[], model?: str
 }
 
 export function assembleCasePacket(snapshot: Awaited<ReturnType<typeof collectPacketSources>>, statements: PacketStatements,
-  interpretation: Awaited<ReturnType<typeof interpretPacketClaims>>) {
-  const sources = [...snapshot.sources, ...statementSources(statements)];
+  interpretation: Awaited<ReturnType<typeof interpretPacketClaims>>, review?: {
+    topics: PacketIssue['topic'][]; supplements: PacketSource[];
+  }) {
+  const sources = [...snapshot.sources, ...statementSources(statements), ...(review?.supplements ?? [])];
   const purchase = sources.find((row) => row.id === 'purchase')!.data;
   const journal = sources.find((row) => row.id === 'journal')!.data;
   const refund = sources.find((row) => row.id === 'refund')!.data;
   const rules = packetRuleIssues(sources);
-  const topics = new Set([...rules, ...interpretation.issues].map((issue) => issue.topic));
+  // Operator topic selection replaces suggestions; it does not verify the underlying claim.
+  const topics = new Set(review?.topics ?? [...rules, ...interpretation.issues].map((issue) => issue.topic));
   const facts = [
     { text: `Local request amount: ${purchase.amountUnits} USDC base units on ${purchase.network}. Budget state: ${purchase.budgetStatus ?? 'unrecorded'}.`, citations: ['purchase'] },
     { text: journal.present ? `Local payment journal contains one posting of ${journal.amount} base units. This does not exclude another charge elsewhere.`
@@ -171,14 +174,16 @@ export function assembleCasePacket(snapshot: Awaited<ReturnType<typeof collectPa
     ? 'A refund is recorded locally; the party statement still needs to be linked to this exact refund and request.'
     : 'The refund-related statement is unverified; no corresponding local refund posting was found.', ['refund'],
   'Provide the refund transaction hash, original request reference, amount, network and recipient for reconciliation.');
-  if (!topics.size || topics.has('other')) add('clarify-claim', 'The concern needs operator clarification before a targeted investigation.', ['purchase'],
+  if ((!topics.size && !review) || topics.has('other')) add('clarify-claim', 'The concern needs operator clarification before a targeted investigation.', ['purchase'],
     'Describe the specific issue and expected outcome, with relevant order or transaction references.');
   return { version: 1, advisoryOnly: true, financialAuthority: false, snapshot,
     partyStatements: sources.filter((row) => row.kind === 'party-claim'), sources,
+    interpretationSources: sources.filter((row) => row.kind === 'party-claim'),
     recordedFacts: facts, ruleIssues: { verification: 'unverified', issues: rules }, modelInterpretation: interpretation,
     evidenceGaps: gaps, merchantInquiryDraft: {
       status: 'draft-not-sent', requestId: snapshot.requestId,
-      text: `Regarding request ${snapshot.requestId}, please help verify the following points:\n${gaps.map((gap, index) => `${index + 1}. ${gap.question}`).join('\n')}`,
+      text: gaps.length ? `Regarding request ${snapshot.requestId}, please help verify the following points:\n${gaps.map((gap, index) => `${index + 1}. ${gap.question}`).join('\n')}`
+        : 'No follow-up topics selected by the operator. This does not resolve the case or verify any claim.',
       citations: [...new Set(gaps.flatMap((gap) => gap.citations))],
     }, limitation: 'Statements are operator-entered assertions, not authenticated party messages. Quote matching checks provenance, not semantic truth. Recorded facts describe local records, not independent chain verification. No refund entitlement, payment conclusion, case closure or message submission is authorized.' };
 }

@@ -37,8 +37,8 @@ read again after model processing and on retrieval of a saved report; changes
 mark it stale without rewriting the original. Freshness refers to this bounded
 local view as of the check time, not current chain state. New reports append to
 history. The API returns the latest packet, while earlier versions remain in
-the database. A history browser and feedback/revision workflow are not yet
-implemented.
+the database. [Stage 11](stage-11-case-packet-review.md) now adds a history browser
+and operator correction workflow; initial creation is limited to one packet per request.
 
 ## API and authority
 
@@ -96,7 +96,7 @@ or ingest external documents automatically.
 ## Upgrade and use
 
 Migration `039_gateway_case_packets.sql` adds the advisory report table. Readiness
-now requires schema version 39. Stop the API/workers before upgrading, then:
+required schema version 39 at this stage; the current application requires version 40. Stop the API/workers before upgrading, then:
 
 ```sh
 npm run build
@@ -151,11 +151,10 @@ should stay in the authenticated case workflow.
 
 ## Next step
 
-Add operator confirmation/correction of the extracted issues and a versioned
-follow-up evidence workflow. Bind new refund references or delivery error
-excerpts to the same request, keep their source/verification status, and
-regenerate the packet with an explicit change summary. Then compare template,
-retrieval-plus-template and model-assisted preparation on separate cases,
-measuring missing evidence, unsupported assertions and operator edit effort.
+Operator confirmation/correction and versioned follow-up evidence are now implemented
+in [Stage 11](stage-11-case-packet-review.md). New materials retain their source and
+verification status; regenerated packets show explicit version differences. The
+next step is to measure missing evidence, unsupported assertions and operator edit
+effort before claiming an advantage over template-only preparation.
 Multi-order duplicate-charge investigation requires an explicit, authorized
 link between requests and remains outside this single-request first slice.

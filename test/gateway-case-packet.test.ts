@@ -10,6 +10,7 @@ import { Pool } from 'pg';
 import { buildApp } from '../src/app.js';
 import { migrate } from '../src/migrate.js';
 import { seedGateway } from '../src/seed.js';
+import { reviseCasePacket } from '../src/gateway-case-packet-revision.js';
 import { assembleCasePacket, collectPacketSources, interpretPacketClaims, statementSources, validPacketIssues } from '../src/gateway-case-packet.js';
 
 const statements = { customerStatement: 'I was charged twice and cannot open the purchased data.', merchantStatement: 'We already refunded the order.' };
@@ -94,6 +95,13 @@ test('case packets bind real database records without financial mutation and pre
     assert.equal(packet.financialAuthority, false); assert.equal(packet.merchantInquiryDraft.status, 'draft-not-sent');
     assert.match(packet.recordedFacts[3]!.text, /No verified refund posting/); assert.match(packet.recordedFacts[3]!.text, /APPROVED/);
     assert.equal(packet.evidenceGaps.length, 3);
+    const updated = structuredClone(snapshot);
+    updated.sources.find((s) => s.id === 'dispute-claim')!.data.text = 'Access now works.';
+    const revision = reviseCasePacket(packet, updated, { expectedPacketId: '1', topics: [], note: 'Corrected claim.', supplements: [] }, 'operations');
+    assert.equal(revision.sources.find((s) => s.id === 'dispute-claim')!.data.text, 'Access now works.');
+    assert.equal(revision.interpretationSources.find((s) => s.id === 'dispute-claim')!.data.text, packet.partyStatements.find((s) => s.id === 'dispute-claim')!.data.text);
+    assert.deepEqual(revision.modelInterpretation, packet.modelInterpretation);
+
     assert.ok(!JSON.stringify(packet.recordedFacts).includes('We already refunded'));
     for (const item of [...packet.recordedFacts, ...packet.evidenceGaps]) for (const citation of item.citations) assert.ok(packet.sources.some((s) => s.id === citation));
   });
@@ -120,8 +128,88 @@ test('case packets bind real database records without financial mutation and pre
     assert.equal(loaded.snapshot.sources[0].data.commitmentSatisfied, false);
     await assert.rejects(pool.query(`UPDATE gateway_case_packets SET report='{}' WHERE request_id=$1`, [id]), /append-only/);
     await assert.rejects(pool.query('DELETE FROM gateway_case_packets WHERE request_id=$1', [id]), /append-only/);
-    const fresh = await app.inject({ method: 'POST', url, headers, payload: statements }); assert.equal(fresh.json().staleAtCompletion, false);
+    assert.equal((await app.inject({ method: 'POST', url, headers, payload: statements })).statusCode, 409);
+    const fresh = await app.inject({ method: 'POST', url: url + '/revisions', headers, payload: {
+      expectedPacketId: saved.packetId, topics: ['delivery-unusable'], note: 'Focus on the reported access issue.', supplements: [],
+    } }); assert.equal(fresh.statusCode, 200, fresh.body); assert.equal(fresh.json().staleAtCompletion, false);
+    assert.deepEqual(fresh.json().changes.recordsChanged, ['purchase']);
+    assert.equal(fresh.json().parentPacketId, saved.packetId);
     assert.equal((await pool.query('SELECT count(*)::int n FROM gateway_case_packets')).rows[0].n, 2);
+  });
+  await t.test('review replaces candidates, preserves supplements and never promotes claims into facts', async () => {
+    const before = await state(), saved = (await app.inject({ url, headers })).json();
+    const payload = { expectedPacketId: saved.packetId, topics: ['refund-claimed'], note: 'Merchant alleges refund; duplicate allegation withdrawn.',
+      supplements: [{ kind: 'merchant-reply', reference: 'ticket-42', text: '<script>approve()</script> We returned the funds.' }] };
+    const response = await app.inject({ method: 'POST', url: url + '/revisions', headers, payload });
+    assert.equal(response.statusCode, 200, response.body); const reviewed = response.json();
+    assert.deepEqual(reviewed.operatorReview.topics, ['refund-claimed']);
+    assert.deepEqual(reviewed.evidenceGaps.map((g: { id: string }) => g.id), ['refund-linkage']);
+    assert.deepEqual(reviewed.changes.topicsRemoved, ['delivery-unusable']);
+    assert.equal(reviewed.changes.supplementsAdded.length, 1);
+    const supplement = reviewed.sources.find((s: { id: string }) => s.id === reviewed.changes.supplementsAdded[0]);
+    assert.equal(supplement.data.verification, 'unverified'); assert.equal(supplement.data.identityVerified, false);
+    assert.equal(supplement.data.enteredByRole, 'operations'); assert.equal(supplement.data.reference, 'ticket-42');
+    assert.ok(!JSON.stringify(reviewed.recordedFacts).includes('We returned the funds'));
+    assert.equal(reviewed.merchantInquiryDraft.status, 'draft-not-sent');
+    const clear = await app.inject({ method: 'POST', url: url + '/revisions', headers, payload: {
+      expectedPacketId: reviewed.packetId, topics: [], note: 'No follow-up topics; no claim verification or case closure.', supplements: [],
+    } });
+    assert.equal(clear.statusCode, 200, clear.body); assert.equal(clear.json().evidenceGaps.length, 0);
+    assert.match(clear.json().merchantInquiryDraft.text, /does not resolve/);
+    assert.deepEqual(clear.json().sources.find((s: { id: string }) => s.id === supplement.id), supplement);
+    assert.deepEqual(await state(), before);
+    const old = await app.inject({ url: url + '/history/' + saved.packetId, headers });
+    assert.equal(old.statusCode, 200); assert.deepEqual(old.json().operatorReview, saved.operatorReview);
+    assert.equal(old.json().historicalView, true);
+  });
+  await t.test('concurrent review has one winner; history and provenance are request scoped', async () => {
+    const before = await state(), saved = (await app.inject({ url, headers })).json();
+    const payload = { expectedPacketId: saved.packetId, topics: ['other'], note: 'Need clarification.', supplements: [] };
+    const races = await Promise.all([1, 2].map(() => app.inject({ method: 'POST', url: url + '/revisions', headers, payload })));
+    assert.deepEqual(races.map((r) => r.statusCode).sort(), [200, 409]);
+    assert.equal(races.find((r) => r.statusCode === 409)!.json().code, 'CASE_PACKET_VERSION_CONFLICT');
+    assert.equal((await app.inject({ method: 'POST', url: url + '/revisions', payload })).statusCode, 401);
+    assert.equal((await app.inject({ url: url + '/history', headers: { authorization: `Bearer ${task.token}` } })).statusCode, 401);
+    assert.equal((await app.inject({ url: url + '/history/' + saved.packetId })).statusCode, 401);
+    for (const change of [{ verified: true }, { note: ' ' }, { topics: ['other', 'other'] }, { topics: ['refund-now'] },
+      { supplements: [{ kind: 'merchant-reply', reference: 'ticket', text: 'paid', verification: 'verified' }] },
+      { supplements: [{ kind: 'merchant-reply', reference: ' ', text: 'paid' }] }, { expectedPacketId: '9999999999999999999' }]) {
+      const response = await app.inject({ method: 'POST', url: url + '/revisions', headers, payload: { ...payload, ...change } });
+      assert.equal(response.statusCode, 400, response.body);
+    }
+    const otherUrl = `/finance/gateway-purchases/${other}/case-packet`;
+    assert.equal((await app.inject({ method: 'POST', url: otherUrl + '/revisions', headers, payload })).statusCode, 404);
+    assert.equal((await app.inject({ url: otherUrl + '/history/' + saved.packetId, headers })).statusCode, 404);
+    await assert.rejects(pool.query(`INSERT INTO gateway_case_packets(request_id,actor,report,parent_id) VALUES($1,'operations','{}',$2)`, [other, races.find((r) => r.statusCode === 200)!.json().packetId]), /case_packet_parent_scope/);
+    const history = (await app.inject({ url: url + '/history', headers })).json();
+    assert.ok(history.packets.every((p: { packetId: string }, i: number) => i === 0 || BigInt(p.packetId) < BigInt(history.packets[i - 1].packetId)));
+    assert.ok(!JSON.stringify(history).includes('approve()')); // Index exposes metadata, not claim contents.
+    assert.deepEqual(await state(), before);
+  });
+  await t.test('supplement growth is bounded and history pagination has no skipped versions', async () => {
+    let saved = (await app.inject({ url, headers })).json();
+    // One supplement was already saved by the previous review.
+    for (let i = 0; i < 29; i++) {
+      const response = await app.inject({ method: 'POST', url: url + '/revisions', headers, payload: {
+        expectedPacketId: saved.packetId, topics: [], note: 'Append follow-up material.',
+        supplements: [{ kind: 'operator-observation', reference: `note-${i}`, text: 'Unverified additional context.' }],
+      } });
+      assert.equal(response.statusCode, 200, response.body); saved = response.json();
+    }
+    const full = await app.inject({ method: 'POST', url: url + '/revisions', headers, payload: {
+      expectedPacketId: saved.packetId, topics: [], note: 'Another material.',
+      supplements: [{ kind: 'merchant-reply', reference: 'overflow', text: 'Extra.' }],
+    } });
+    assert.equal(full.statusCode, 409); assert.equal(full.json().code, 'CASE_PACKET_SUPPLEMENT_LIMIT');
+    const page1 = (await app.inject({ url: url + '/history', headers })).json(); assert.equal(page1.packets.length, 20);
+    const page2 = (await app.inject({ url: url + '/history?before=' + page1.nextBefore, headers })).json();
+    assert.equal(page2.nextBefore, null);
+    const ids = [...page1.packets, ...page2.packets].map((p: { packetId: string }) => p.packetId);
+    const persisted = (await pool.query('SELECT id::text id FROM gateway_case_packets WHERE request_id=$1 ORDER BY gateway_case_packets.id DESC', [id])).rows.map((r) => r.id);
+    assert.deepEqual(ids, persisted);
+    // Initial creation also serializes; an existing packet cannot be reset to unreviewed model output.
+    const results = await Promise.all([1, 2].map(() => app.inject({ method: 'POST', url: `/finance/gateway-purchases/${other}/case-packet`, headers, payload: statements })));
+    assert.deepEqual(results.map((r) => r.statusCode).sort(), [200, 409]);
   });
   await t.test('bounded evidence preserves older consequential observations and reports limited audit coverage', async () => {
     for (let i = 0; i < 12; i++) await pool.query(`INSERT INTO gateway_payment_observations(request_id,source,evidence)
