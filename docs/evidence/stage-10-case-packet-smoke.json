@@ -1,0 +1,103 @@
+{
+  "scope": "Synthetic local model integration smoke check, not a benchmark or production ROI measurement.",
+  "runAt": "2026-11-17T09:54:39.315Z",
+  "node": "v25.2.1",
+  "model": {
+    "name": "qwen2.5:3b",
+    "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b"
+  },
+  "sourceDigest": "13b4929880d4d491ade310041966c0a4f9e7db7c0ca61f181f670a317e1f5b52",
+  "results": [
+    {
+      "id": "compound-complaint",
+      "customerStatement": "I was charged twice and cannot open the purchased data.",
+      "merchantStatement": "We already refunded the order.",
+      "ruleIssues": [
+        {
+          "topic": "duplicate-charge",
+          "sourceId": "statement-customer",
+          "quote": "I was charged twice and cannot open the purchased data."
+        },
+        {
+          "topic": "delivery-unusable",
+          "sourceId": "statement-customer",
+          "quote": "I was charged twice and cannot open the purchased data."
+        },
+        {
+          "topic": "refund-claimed",
+          "sourceId": "statement-merchant",
+          "quote": "We already refunded the order."
+        }
+      ],
+      "model": {
+        "model": "qwen2.5:3b",
+        "status": "ready",
+        "issues": [
+          {
+            "topic": "duplicate-charge",
+            "sourceId": "statement-customer",
+            "quote": "I was charged twice and cannot open the purchased data."
+          },
+          {
+            "topic": "refund-claimed",
+            "sourceId": "statement-merchant",
+            "quote": "We already refunded the order."
+          }
+        ],
+        "reason": null,
+        "durationMs": 5507.400292,
+        "verification": "unverified"
+      }
+    },
+    {
+      "id": "paraphrase",
+      "customerStatement": "My wallet was debited on two occasions for this one purchase. The download gives me an error instead of the report.",
+      "merchantStatement": "The money has been sent back to the buyer.",
+      "ruleIssues": [],
+      "model": {
+        "model": "qwen2.5:3b",
+        "status": "rejected",
+        "issues": [],
+        "reason": "invalid-issue-or-quote",
+        "durationMs": 3082.512208000001,
+        "verification": "unverified"
+      }
+    },
+    {
+      "id": "negative-context",
+      "customerStatement": "There was no duplicate charge. The file opens correctly. I only need a receipt.",
+      "merchantStatement": "No refund has been issued or promised.",
+      "ruleIssues": [
+        {
+          "topic": "duplicate-charge",
+          "sourceId": "statement-customer",
+          "quote": "There was no duplicate charge."
+        },
+        {
+          "topic": "refund-claimed",
+          "sourceId": "statement-merchant",
+          "quote": "No refund has been issued or promised."
+        }
+      ],
+      "model": {
+        "model": "qwen2.5:3b",
+        "status": "ready",
+        "issues": [
+          {
+            "topic": "duplicate-charge",
+            "sourceId": "statement-customer",
+            "quote": "There was no duplicate charge. The file opens correctly. I only need a receipt."
+          },
+          {
+            "topic": "refund-claimed",
+            "sourceId": "statement-merchant",
+            "quote": "No refund has been issued or promised."
+          }
+        ],
+        "reason": null,
+        "durationMs": 2780.203042000001,
+        "verification": "unverified"
+      }
+    }
+  ]
+}

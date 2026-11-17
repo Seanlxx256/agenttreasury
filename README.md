@@ -8,6 +8,8 @@ For durable reconciliation cases, operations metrics, deployment and recovery dr
 
 [Stage 9 multi-step investigation](docs/stage-9-investigation-dialogue.md) measures evidence gathering with hidden tool results, a three-read budget, and an adaptive rule baseline. It separates a correct guess from a conclusion supported by records actually retrieved.
 
+[Stage 10 exception case packets](docs/stage-10-case-packets.md) adds an operator workflow backed by actual database records: enter party statements, collect cited local evidence, identify missing materials, and save a merchant inquiry draft. Model interpretations remain optional and unverified.
+
 Stage 0 approval and evidence boundaries, regression invariants, and migration
 `032`/`033` upgrade instructions are in [the acceptance checklist](docs/stage-0-acceptance.md).
 

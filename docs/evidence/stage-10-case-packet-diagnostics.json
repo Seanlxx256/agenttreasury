@@ -1,0 +1,124 @@
+{
+  "scope": "Synthetic local model integration smoke check, not a benchmark or production ROI measurement.",
+  "runAt": "2026-11-17T09:57:50.350Z",
+  "node": "v25.2.1",
+  "model": {
+    "name": "qwen2.5:3b",
+    "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b"
+  },
+  "sourceDigest": "105857ea5357088333df1b9d08858e72df68484d81d468006bf3720aa976c081",
+  "results": [
+    {
+      "id": "compound-complaint",
+      "customerStatement": "I was charged twice and cannot open the purchased data.",
+      "merchantStatement": "We already refunded the order.",
+      "ruleIssues": [
+        {
+          "topic": "duplicate-charge",
+          "sourceId": "statement-customer",
+          "quote": "I was charged twice and cannot open the purchased data."
+        },
+        {
+          "topic": "delivery-unusable",
+          "sourceId": "statement-customer",
+          "quote": "I was charged twice and cannot open the purchased data."
+        },
+        {
+          "topic": "refund-claimed",
+          "sourceId": "statement-merchant",
+          "quote": "We already refunded the order."
+        }
+      ],
+      "model": {
+        "model": "qwen2.5:3b",
+        "status": "ready",
+        "issues": [
+          {
+            "topic": "duplicate-charge",
+            "sourceId": "statement-customer",
+            "quote": "I was charged twice and cannot open the purchased data."
+          },
+          {
+            "topic": "refund-claimed",
+            "sourceId": "statement-merchant",
+            "quote": "We already refunded the order."
+          }
+        ],
+        "reason": null,
+        "durationMs": 2574.514584,
+        "verification": "unverified",
+        "diagnostics": {
+          "rawOutput": "{\n  \"issues\": [\n    {\n      \"topic\": \"duplicate-charge\",\n      \"sourceId\": \"statement-customer\",\n      \"quote\": \"I was charged twice and cannot open the purchased data.\"\n    },\n    {\n      \"topic\": \"refund-claimed\",\n      \"sourceId\": \"statement-merchant\",\n      \"quote\": \"We already refunded the order.\"\n    }\n  ]\n}",
+          "truncated": false,
+          "promptTokens": 125,
+          "outputTokens": 83,
+          "doneReason": "stop"
+        }
+      }
+    },
+    {
+      "id": "paraphrase",
+      "customerStatement": "My wallet was debited on two occasions for this one purchase. The download gives me an error instead of the report.",
+      "merchantStatement": "The money has been sent back to the buyer.",
+      "ruleIssues": [],
+      "model": {
+        "model": "qwen2.5:3b",
+        "status": "rejected",
+        "issues": [],
+        "reason": "/issues/1/quote: quote-not-in-source",
+        "durationMs": 2788.882875,
+        "verification": "unverified",
+        "diagnostics": {
+          "rawOutput": "{\n  \"issues\": [\n    {\n      \"topic\": \"refund-claimed\",\n      \"sourceId\": \"statement-customer\",\n      \"quote\": \"My wallet was debited on two occasions for this one purchase. The download gives me an error instead of the report.\"\n    },\n    {\n      \"topic\": \"refund-claimed\",\n      \"sourceId\": \"statement-customer\",\n      \"quote\": \"The money has been sent back to the buyer.\"\n    }\n  ]\n}",
+          "truncated": false,
+          "promptTokens": 142,
+          "outputTokens": 101,
+          "doneReason": "stop"
+        }
+      }
+    },
+    {
+      "id": "negative-context",
+      "customerStatement": "There was no duplicate charge. The file opens correctly. I only need a receipt.",
+      "merchantStatement": "No refund has been issued or promised.",
+      "ruleIssues": [
+        {
+          "topic": "duplicate-charge",
+          "sourceId": "statement-customer",
+          "quote": "There was no duplicate charge."
+        },
+        {
+          "topic": "refund-claimed",
+          "sourceId": "statement-merchant",
+          "quote": "No refund has been issued or promised."
+        }
+      ],
+      "model": {
+        "model": "qwen2.5:3b",
+        "status": "ready",
+        "issues": [
+          {
+            "topic": "duplicate-charge",
+            "sourceId": "statement-customer",
+            "quote": "There was no duplicate charge. The file opens correctly. I only need a receipt."
+          },
+          {
+            "topic": "refund-claimed",
+            "sourceId": "statement-merchant",
+            "quote": "No refund has been issued or promised."
+          }
+        ],
+        "reason": null,
+        "durationMs": 2587.8399580000005,
+        "verification": "unverified",
+        "diagnostics": {
+          "rawOutput": "{\n  \"issues\": [\n    {\n      \"topic\": \"duplicate-charge\",\n      \"sourceId\": \"statement-customer\",\n      \"quote\": \"There was no duplicate charge. The file opens correctly. I only need a receipt.\"\n    },\n    {\n      \"topic\": \"refund-claimed\",\n      \"sourceId\": \"statement-merchant\",\n      \"quote\": \"No refund has been issued or promised.\"\n    }\n  ]\n}",
+          "truncated": false,
+          "promptTokens": 133,
+          "outputTokens": 91,
+          "doneReason": "stop"
+        }
+      }
+    }
+  ]
+}

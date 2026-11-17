@@ -52,6 +52,10 @@ async function consoleHarness(role: string, reconciliationCase?: Record<string, 
     Node: Element, setTimeout, clearTimeout, purchase,
     fetch: async (path: string, init?: { method?: string; body?: string }) => {
       if (init?.method === 'POST') posts.push({ path, payload: JSON.parse(init.body ?? '{}') });
+      if (path.endsWith('/case-packet')) return Response.json({ packetId: 'packet-1', snapshot: { capturedAt: '2026-11-17T00:00:00Z', coverage: {} },
+        modelInterpretation: { status: 'disabled' }, partyStatements: [{ id: 'statement-customer', data: { text: '<script>claim()</script>' } }],
+        recordedFacts: [{ text: 'No verified refund posting.', citations: ['refund'] }], ruleIssues: {}, evidenceGaps: [],
+        merchantInquiryDraft: { status: 'draft-not-sent', text: 'Please provide refund evidence.' }, sources: [], staleNow: true });
       if (path.includes('/reconciliation-cases')) return Response.json(path.endsWith('?status=all')
         ? { cases: [], next:null } : reconciliationCase);
       if (path.endsWith('/operations/metrics')) return Response.json({ cases:{},recovery:{},scans:{},wallets:[],workers:[] });
@@ -90,6 +94,22 @@ test('investigation console renders untrusted evidence as text and flags stale s
   runInContext(`showInvestigation(document.getElementById('gateway-detail'), ${JSON.stringify(report)})`,context);
   assert.match(root.textContent,/Local records changed/);assert.match(root.textContent,/<script>refund\(\)<\/script>/);
   assert.match(root.textContent,/does not authorize payment/);assert.match(root.textContent,/No bound hash/);
+});
+
+test('case packet console submits party claims separately, renders text safely and shows stale advisory evidence', async () => {
+  const { root, posts } = await consoleHarness('operations');
+  const customer = root.all().find((node) => node.tag === 'textarea' && node.parent?.textContent === 'Customer statement')!;
+  const merchant = root.all().find((node) => node.tag === 'textarea' && node.parent?.textContent === 'Merchant statement')!;
+  customer.value = 'Charged twice.'; merchant.value = 'Already refunded.';
+  await root.all().find((node) => node.tag === 'button' && node.textContent === 'Prepare case packet')!.fire('click');
+  assert.deepEqual(posts[0], { path: '/finance/gateway-purchases/case-1/case-packet', payload: {
+    customerStatement: 'Charged twice.', merchantStatement: 'Already refunded.',
+  } });
+  assert.match(root.textContent, /Party statements — unverified/); assert.match(root.textContent, /No verified refund posting/);
+  assert.match(root.textContent, /<script>claim\(\)<\/script>/); assert.match(root.textContent, /Records changed after this snapshot/);
+  assert.match(root.textContent, /Merchant inquiry draft — not sent/);
+  await root.all().find((node) => node.tag === 'button' && node.textContent === 'View saved case packet')!.fire('click');
+  assert.equal(customer.value, '<script>claim()</script>'); assert.equal(posts.length, 1);
 });
 
 test('finance sees evidence before approving and submits the exact displayed version', async () => {

@@ -231,7 +231,7 @@ function showGatewayPurchase(purchase, path, session) {
       ['Transfer ID', transferId], ['Batch hash', batchHash], ['Posted', timestamp(postedAt)],
     ]), entries);
   }
-  actions.after(triage, investigation);
+  actions.after(triage, investigation, casePacketPanel(path, session));
   if (!purchase.observations.length) {
     gatewayDetail.append(element('p', 'No Gateway check recorded.', 'muted'));
     return;
@@ -663,4 +663,51 @@ function showInvestigation(container, report) {
     evidenceBlock('Selected checks and citations', report.planner.investigations));
   for (const check of report.checks) container.append(evidenceBlock(check.kind + ' · ' + check.status, check));
   container.append(evidenceBlock('Original local snapshot', report.snapshot.records));
+}
+
+function casePacketPanel(path, session) {
+  const root = element('section');
+  root.append(element('h3', 'Prepare an exception case packet'), element('p',
+    'Enter the statements as received. They remain unverified claims. The packet saves evidence and a merchant inquiry draft; it sends no message or payment.'));
+  const customer = element('textarea'); customer.maxLength = 3000;
+  customer.placeholder = 'Customer statement, for example: I was charged twice and cannot open the purchased data.';
+  const merchant = element('textarea'); merchant.maxLength = 3000;
+  merchant.placeholder = 'Merchant statement, for example: We have already refunded the order.';
+  const customerLabel = element('label', 'Customer statement'); customerLabel.append(customer);
+  const merchantLabel = element('label', 'Merchant statement'); merchantLabel.append(merchant);
+  const create = element('button', 'Prepare case packet'), saved = element('button', 'View saved case packet');
+  const output = element('section'); output.setAttribute('aria-live', 'polite');
+  for (const [button, fresh] of [[create, true], [saved, false]]) {
+    button.type = 'button';
+    button.addEventListener('click', () => showErrors(async () => {
+      create.disabled = true; saved.disabled = true;
+      try {
+        const packet = await financeApi(path + '/case-packet', fresh ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerStatement: customer.value, merchantStatement: merchant.value }) } : {});
+        if (session !== generation || !button.isConnected) return;
+        showCasePacket(output, packet);
+        if (!fresh) {
+          customer.value = packet.partyStatements.find((row) => row.id === 'statement-customer')?.data.text ?? '';
+          merchant.value = packet.partyStatements.find((row) => row.id === 'statement-merchant')?.data.text ?? '';
+        }
+      } finally { create.disabled = false; saved.disabled = false; }
+    }));
+  }
+  root.append(customerLabel, merchantLabel, create, saved, output);
+  return root;
+}
+
+function showCasePacket(container, report) {
+  container.replaceChildren(element('h3', 'Exception case packet'), element('p',
+    'Recorded facts describe local records. Party statements and topic interpretations are unverified. This packet authorizes no financial or case action.'),
+  metadata([['Packet', report.packetId], ['Captured', timestamp(report.snapshot.capturedAt)], ['Model interpretation', report.modelInterpretation.status]]));
+  if (report.staleAtCompletion || report.staleNow) container.append(element('p',
+    'Records changed after this snapshot. Prepare a fresh packet before acting.', 'muted'));
+  container.append(evidenceBlock('Party statements — unverified', report.partyStatements),
+    evidenceBlock('Recorded facts and citations', report.recordedFacts),
+    evidenceBlock('Candidate topics — unverified', { rules: report.ruleIssues, model: {
+      status: report.modelInterpretation.status, issues: report.modelInterpretation.issues, reason: report.modelInterpretation.reason } }),
+    evidenceBlock('Missing evidence and follow-up questions', report.evidenceGaps),
+    evidenceBlock('Merchant inquiry draft — not sent', report.merchantInquiryDraft),
+    evidenceBlock('Source records and coverage limits', { sources: report.sources, coverage: report.snapshot.coverage }));
 }
