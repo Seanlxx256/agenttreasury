@@ -1,0 +1,29 @@
+
+packet-01
+packet-02
+packet-03
+packet-04
+packet-05
+packet-06
+packet-07
+packet-08
+packet-09
+packet-10
+packet-11
+packet-12
+{
+  "baseline": {
+    "cases": 12,
+    "exactTopicSets": 8,
+    "exactTopicSetsWithoutReview": 4,
+    "heldForReviewCases": 6,
+    "exactMaterialSets": 5,
+    "missingMaterials": 5,
+    "unnecessaryQuestions": 7,
+    "unsupportedCandidates": 0,
+    "candidateCount": 4,
+    "minimumTopicSetEdits": 6
+  },
+  "assisted": null,
+  "model": null
+}

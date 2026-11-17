@@ -57,7 +57,8 @@
     "eval:investigation-dialogue-v1": "npm run --silent build && node dist/src/evaluate-investigation-dialogue.js",
     "eval:gateway-exceptions": "npm run --silent build && node dist/src/evaluate-gateway-exceptions.js",
     "test:exceptions": "npm run build && node --test dist/test/gateway-exception-benchmark.test.js",
-    "eval:case-packets": "npm run --silent build && node dist/src/evaluate-case-packets.js"
+    "eval:case-packets": "npm run --silent build && node dist/src/evaluate-case-packets.js",
+    "verify:portfolio": "node scripts/verify-portfolio.mjs"
   },
   "dependencies": {
     "@circle-fin/x402-batching": "^4.0.0",

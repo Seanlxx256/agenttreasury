@@ -1,0 +1,9 @@
+{
+  "verified": true,
+  "requestId": "e9c47400-1789-4a3d-bbf3-e7d4ef8f5812",
+  "authorizationHash": "0xe1d7df89b13c2d442d1427ca7a4da978dfe1bb2aaade3d1bc2e9314d8404be7b",
+  "amountUnits": "1000",
+  "batchHash": "0x0be2e77561ba007ef136699627523756d19a55cd4f98559d3c30093b831a8b57",
+  "linkage": "corroborated",
+  "limitation": "Offline verification checks report integrity, authorization hash and batch linkage. Signature recovery is a recorded local check; no bearer signature or nonce inclusion proof is exported."
+}

@@ -3,6 +3,7 @@ import { open, readFile } from 'node:fs/promises';
 import { parseArgs, isDeepStrictEqual } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { assembleCasePacket, interpretPacketClaims, packetRuleIssues, statementSources, type PacketIssue, type PacketStatements } from './gateway-case-packet.js';
+import { loadPacketAnnotations, validatePacketAnnotations, comparePacketAnnotations, type ValidatedPacketAnnotations } from './case-packet-annotations.js';
 import { exportPacketAnnotationForm, packetEvaluationCases, packetEvaluationSnapshot, type PacketEvaluationCase } from './case-packet-evaluation-cases.js';
 
 const sha = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
@@ -86,11 +87,12 @@ async function localModelIdentity(name: string, request: typeof fetch) {
   return { name, digest: identity.digest };
 }
 
-export async function planPacketEvaluation(model: string | undefined, request: typeof fetch = fetch) {
+export async function planPacketEvaluation(model: string | undefined, request: typeof fetch = fetch, annotationReview?: ValidatedPacketAnnotations) {
   return { protocol: 'case-packet-development-v2-context-review', createdAt: new Date().toISOString(), node: process.version,
     datasetDigest: sha(JSON.stringify(packetEvaluationCases())), files: await packetEvaluationHashes(),
     model: model ? await localModelIdentity(model, request) : null, independentReview: false, promotionEligible: false,
-    scope: 'Synthetic, author-labelled development evaluation; separate from Stage 10 smoke examples. Context gating was developed after observing Stage 13 results on these same cases. Not held-out or independently reviewed. No wallet, database or merchant calls.',
+    annotationReview: annotationReview ?? null, labelSource: annotationReview ? annotationReview.reviewer.relationship : 'author-development',
+    scope: (annotationReview ? 'Imported reviewer-declared labels; reviewer identity and independence are unverified. ' : 'Author-labelled evaluation. ') + 'Synthetic development evaluation; separate from Stage 10 smoke examples. Context gating was developed after observing Stage 13 results on these same cases. Not held-out or independently reviewed. No wallet, database or merchant calls.',
     scoring: 'Unsupported means no matching topic/source and annotated span in the quote, not independent truth verification. Topic-set edits are a theoretical lower bound, not measured human edits. Material coverage counts question categories, not complete document quality.' };
 }
 
@@ -98,10 +100,12 @@ export async function runPacketEvaluation(plan: Awaited<ReturnType<typeof planPa
   capture: (row: CaseResult) => Promise<void> = async () => {}, progress: (id: string) => void = () => {}) {
   if (plan.node !== process.version || plan.datasetDigest !== sha(JSON.stringify(packetEvaluationCases()))
     || !isDeepStrictEqual(plan.files, await packetEvaluationHashes())) throw new Error('Evaluation sources changed after planning');
+  const reviewed = plan.annotationReview ? validatePacketAnnotations(plan.annotationReview.form) : null;
+  if (reviewed && reviewed.annotationDigest !== plan.annotationReview?.annotationDigest) throw new Error('Annotations changed after planning');
   const checkModel = async () => { if (plan.model && !isDeepStrictEqual(plan.model, await localModelIdentity(plan.model.name, request))) throw new Error('Model identity changed during evaluation'); };
   await checkModel();
   const rows: CaseResult[] = [];
-  for (const sample of packetEvaluationCases()) {
+  for (const sample of reviewed?.cases ?? packetEvaluationCases()) {
     progress(sample.id); await checkModel();
     const row = await evaluatePacketCase(sample, plan.model?.name, request); rows.push(row); await capture(row);
   }
@@ -112,17 +116,25 @@ export async function runPacketEvaluation(plan: Awaited<ReturnType<typeof planPa
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { values } = parseArgs({ options: { output: { type: 'string' }, model: { type: 'string' },
-    'rules-only': { type: 'boolean' }, 'export-review': { type: 'boolean' } } });
-  if (!values.output || [!!values.model, !!values['rules-only'], !!values['export-review']].filter(Boolean).length !== 1)
-    throw new Error('Specify --output <new.json> and exactly one of --rules-only, --model <installed-name>, --export-review');
+    'rules-only': { type: 'boolean' }, 'export-review': { type: 'boolean' }, annotations: { type: 'string' },
+    'validate-review': { type: 'boolean' }, 'compare-review': { type: 'string' } } });
+  if (!values.output || [!!values.model, !!values['rules-only'], !!values['export-review'], !!values['validate-review'], !!values['compare-review']].filter(Boolean).length !== 1
+    || (values['export-review'] && !!values.annotations) || ((values['validate-review'] || values['compare-review']) && !values.annotations))
+    throw new Error('Specify --output <new.json> and one mode: --rules-only, --model <name>, --export-review, --validate-review, --compare-review <second.json>. Review validation/comparison requires --annotations <first.json>.');
   if (values['export-review']) {
     const file = await open(values.output, 'wx');
     try { await file.writeFile(JSON.stringify(exportPacketAnnotationForm(), null, 2) + '\n'); } finally { await file.close(); }
+  } else if (values['validate-review'] || values['compare-review']) {
+    const imported = await loadPacketAnnotations(values.annotations!);
+    const result = values['compare-review'] ? comparePacketAnnotations(imported, await loadPacketAnnotations(values['compare-review'])) : imported;
+    const file = await open(values.output, 'wx');
+    try { await file.writeFile(JSON.stringify(result, null, 2) + '\n'); } finally { await file.close(); }
   } else {
     // Reserve output first; never overwrite or invoke a model for an already existing output path.
     const file = await open(values.output, 'wx');
     try {
-      const plan = await planPacketEvaluation(values.model);
+      const annotations = values.annotations ? await loadPacketAnnotations(values.annotations) : undefined;
+      const plan = await planPacketEvaluation(values.model, fetch, annotations);
       const planFile = await open(values.output + '.plan.json', 'wx');
       try { await planFile.writeFile(JSON.stringify(plan, null, 2) + '\n'); } finally { await planFile.close(); }
       const journal = await open(values.output + '.cases.jsonl', 'wx');

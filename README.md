@@ -1,5 +1,27 @@
 # AgentTreasury
 
+The portfolio implementation is complete through Stage 16. Start with the
+[final acceptance and proposal matrix](docs/stage-16-portfolio-acceptance.md),
+[project highlights](docs/project-highlights.md), and
+[current agent findings](docs/agent-increment-findings.md). Completion describes the
+local/testnet engineering deliverables; production readiness and model productivity
+are not established.
+
+For local acceptance without wallet credentials, Docker or a running model:
+
+```sh
+# On a fresh checkout, install the locked dependencies first with npm ci.
+npm run verify:portfolio -- --output /tmp/agenttreasury-acceptance-new.json
+```
+
+The runner builds, executes all regression tests using temporary PostgreSQL and
+loopback fixtures, replays archived testnet evidence, evaluates rules and exports a
+blank review form. See [annotation import and comparison](docs/stage-15-annotation-import.md)
+for the completed external-review tooling. No external review has been fabricated.
+
+<details>
+<summary>Implementation history and earlier evidence</summary>
+
 For durable reconciliation cases, operations metrics, deployment and recovery drills, see [Stage 1 operations](docs/stage-1-operations.md). For the constrained, separate-process Gateway signer, see [Stage 2 signing boundary](docs/stage-2-signing-boundary.md). For bounded evidence collection and the measured rules/model comparison, see [Stage 3 investigation](docs/stage-3-investigation.md). For the frozen contextual exception benchmark, see [Stage 4 evaluation](docs/stage-4-exception-evaluation.md). For saved testnet event evidence and offline balance replay, see [Stage 5 replay](docs/stage-5-balance-evidence.md) and the [live testnet sample and investigation integration](docs/stage-5-live-evidence.md), followed by [real batch and project-purchase acceptance](docs/stage-5-batch-acceptance.md). The [Stage 6 modern signing acceptance](docs/stage-6-signing-acceptance.md) closes the original-authorization gap with one real testnet order and provides a versioned investigation review packet. The [Stage 7 model comparison](docs/stage-7-batch-evaluation.md) records the exploratory results and explains why rules remain the default.
 
 > For a hiring-focused two-minute summary, see [project highlights](docs/project-highlights.md). For how the agent's value over the rules is designed and measured, see [the agent increment findings](docs/agent-increment-findings.md).
@@ -20,6 +42,8 @@ For durable reconciliation cases, operations metrics, deployment and recovery dr
 
 Stage 0 approval and evidence boundaries, regression invariants, and migration
 `032`/`033` upgrade instructions are in [the acceptance checklist](docs/stage-0-acceptance.md).
+
+</details>
 
 AgentTreasury is a portfolio project for Circle Agent Wallets and payments engineering roles. It targets platform teams that let internal agents buy API access with USDC and need to control that spend by task, recover payments safely, and explain charges to finance. The TypeScript, Fastify, and PostgreSQL backend is built around an Arc testnet purchase flow using Circle Gateway Nanopayments, with budget reservations, idempotent recovery, a balanced payment ledger, and an evidence-backed operations agent. An earlier Base Sepolia direct-settlement flow is retained as legacy reference material.
 
@@ -124,7 +148,7 @@ REQUEST_ID=$(node -p 'crypto.randomUUID()')
 npm run buy:gateway -- "$REQUEST_ID"
 ```
 
-The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer reserves the task budget and stores the request and nonce before sending the signed request. Apply all migrations through `036` before restarting the buyer, signer, workers, merchant and finance API.
+The loopback merchant charges 0.001 test USDC and saves a labeled sample trace in PostgreSQL before responding. The buyer reserves the task budget and stores the request and nonce before sending the signed request. Apply all migrations through `040` before restarting the buyer, signer, workers, merchant and finance API.
 
 If the paid response is lost, rerun `npm run buy:gateway -- "$REQUEST_ID"`. The buyer queries Gateway using the stored nonce. When Gateway confirms a matching charge, the buyer uses a separate retrieval token to fetch the original trace and save it locally. The merchant serves the stored result through a read-only endpoint. The same purchase ID and nonce can be submitted to the seller only once.
 

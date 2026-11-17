@@ -1,0 +1,32 @@
+{
+  "protocol": "case-packet-development-v2-context-review",
+  "createdAt": "2026-11-17T11:07:44.898Z",
+  "node": "v25.2.1",
+  "datasetDigest": "125f6ccb55cb9145db3ae26803f67142f68ba25c1ff4b8ce57018484f18f5d9d",
+  "files": {
+    "dist/src/budget.js": "af1bde1d2a64dcb7d021436cd8024065704f3a47a1b1b40e8b3096be524ce7aa",
+    "dist/src/case-packet-annotations.js": "656b88089240ae399207f6246a5add60319bb3b3928277bbff51d59776cef71c",
+    "dist/src/case-packet-evaluation-cases.js": "05c14df3784a8e27362822fe310dcf9d76583a3d00c62267414afdbebfbda888",
+    "dist/src/db.js": "29b1f502c1bfe37e68279008b9e1f5e4b4db7a8b7881861000dd9f3a3e3799a1",
+    "dist/src/evaluate-case-packets.js": "ec83670624aa7c6623e6b620607be8fb55770a92fb51c87417f58ae8f54dcfbb",
+    "dist/src/gateway-case-packet-context.js": "5ddf2ea9d302ed1f7386c3634f0fa433d166c0d1567ff38f0e04a49fb7c79003",
+    "dist/src/gateway-case-packet.js": "ba250b5891654d4060ba06ede49a26bdb6905775dd37b591e6d13cfa42eb0861",
+    "dist/src/payments.js": "47bffd71eadaee51912b8c6ab50e975c581f0a3319cb96f2cced5e7ffefedac3",
+    "package-lock.json": "491b8fa36167cdd076555385ddf501556c86b34d1ccc8aca1b415a20fb41cd71",
+    "src/budget.ts": "264b0c6fd316f68a96143cd0c5077eb2014ce2dca455af18d18f167b9c1b8380",
+    "src/case-packet-annotations.ts": "d916f009b1496c66e317692d96ababa327edb8ae9cf098dd1c14bb8852170ab6",
+    "src/case-packet-evaluation-cases.ts": "4082d1d9df1c21c287139ca849f81057cccce3e9c1a8568e2807a880460f8587",
+    "src/db.ts": "aa2775606344907d082b4418b2bedd8131f52a17f11a40d28f8cddafa74608d3",
+    "src/evaluate-case-packets.ts": "f28ded408042ea57878c947d284b33e1d0ed0fb70094618f46ec61898a0fbe27",
+    "src/gateway-case-packet-context.ts": "ac83cd53bc13d494dd32cd771e3e12b77ceb4af1b6ea12366de077d581670b25",
+    "src/gateway-case-packet.ts": "a73c9cb710181848636f53da6d34ee7602c1de78cccb0e3a48249ceb4e93f139",
+    "src/payments.ts": "b171fc85d4397c4afce8d34198894e1953a682b8723b9810dd3de54262f99b22"
+  },
+  "model": null,
+  "independentReview": false,
+  "promotionEligible": false,
+  "annotationReview": null,
+  "labelSource": "author-development",
+  "scope": "Author-labelled evaluation. Synthetic development evaluation; separate from Stage 10 smoke examples. Context gating was developed after observing Stage 13 results on these same cases. Not held-out or independently reviewed. No wallet, database or merchant calls.",
+  "scoring": "Unsupported means no matching topic/source and annotated span in the quote, not independent truth verification. Topic-set edits are a theoretical lower bound, not measured human edits. Material coverage counts question categories, not complete document quality."
+}

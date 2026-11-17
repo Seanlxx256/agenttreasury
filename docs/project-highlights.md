@@ -1,149 +1,76 @@
-# AgentTreasury — project highlights
+# AgentTreasury project highlights
 
-A payments backend that lets internal AI agents buy API access with USDC through Circle
-Gateway Nanopayments, and that treats payment-failure recovery and explainability as
-first-class product concerns rather than afterthoughts.
+AgentTreasury is a TypeScript, Fastify and PostgreSQL portfolio project for controlled
+agent payments and payment operations. A task-scoped buyer purchases API access on
+Arc testnet using Gateway; the backend retains uncertain reservations, recovers the
+original delivery and reconciles payment evidence. An optional agent prepares
+read-only investigation suggestions and reviewable case material.
 
-## What's actually hard here
+## Engineering value
 
-Anyone can add a budget or an allowlist. The hard part is the failure window: the buyer
-sends a signed payment, the network drops, and now nobody is sure whether money moved.
-AgentTreasury answers three questions under that uncertainty — *did we pay?*, *can we
-recover the result without paying twice?*, and *can we prove the ledger is right to
-finance?*
+- Built transactional task/daily budget reservations, grant and recipient-version
+  validation, durable request/nonce identity and bounded recovery workers. Lost
+  responses do not justify releasing budgets or issuing a new payment authorization.
+- Separated the executable signer from the buyer and constrained its input to stored,
+  authorized terms. Tested concurrent retries, revocation, lost responses and process
+  restart. The local key-file/shared-DB setup is not HSM custody or OS isolation.
+- Implemented payment/refund journals, batch and wallet-window reconciliation,
+  replayable evidence, durable discrepancy cases and a cold-backup restoration drill.
+  Conflicts remain visible rather than becoming silently accepted accounting changes.
+- Added operator-controlled disputes, evidence-gated refunds and at-most-once automatic
+  refund broadcast. Unknown broadcast outcomes require investigation before recovery.
+- Built source-bound exception packets, append-only revisions, provenance-labelled
+  supplements, context/disagreement holds and role-authenticated review. Candidate
+  text never becomes a financial fact or payment authority merely because it is quoted.
+- Evaluated local models against deterministic controls, retained raw failures and
+  pinned evaluation inputs/code/model identity. Added annotation import and reviewer
+  disagreement tooling without asserting that self-declared review is independent.
 
-## Highlights
+## Evidence that can be shown
 
-- **Official Circle SDK at the right layer.** Chain ID, USDC address, Gateway contract,
-  and payer deposits come from `@circle-fin/x402-batching`, with an `GATEWAY_NETWORK=arc`
-  switch for mainnet. The protocol is handwritten where the SDK's happy-path clients
-  would hide the failure states this project governs — the boundary is in
-  [sdk-adoption-boundary.md](sdk-adoption-boundary.md).
-- **Buyer-side recovery.** A six-state machine covers submission-unknown →
-  charged-delivery-missing → delivered, keyed by request ID and authorization nonce so a
-  retry replays idempotently instead of double-charging.
-- **Frozen contextual exception evaluation.** A 36-case authored stress set includes negation, resolved history, instructions and multiple faults. Hashes bind labels, prompts, scoring and runtime. Neither tested model beats the contextual rule control; negative results, output rejection, evidence coverage and latency are reported separately. No production ROI or independent human annotation is claimed. See [Stage 4](stage-4-exception-evaluation.md).
-- **Bounded read-only investigations.** Operator-triggered plans collect request-scoped evidence through a closed set of tools, validate citation relevance, and flag stale local snapshots. A SELECT-only database role passes the collection tests. The actual 0.5B/1.5B comparison remains below the rule baseline; deterministic planning stays the default. See [Stage 3 and measured results](stage-3-investigation.md).
-- **Constrained signing service.** The executable Gateway buyer sends only request/task IDs to a separate signer. The signer checks current grants, stored authorization, testnet, recipient allowlist and amount cap. A durable pre-signing marker preserves budget after lost responses; tests kill/restart the real signer process. Local process separation is not OS-enforced key custody or a wallet-native policy claim. See [Stage 2](stage-2-signing-boundary.md).
-- **Durable reconciliation operations.** Balance-scan sightings are grouped into versioned cases with evidence-bound operator transitions, protected metrics and correlated logs. A local cold-backup drill checks restored budgets, journal, cursors and case history. Docker/CI configuration is supplied; container and 24-hour soak acceptance remain unverified. See [Stage 1 operations](stage-1-operations.md).
-- **Dual-ledger reconciliation.** The local journal and Circle Gateway transfers are
-  compared on both sides, and conflicts are surfaced for review instead of silently
-  closed.
-- **Application-layer spend governance.** Fine-grained task budgets and payment-term
-  allowlists in the application, plus operator-gated refunds. Circle Agent Wallet transfer
-  limits and recipient policies are documented as a deployment recommendation for mainnet
-  wallets only — enforcement is not verified here, because the self-custodied EOA that
-  signs Gateway batch settlement is not proven to pass through the wallet's policy layer.
-  Documented in [agent-wallet-governance-boundary.md](agent-wallet-governance-boundary.md).
-- **Read-only triage agent with a swappable model.** A locally-run LLM picks an action
-  and cites evidence, but the explanation is supplied by the server and the
-  recommendation is advisory — the backend validates before acting. Models resolve
-  through per-model prompt profiles, so a new model is a registry entry and the
-  auditable JSON-schema envelope stays the same. The constraints are regression-tested.
-- **Append-only audit and operator-gated refunds on both rails.** State transitions are
-  recorded, refunds need a human decision, and the Gateway rail closes the loop for a
-  charged-but-undelivered payment: approval, seller-initiated return, onchain evidence.
-  The onchain return is at-most-once by construction, not exactly-once: a submission intent
-  is persisted before broadcasting, and an unresolved broadcast is never re-sent
-  automatically — an operator verifies the transfer and resumes.
-- **Tamper-evident audit chain (within its limits).** Every audit row hashes its own fields
-  plus the previous row's hash, so editing a row or reordering the log breaks the chain and
-  is detectable offline without trusting the database operator — the application-layer answer
-  to x402's missing self-contained receipt. `verifyAuditChain()` recomputes the chain end to
-  end, and concurrent writers are serialized by an advisory lock so the chain can never fork.
-  The chain has no external anchor, so it cannot detect a truncated tail, a fully rewritten
-  chain, or the removal of all hashes; those still trust the database operator.
-- **Delivery disputes for pay-then-verify.** A charged payment with a delivered-but-wrong
-  result can be raised as a dispute, kept separate from the missing-delivery refund path,
-  and arbitrated by an operator into a refund — executed through the same onchain evidence
-  rules — or a dismissal. The buyer's expected-vs-received claim stays in the audit trail.
-- **Delivery commitment binding.** The merchant's offer declares what a valid delivery must
-  look like, the buyer stores that commitment at purchase time and checks the received
-  delivery against it, and the dispute path snapshots the objective mismatch next to the
-  buyer's claim. The verifier checks call type and terminal result, and treats a reverted
-  target transaction as a correct diagnostic answer rather than a delivery failure, so
-  "expected vs received" becomes reproducible evidence instead of a pay-then-verify assertion.
-- **Commitment-aware triage and recipient-change review.** The read-only triage agent
-  recognizes a delivered-but-commitment-violating payment and recommends raising a dispute,
-  and a merchant payout address can never change silently — it is staged, confirmed by a
-  finance operator against the exact version the operator reviewed, and any task grant that
-  predates the change is rejected at payment time until it is explicitly re-authorized for
-  the reviewed address, closing the "change the bank account" B2B fraud vector.
-- **Multi-network, multi-merchant, multi-process.** The network is a column on each
-  purchase, resolved through a per-network config factory derived from Circle's official
-  SDK, so one worker pool spans testnet and mainnet. Merchants are first-class entities
-  keyed on `(recipient, network)`. Concurrent workers claim work with `SKIP LOCKED` plus
-  a lease, so several processes can settle the same due queue without double-claiming work. Documented in
-  [distributed-multi-network.md](distributed-multi-network.md).
-- **A failure catalog, not just scattered fixes.** Every failure mode — lost response,
-  double charge, reorg, reverted batch, wrong refund, contradictory transfer evidence,
-  paid-but-wrong delivery — has a detection path, a recovery path, and a regression test
-  that injects the failure and asserts the recovery.
-  [failure-catalog.md](failure-catalog.md) is the map.
+The [final acceptance report](evidence/portfolio-acceptance.json) records the current
+complete test count, runtime, individual verification steps and source/build hashes.
+It includes local PostgreSQL and HTTP fault-injection tests and offline replay of
+historical Arc testnet evidence. It does not create a new chain payment.
 
-## Warts found and fixed
+The [modern testnet capture](stage-6-signing-acceptance.md) recorded one 0.001 test-USDC
+purchase through the separate signer and actual buyer executable: one signature,
+one payment journal entry, saved delivery, spent budget and a corroborated batch.
+Resuming the same request retained that identity and spend. The seller and trace
+were project-operated fixtures, not an independent commercial provider.
 
-These are the parts a hiring manager should ask about, because they show the candidate
-actually ran the thing:
+The [Stage 13 development comparison](stage-13-case-packet-evaluation.md) did not
+establish a stable model benefit: template/model-assisted topic matching was 4/12
+versus 5/12, while exact question-category coverage remained 5/12. Later context
+holds improve review boundaries, not the underlying model's semantic accuracy.
+No human review reduction or production time saving is claimed.
 
-1. Switching to the SDK's checksummed addresses exposed a **case-sensitive comparison
-   bug** in quote validation. Fixed by comparing addresses case-insensitively.
-2. The offline recovery drill reused a fixed transfer ID and hit a `UNIQUE` constraint on
-   the second run. Fixed by deriving IDs from the request.
-3. A weak local LLM generated explanations that contradicted its own action. Fixed by
-   moving the explanation to the server and adding a regression test that feeds a
-   contradictory stub response and asserts the displayed explanation comes from the
-   server.
+## Resume wording
 
-## Evidence it works
+Use these as project bullets, not employment or production-scale claims:
 
-- Two real Arc testnet payments, including one lost-response recovery, with verified
-  batch receipts.
-- `npm test` passes 171/171 (Stage 4 local regression run).
-- Triage evaluation is honest about model limits: the rule baseline is exact, and a
-  per-model prompt dictionary lifts Qwen2.5 0.5B from 6/12 to 12/12 with zero unnecessary
-  escalations — measured, not assumed, with the failures (a principles prompt collapsing
-  1.5B to all-escalate) recorded in the evaluation doc. A held-out set of nine independent
-  cases confirms the rules stay at 9/9, but no model beats them (0.5B 9/9, 1.5B 8/9,
-  3B 9/9), and each model adds hundreds of milliseconds of latency.
-- The first measured positive increment comes from the task the rules genuinely cannot
-  do: extracting failure signals from free-text error strings. On `gateway-evidence-v1`
-  (20 strings, 10 direct + 10 paraphrases), the keyword baseline scores recall 0.50 with
-  precision 1.00 — it catches every direct phrase and misses every paraphrase. The models
-  recover the paraphrases (qwen2.5:3b recall 0.95 / precision 0.95; 1.5b and 0.5b 0.85)
-  at a small precision cost. The baseline and split are locked by a unit test, and the
-  signals are displayed as unverified interpretations, separate from recorded facts.
-  Every model signal carries a source quote and observation references. A quote match
-  checks provenance only; it does not prove that the signal is true. Interpretations
-  cannot satisfy action citations, and reviews persist the two categories separately. The numbers are development-set
-  results (the prompts were tuned against them), not held-out generalization. On a
-  frozen ten-string held-out set (`gateway-evidence-test-v1`), the best model reaches
-  0.80 recall (1.5b, 3b 0.70) while 0.5b drops to 0.30 below the rules' 0.50 — the
-  direction holds, the magnitude is recorded honestly.
-- A second candidate increment — read-only investigation suggestions for conflicts — is
-  measured and recorded as a negative result, and it is not a size problem: a deterministic
-  `fact -> check` rule mapping reaches recall 1.00 / precision 1.00, while the models stay
-  at 0.59 recall even at 7b, because "what to check next" is a structured mapping the rules
-  can encode exactly, not a semantic task a local model generalizes on. The read-only,
-  auditable suggestion capability is kept with the exact rule mapping as the default.
-- The third candidate increment — cross-case pattern recognition — is a second positive
-  result. On `gateway-patterns-v1` (six batches, two paraphrased), shared-signal counting
-  scores 0.67, the small models 0.83, and qwen2.5:7b reads all six correctly (1.00). The
-  rule of thumb the three increments establish: the model adds value on semantic tasks
-  (extract signals, cluster paraphrases) and none on structured mappings (choose the next
-  check). The recognition is wired into the finance console at `/finance/gateway-patterns`,
-  which groups the failure reasons the payment path already recorded by merchant and
-  reduces each group to one systemic pattern. The full design-and-validation narrative is
-  in [agent-increment-findings.md](agent-increment-findings.md).
+- Developed a TypeScript/PostgreSQL agent-payment backend with task budgets,
+  request/nonce idempotency and evidence-based recovery for uncertain Gateway
+  testnet payments; validated concurrency, revocation and lost-response behavior
+  through fault-injection tests.
+- Implemented a separate constrained signer, balanced payment/refund accounting,
+  batch/balance reconciliation and replayable operational evidence; exercised an
+  end-to-end 0.001 test-USDC purchase and repeat-request recovery.
+- Built read-only agent investigation and versioned exception-case preparation with
+  cited evidence, operator review and reproducible rule/model evaluation; retained
+  unsuccessful model results and kept model suggestions outside fund execution.
 
-## Not done (and why)
+## Interview explanation
 
-- **Mainnet acceptance run.** The code path and config switch exist (`GATEWAY_NETWORK=arc`
-  resolves the mainnet chain, RPC, contract, and API), but real funds are intentionally
-  out of scope — validation stays on testnet.
-- **Multi-writer scale-out.** The concurrency model is correct across processes that share
-  one PostgreSQL instance (`SKIP LOCKED` + leases + advisory locks). It is not yet
-  sharded across databases or backed by a message queue; those are the next production
-  milestones, in that order.
-- **Operator-time measurement.** The triage evaluation measures decision correctness and
-  evidence, not the time saved in production.
+A useful starting point is the failure window: a paid request times out, so the
+buyer cannot safely assume either success or failure. Explain the persisted request
+and authorization, retained reservation, nonce lookup, matching evidence, original
+result retrieval and the eventual journal entry. Then show why a model may help
+organize ambiguous statements but must not decide whether money moved.
+
+Be ready to explain the tradeoffs: one authorization per logical request, at-most-once
+broadcast under uncertainty, bounded read snapshots, coarse shared role identity,
+local key custody and conservatively increased human review. The project shows
+backend correctness work and evaluation judgment; agent productivity remains an
+unverified hypothesis. See the [proposal acceptance matrix](stage-16-portfolio-acceptance.md)
+for precise scope changes and unimplemented original aspirations.

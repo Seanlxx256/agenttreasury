@@ -54,9 +54,16 @@ export function packetEvaluationSnapshot(recordedRefund: boolean) {
     fingerprint: createHash('sha256').update(JSON.stringify({ sources, coverage })).digest('hex'), sources, coverage };
 }
 
+export function packetEvaluationInputs() {
+  return packetEvaluationCases().map(({ id, input, recordedRefund }) => ({ id, input, snapshot: packetEvaluationSnapshot(recordedRefund) }));
+}
+export function packetEvaluationInputDigest() {
+  return createHash('sha256').update(JSON.stringify(packetEvaluationInputs())).digest('hex');
+}
 export function exportPacketAnnotationForm() {
-  return { schemaVersion: 1, purpose: 'Independent review form; no author labels or model outputs included.',
-    instructions: 'Annotate current asserted topics with supporting source quotes and required follow-up gap IDs. Distinguish denial, hypothetical content, retraction and untrusted instructions. Record disagreement before inspecting author labels.',
-    cases: packetEvaluationCases().map(({ id, input, recordedRefund }) => ({ id, input,
-      snapshot: packetEvaluationSnapshot(recordedRefund), annotation: { issues: [], requiredGapIds: [], rationale: '', reviewer: '', reviewedAt: '' } })) };
+  return { schemaVersion: 2, datasetId: 'case-packet-development-v1', inputDigest: packetEvaluationInputDigest(),
+    purpose: 'Review form; no author labels or model outputs included. Reviewer identity and independence are self-declared.',
+    instructions: 'Complete every case, including explicit empty labels for negatives. Use a reviewer pseudonym, ISO UTC reviewedAt, status reviewed and relationship external-declared, author-declared or simulation. Annotate current topics with exact source quotes and corresponding required question categories. Review disagreements before inspecting author labels.',
+    cases: packetEvaluationInputs().map((row) => ({ ...row,
+      annotation: { issues: [], requiredGapIds: [], rationale: '', reviewer: '', reviewedAt: '', status: 'unreviewed', relationship: 'unspecified' } })) };
 }
