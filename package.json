@@ -52,6 +52,7 @@
     "test:signer": "npm run build && node --test dist/test/gateway-signer.test.js",
     "test:investigation": "npm run build && node --test --test-concurrency=1 dist/test/gateway-investigation.test.js dist/test/gateway-investigation-run.test.js",
     "eval:batch-investigation": "npm run --silent build && node dist/src/evaluate-batch-investigation.js",
+    "eval:batch-development": "npm run --silent build && node dist/src/evaluate-batch-investigation-dev.js",
     "eval:gateway-exceptions": "npm run --silent build && node dist/src/evaluate-gateway-exceptions.js",
     "test:exceptions": "npm run build && node --test dist/test/gateway-exception-benchmark.test.js"
   },

@@ -1,0 +1,1692 @@
+{
+  "protocol": "batch-investigation-development-v1",
+  "completedAt": "2026-11-17T08:55:38.196Z",
+  "planDigest": "50be939ba750222d855502a0081aef6cced33dec7fc218241e1bfcabaff3331f",
+  "rules": {
+    "summary": {
+      "cases": 8,
+      "correct": 8,
+      "strictSuccesses": 8,
+      "falseCorroborations": 0,
+      "requiredCheckRecall": 1,
+      "requiredPathRecall": 1,
+      "annotatedPathPrecision": 1,
+      "unsupportedByAnnotation": 0
+    },
+    "cases": [
+      {
+        "id": "dev-01-consistent",
+        "decision": {
+          "status": "corroborated",
+          "checks": [
+            "read-balance-evidence"
+          ],
+          "citations": [
+            "/input/snapshot"
+          ]
+        },
+        "durationMs": 4.7339170000000195,
+        "correct": true,
+        "requiredChecksFound": 1,
+        "requiredChecks": 1,
+        "requiredPathsFound": 1,
+        "requiredPaths": 1,
+        "supportedPaths": 1,
+        "citedPaths": 1,
+        "unsupportedByAnnotation": 0,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "dev-02-two-conflicts",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-original-authorization",
+            "read-local-journal"
+          ],
+          "citations": [
+            "/input/purchase/authorization",
+            "/input/purchase",
+            "/input/journal",
+            "/input/snapshot/purchases"
+          ]
+        },
+        "durationMs": 0.3618330000000469,
+        "correct": true,
+        "requiredChecksFound": 2,
+        "requiredChecks": 2,
+        "requiredPathsFound": 4,
+        "requiredPaths": 4,
+        "supportedPaths": 4,
+        "citedPaths": 4,
+        "unsupportedByAnnotation": 0,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "dev-03-stale-records",
+        "decision": {
+          "status": "incomplete",
+          "checks": [
+            "read-local-journal"
+          ],
+          "citations": [
+            "/context/capturedRevision",
+            "/context/currentRevision"
+          ]
+        },
+        "durationMs": 2.71712500000001,
+        "correct": true,
+        "requiredChecksFound": 1,
+        "requiredChecks": 1,
+        "requiredPathsFound": 2,
+        "requiredPaths": 2,
+        "supportedPaths": 2,
+        "citedPaths": 2,
+        "unsupportedByAnnotation": 0,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "dev-04-provider-error",
+        "decision": {
+          "status": "incomplete",
+          "checks": [
+            "read-gateway-status"
+          ],
+          "citations": [
+            "/context/providerRead"
+          ]
+        },
+        "durationMs": 4.004791999999952,
+        "correct": true,
+        "requiredChecksFound": 1,
+        "requiredChecks": 1,
+        "requiredPathsFound": 1,
+        "requiredPaths": 1,
+        "supportedPaths": 1,
+        "citedPaths": 1,
+        "unsupportedByAnnotation": 0,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "dev-05-two-missing-sources",
+        "decision": {
+          "status": "incomplete",
+          "checks": [
+            "read-original-authorization",
+            "read-local-journal",
+            "read-gateway-status"
+          ],
+          "citations": [
+            "/input/purchase/authorization",
+            "/input/purchase",
+            "/input/journal",
+            "/input/snapshot/purchases",
+            "/input/observations"
+          ]
+        },
+        "durationMs": 0.9197079999999005,
+        "correct": true,
+        "requiredChecksFound": 3,
+        "requiredChecks": 3,
+        "requiredPathsFound": 4,
+        "requiredPaths": 4,
+        "supportedPaths": 5,
+        "citedPaths": 5,
+        "unsupportedByAnnotation": 0,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "dev-06-conflict-and-staleness",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-original-authorization",
+            "read-local-journal"
+          ],
+          "citations": [
+            "/input/purchase/authorization",
+            "/input/purchase",
+            "/context/capturedRevision",
+            "/context/currentRevision"
+          ]
+        },
+        "durationMs": 0.30587500000001455,
+        "correct": true,
+        "requiredChecksFound": 2,
+        "requiredChecks": 2,
+        "requiredPathsFound": 4,
+        "requiredPaths": 4,
+        "supportedPaths": 4,
+        "citedPaths": 4,
+        "unsupportedByAnnotation": 0,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "dev-07-closing-balance-conflict",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-balance-evidence"
+          ],
+          "citations": [
+            "/input/snapshot"
+          ]
+        },
+        "durationMs": 0.3446250000000646,
+        "correct": true,
+        "requiredChecksFound": 1,
+        "requiredChecks": 1,
+        "requiredPathsFound": 1,
+        "requiredPaths": 1,
+        "supportedPaths": 1,
+        "citedPaths": 1,
+        "unsupportedByAnnotation": 0,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      },
+      {
+        "id": "dev-08-validation-failure",
+        "decision": {
+          "status": "conflict",
+          "checks": [
+            "read-batch-calldata",
+            "read-balance-evidence",
+            "read-original-authorization"
+          ],
+          "citations": [
+            "/input/snapshot/movements/batches",
+            "/input/snapshot",
+            "/input/purchase",
+            "/input/snapshot/purchases",
+            "/input/purchase/authorization",
+            "/input/journal",
+            "/input/observations"
+          ]
+        },
+        "durationMs": 0.5772499999999354,
+        "correct": true,
+        "requiredChecksFound": 2,
+        "requiredChecks": 2,
+        "requiredPathsFound": 2,
+        "requiredPaths": 2,
+        "supportedPaths": 7,
+        "citedPaths": 7,
+        "unsupportedByAnnotation": 0,
+        "falseCorroboration": false,
+        "strictSuccess": true
+      }
+    ]
+  },
+  "groups": [
+    {
+      "model": "qwen2.5:1.5b",
+      "view": "full",
+      "cases": 8,
+      "correct": 5,
+      "strictSuccesses": 0,
+      "falseCorroborations": 0,
+      "requiredCheckRecall": 0.38461538461538464,
+      "requiredPathRecall": 0.6842105263157895,
+      "annotatedPathPrecision": 0.3333333333333333,
+      "unsupportedByAnnotation": 36,
+      "ready": 8,
+      "rejected": 0,
+      "unavailable": 0,
+      "meanDurationMs": 6503.986812625,
+      "inputBytes": 42709,
+      "promptTokens": 26642,
+      "outputTokens": 700,
+      "usageMissing": 0
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "view": "compact",
+      "cases": 8,
+      "correct": 3,
+      "strictSuccesses": 0,
+      "falseCorroborations": 0,
+      "requiredCheckRecall": 0.38461538461538464,
+      "requiredPathRecall": 0.8421052631578947,
+      "annotatedPathPrecision": 0.34375,
+      "unsupportedByAnnotation": 42,
+      "ready": 8,
+      "rejected": 0,
+      "unavailable": 0,
+      "meanDurationMs": 2059.757973874999,
+      "inputBytes": 13230,
+      "promptTokens": 5090,
+      "outputTokens": 792,
+      "usageMissing": 0
+    },
+    {
+      "model": "qwen2.5:3b",
+      "view": "full",
+      "cases": 8,
+      "correct": 6,
+      "strictSuccesses": 0,
+      "falseCorroborations": 0,
+      "requiredCheckRecall": 0.7692307692307693,
+      "requiredPathRecall": 0.5789473684210527,
+      "annotatedPathPrecision": 0.2972972972972973,
+      "unsupportedByAnnotation": 26,
+      "ready": 8,
+      "rejected": 0,
+      "unavailable": 0,
+      "meanDurationMs": 11864.694750125003,
+      "inputBytes": 42709,
+      "promptTokens": 26642,
+      "outputTokens": 614,
+      "usageMissing": 0
+    },
+    {
+      "model": "qwen2.5:3b",
+      "view": "compact",
+      "cases": 8,
+      "correct": 7,
+      "strictSuccesses": 0,
+      "falseCorroborations": 0,
+      "requiredCheckRecall": 0.9230769230769231,
+      "requiredPathRecall": 0.631578947368421,
+      "annotatedPathPrecision": 0.3469387755102041,
+      "unsupportedByAnnotation": 32,
+      "ready": 8,
+      "rejected": 0,
+      "unavailable": 0,
+      "meanDurationMs": 3210.2757394999953,
+      "inputBytes": 13230,
+      "promptTokens": 5090,
+      "outputTokens": 736,
+      "usageMissing": 0
+    }
+  ],
+  "calls": [
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-01-consistent",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision",
+          "/context/currentRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\",\n    \"/context/currentRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3364,
+      "outputTokens": 91,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 9253.6025,
+      "inputBytes": 5370,
+      "evidenceDigest": "10538da16b5325684a25a8dd2d88467e574f8168fd85d2d94894726daece1dca",
+      "correct": false,
+      "requiredChecksFound": 0,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 1,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-01-consistent",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 636,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 1950.4838330000002,
+      "inputBytes": 1653,
+      "evidenceDigest": "10538da16b5325684a25a8dd2d88467e574f8168fd85d2d94894726daece1dca",
+      "correct": false,
+      "requiredChecksFound": 0,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 1,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-02-two-conflicts",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 639,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 2209.6375000000007,
+      "inputBytes": 1655,
+      "evidenceDigest": "0a6115eb7ffcc210920d9399ce04f40b2346a252797833997b9a2e6ab44248ac",
+      "correct": false,
+      "requiredChecksFound": 1,
+      "requiredChecks": 2,
+      "requiredPathsFound": 4,
+      "requiredPaths": 4,
+      "supportedPaths": 4,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 4,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-02-two-conflicts",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-chain-receipt\"\n  ],\n  \"citations\": [\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3361,
+      "outputTokens": 67,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 5460.726666999999,
+      "inputBytes": 5369,
+      "evidenceDigest": "0a6115eb7ffcc210920d9399ce04f40b2346a252797833997b9a2e6ab44248ac",
+      "correct": false,
+      "requiredChecksFound": 1,
+      "requiredChecks": 2,
+      "requiredPathsFound": 2,
+      "requiredPaths": 4,
+      "supportedPaths": 2,
+      "citedPaths": 3,
+      "unsupportedByAnnotation": 1,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-03-stale-records",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision",
+          "/context/currentRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\",\n    \"/context/currentRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3363,
+      "outputTokens": 91,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 6434.036667,
+      "inputBytes": 5370,
+      "evidenceDigest": "e77c1a4a72c4956e5ca42a2c969e8356e9431cb2900f8c6caebf445086a3a741",
+      "correct": true,
+      "requiredChecksFound": 0,
+      "requiredChecks": 1,
+      "requiredPathsFound": 2,
+      "requiredPaths": 2,
+      "supportedPaths": 2,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 6,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-03-stale-records",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 639,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 2242.9512079999986,
+      "inputBytes": 1653,
+      "evidenceDigest": "e77c1a4a72c4956e5ca42a2c969e8356e9431cb2900f8c6caebf445086a3a741",
+      "correct": true,
+      "requiredChecksFound": 0,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 2,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-04-provider-error",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 630,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 2169.8388749999976,
+      "inputBytes": 1653,
+      "evidenceDigest": "ae49bbe34dc68fbb431f4888fe06f4bf79a28aaf471b6fdfdbbb92284e5729af",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 0,
+      "requiredPaths": 1,
+      "supportedPaths": 0,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 8,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-04-provider-error",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision",
+          "/context/currentRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\",\n    \"/context/currentRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3369,
+      "outputTokens": 91,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 6244.6417089999995,
+      "inputBytes": 5440,
+      "evidenceDigest": "ae49bbe34dc68fbb431f4888fe06f4bf79a28aaf471b6fdfdbbb92284e5729af",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 0,
+      "requiredPaths": 1,
+      "supportedPaths": 0,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 8,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-05-two-missing-sources",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision",
+          "/context/currentRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\",\n    \"/context/currentRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3111,
+      "outputTokens": 91,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 6322.889750000002,
+      "inputBytes": 5049,
+      "evidenceDigest": "6c5b7fd87731e27bf8274c5dc066a281f27669d801feeae26cca3e9d49f0797e",
+      "correct": true,
+      "requiredChecksFound": 2,
+      "requiredChecks": 3,
+      "requiredPathsFound": 4,
+      "requiredPaths": 4,
+      "supportedPaths": 4,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 4,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-05-two-missing-sources",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 635,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 1795.2300419999956,
+      "inputBytes": 1653,
+      "evidenceDigest": "6c5b7fd87731e27bf8274c5dc066a281f27669d801feeae26cca3e9d49f0797e",
+      "correct": true,
+      "requiredChecksFound": 2,
+      "requiredChecks": 3,
+      "requiredPathsFound": 4,
+      "requiredPaths": 4,
+      "supportedPaths": 5,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 3,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-06-conflict-and-staleness",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 635,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 2148.888082999998,
+      "inputBytes": 1654,
+      "evidenceDigest": "706d3d8383f65c87f5f4bc36fdca3a5afb83cde61b1bca63af10841412d67eb3",
+      "correct": false,
+      "requiredChecksFound": 1,
+      "requiredChecks": 2,
+      "requiredPathsFound": 3,
+      "requiredPaths": 4,
+      "supportedPaths": 3,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 5,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-06-conflict-and-staleness",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-chain-receipt\"\n  ],\n  \"citations\": [\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3356,
+      "outputTokens": 67,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 5505.567042000002,
+      "inputBytes": 5371,
+      "evidenceDigest": "706d3d8383f65c87f5f4bc36fdca3a5afb83cde61b1bca63af10841412d67eb3",
+      "correct": false,
+      "requiredChecksFound": 1,
+      "requiredChecks": 2,
+      "requiredPathsFound": 1,
+      "requiredPaths": 4,
+      "supportedPaths": 1,
+      "citedPaths": 3,
+      "unsupportedByAnnotation": 2,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-07-closing-balance-conflict",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision",
+          "/context/currentRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\",\n    \"/context/currentRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 3357,
+      "outputTokens": 97,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 6642.718957999998,
+      "inputBytes": 5371,
+      "evidenceDigest": "fda4821e83dccbeb8d757a13e26c56d29a457cb9aa51402b5b3a8c9093656fae",
+      "correct": true,
+      "requiredChecksFound": 0,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 1,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-07-closing-balance-conflict",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 636,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 1730.4194590000043,
+      "inputBytes": 1654,
+      "evidenceDigest": "fda4821e83dccbeb8d757a13e26c56d29a457cb9aa51402b5b3a8c9093656fae",
+      "correct": false,
+      "requiredChecksFound": 0,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 1,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-08-validation-failure",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\"read-original-authorization\", \"read-gateway-status\", \"read-chain-receipt\"],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 640,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 2230.614791,
+      "inputBytes": 1655,
+      "evidenceDigest": "2936ef044d6ecb9353fb098c0e324c7bf34d3954b55e2e99358f451c6cc9b463",
+      "correct": false,
+      "requiredChecksFound": 0,
+      "requiredChecks": 2,
+      "requiredPathsFound": 2,
+      "requiredPaths": 2,
+      "supportedPaths": 7,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 1,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "id": "dev-08-validation-failure",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-chain-receipt"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-chain-receipt\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 3361,
+      "outputTokens": 105,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 6167.711208000001,
+      "inputBytes": 5369,
+      "evidenceDigest": "2936ef044d6ecb9353fb098c0e324c7bf34d3954b55e2e99358f451c6cc9b463",
+      "correct": true,
+      "requiredChecksFound": 0,
+      "requiredChecks": 2,
+      "requiredPathsFound": 2,
+      "requiredPaths": 2,
+      "supportedPaths": 7,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 1,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-01-consistent",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-balance-evidence"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-balance-evidence\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3364,
+      "outputTokens": 99,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 15822.929000000004,
+      "inputBytes": 5370,
+      "evidenceDigest": "10538da16b5325684a25a8dd2d88467e574f8168fd85d2d94894726daece1dca",
+      "correct": false,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 1,
+      "supportedPaths": 1,
+      "citedPaths": 7,
+      "unsupportedByAnnotation": 6,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-01-consistent",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-balance-evidence"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-balance-evidence\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 636,
+      "outputTokens": 106,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 3358.4590000000026,
+      "inputBytes": 1653,
+      "evidenceDigest": "10538da16b5325684a25a8dd2d88467e574f8168fd85d2d94894726daece1dca",
+      "correct": false,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 1,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-02-two-conflicts",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-local-journal"
+        ],
+        "citations": [
+          "/input/purchase/authorization",
+          "/input/purchase",
+          "/input/journal",
+          "/input/snapshot/purchases",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-local-journal\"\n  ],\n  \"citations\": [\n    \"/input/purchase/authorization\",\n    \"/input/purchase\",\n    \"/input/journal\",\n    \"/input/snapshot/purchases\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 639,
+      "outputTokens": 92,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 3794.205249999999,
+      "inputBytes": 1655,
+      "evidenceDigest": "0a6115eb7ffcc210920d9399ce04f40b2346a252797833997b9a2e6ab44248ac",
+      "correct": true,
+      "requiredChecksFound": 2,
+      "requiredChecks": 2,
+      "requiredPathsFound": 4,
+      "requiredPaths": 4,
+      "supportedPaths": 4,
+      "citedPaths": 6,
+      "unsupportedByAnnotation": 2,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-02-two-conflicts",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-local-journal"
+        ],
+        "citations": [
+          "/input/purchase/authorization",
+          "/input/purchase",
+          "/input/journal"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-local-journal\"\n  ],\n  \"citations\": [\n    \"/input/purchase/authorization\",\n    \"/input/purchase\",\n    \"/input/journal\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 3361,
+      "outputTokens": 67,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 10744.362999999998,
+      "inputBytes": 5369,
+      "evidenceDigest": "0a6115eb7ffcc210920d9399ce04f40b2346a252797833997b9a2e6ab44248ac",
+      "correct": true,
+      "requiredChecksFound": 2,
+      "requiredChecks": 2,
+      "requiredPathsFound": 3,
+      "requiredPaths": 4,
+      "supportedPaths": 3,
+      "citedPaths": 3,
+      "unsupportedByAnnotation": 0,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-03-stale-records",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-local-journal"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-local-journal\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3363,
+      "outputTokens": 105,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 12552.647334000008,
+      "inputBytes": 5370,
+      "evidenceDigest": "e77c1a4a72c4956e5ca42a2c969e8356e9431cb2900f8c6caebf445086a3a741",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 2,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-03-stale-records",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-local-journal"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-local-journal\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 639,
+      "outputTokens": 105,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 3007.0172500000044,
+      "inputBytes": 1653,
+      "evidenceDigest": "e77c1a4a72c4956e5ca42a2c969e8356e9431cb2900f8c6caebf445086a3a741",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 2,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-04-provider-error",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-balance-evidence"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-balance-evidence\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 630,
+      "outputTokens": 106,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 3636.7067499999976,
+      "inputBytes": 1653,
+      "evidenceDigest": "ae49bbe34dc68fbb431f4888fe06f4bf79a28aaf471b6fdfdbbb92284e5729af",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 0,
+      "requiredPaths": 1,
+      "supportedPaths": 0,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 8,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-04-provider-error",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-gateway-status",
+          "read-batch-calldata",
+          "read-local-journal"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-gateway-status\",\n    \"read-batch-calldata\",\n    \"read-local-journal\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 3369,
+      "outputTokens": 106,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 11920.80541700001,
+      "inputBytes": 5440,
+      "evidenceDigest": "ae49bbe34dc68fbb431f4888fe06f4bf79a28aaf471b6fdfdbbb92284e5729af",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 0,
+      "requiredPaths": 1,
+      "supportedPaths": 0,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 8,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-05-two-missing-sources",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-balance-evidence"
+        ],
+        "citations": [
+          "/input/purchase/authorization",
+          "/input/observations",
+          "/input/snapshot/movements/batches"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-balance-evidence\"\n  ],\n  \"citations\": [\n    \"/input/purchase/authorization\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 3111,
+      "outputTokens": 73,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 11087.340625000012,
+      "inputBytes": 5049,
+      "evidenceDigest": "6c5b7fd87731e27bf8274c5dc066a281f27669d801feeae26cca3e9d49f0797e",
+      "correct": false,
+      "requiredChecksFound": 2,
+      "requiredChecks": 3,
+      "requiredPathsFound": 2,
+      "requiredPaths": 4,
+      "supportedPaths": 2,
+      "citedPaths": 3,
+      "unsupportedByAnnotation": 1,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-05-two-missing-sources",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "incomplete",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-local-journal"
+        ],
+        "citations": [
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/snapshot/purchases"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"incomplete\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-local-journal\"\n  ],\n  \"citations\": [\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/snapshot/purchases\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "incomplete",
+      "promptTokens": 635,
+      "outputTokens": 69,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 2078.810207999981,
+      "inputBytes": 1653,
+      "evidenceDigest": "6c5b7fd87731e27bf8274c5dc066a281f27669d801feeae26cca3e9d49f0797e",
+      "correct": true,
+      "requiredChecksFound": 3,
+      "requiredChecks": 3,
+      "requiredPathsFound": 2,
+      "requiredPaths": 4,
+      "supportedPaths": 3,
+      "citedPaths": 3,
+      "unsupportedByAnnotation": 0,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-06-conflict-and-staleness",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-local-journal"
+        ],
+        "citations": [
+          "/input/purchase/authorization",
+          "/input/purchase",
+          "/input/journal"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-local-journal\"\n  ],\n  \"citations\": [\n    \"/input/purchase/authorization\",\n    \"/input/purchase\",\n    \"/input/journal\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 635,
+      "outputTokens": 67,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 3121.162000000011,
+      "inputBytes": 1654,
+      "evidenceDigest": "706d3d8383f65c87f5f4bc36fdca3a5afb83cde61b1bca63af10841412d67eb3",
+      "correct": true,
+      "requiredChecksFound": 2,
+      "requiredChecks": 2,
+      "requiredPathsFound": 2,
+      "requiredPaths": 4,
+      "supportedPaths": 2,
+      "citedPaths": 3,
+      "unsupportedByAnnotation": 1,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-06-conflict-and-staleness",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status"
+        ],
+        "citations": [
+          "/input/purchase/authorization",
+          "/input/purchase",
+          "/input/observations",
+          "/input/journal"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\"\n  ],\n  \"citations\": [\n    \"/input/purchase/authorization\",\n    \"/input/purchase\",\n    \"/input/observations\",\n    \"/input/journal\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 3356,
+      "outputTokens": 66,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 11013.76662499999,
+      "inputBytes": 5371,
+      "evidenceDigest": "706d3d8383f65c87f5f4bc36fdca3a5afb83cde61b1bca63af10841412d67eb3",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 2,
+      "requiredPathsFound": 2,
+      "requiredPaths": 4,
+      "supportedPaths": 2,
+      "citedPaths": 4,
+      "unsupportedByAnnotation": 2,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-07-closing-balance-conflict",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-balance-evidence"
+        ],
+        "citations": [
+          "/input/snapshot",
+          "/context/capturedRevision",
+          "/context/currentRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-balance-evidence\"\n  ],\n  \"citations\": [\n    \"/input/snapshot\",\n    \"/context/capturedRevision\",\n    \"/context/currentRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 3357,
+      "outputTokens": 53,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 11380.009374999994,
+      "inputBytes": 5371,
+      "evidenceDigest": "fda4821e83dccbeb8d757a13e26c56d29a457cb9aa51402b5b3a8c9093656fae",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 1,
+      "supportedPaths": 1,
+      "citedPaths": 3,
+      "unsupportedByAnnotation": 2,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-07-closing-balance-conflict",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-balance-evidence",
+          "read-original-authorization",
+          "read-gateway-status"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/snapshot/purchases",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches",
+          "/input/snapshot",
+          "/context/capturedRevision"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-balance-evidence\",\n    \"read-original-authorization\",\n    \"read-gateway-status\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/snapshot/purchases\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\",\n    \"/input/snapshot\",\n    \"/context/capturedRevision\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 636,
+      "outputTokens": 106,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 3034.649374999979,
+      "inputBytes": 1654,
+      "evidenceDigest": "fda4821e83dccbeb8d757a13e26c56d29a457cb9aa51402b5b3a8c9093656fae",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 1,
+      "requiredPathsFound": 1,
+      "requiredPaths": 1,
+      "supportedPaths": 1,
+      "citedPaths": 8,
+      "unsupportedByAnnotation": 7,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-08-validation-failure",
+      "view": "compact",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-original-authorization",
+          "read-gateway-status",
+          "read-batch-calldata"
+        ],
+        "citations": [
+          "/input/purchase",
+          "/input/purchase/authorization",
+          "/input/journal",
+          "/input/observations",
+          "/input/snapshot/movements/batches"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-original-authorization\",\n    \"read-gateway-status\",\n    \"read-batch-calldata\"\n  ],\n  \"citations\": [\n    \"/input/purchase\",\n    \"/input/purchase/authorization\",\n    \"/input/journal\",\n    \"/input/observations\",\n    \"/input/snapshot/movements/batches\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 640,
+      "outputTokens": 85,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 3651.196082999988,
+      "inputBytes": 1655,
+      "evidenceDigest": "2936ef044d6ecb9353fb098c0e324c7bf34d3954b55e2e99358f451c6cc9b463",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 2,
+      "requiredPathsFound": 1,
+      "requiredPaths": 2,
+      "supportedPaths": 5,
+      "citedPaths": 5,
+      "unsupportedByAnnotation": 0,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    },
+    {
+      "model": "qwen2.5:3b",
+      "id": "dev-08-validation-failure",
+      "view": "full",
+      "status": "ready",
+      "reasons": [],
+      "decision": {
+        "status": "conflict",
+        "checks": [
+          "read-batch-calldata"
+        ],
+        "citations": [
+          "/input/snapshot/movements/batches"
+        ]
+      },
+      "rawOutput": "{\n  \"status\": \"conflict\",\n  \"checks\": [\n    \"read-batch-calldata\"\n  ],\n  \"citations\": [\n    \"/input/snapshot/movements/batches\"\n  ]\n}",
+      "rawOutputTruncated": false,
+      "candidateStatus": "conflict",
+      "promptTokens": 3361,
+      "outputTokens": 45,
+      "doneReason": "stop",
+      "httpStatus": 200,
+      "durationMs": 10395.696625000011,
+      "inputBytes": 5369,
+      "evidenceDigest": "2936ef044d6ecb9353fb098c0e324c7bf34d3954b55e2e99358f451c6cc9b463",
+      "correct": true,
+      "requiredChecksFound": 1,
+      "requiredChecks": 2,
+      "requiredPathsFound": 1,
+      "requiredPaths": 2,
+      "supportedPaths": 1,
+      "citedPaths": 1,
+      "unsupportedByAnnotation": 0,
+      "falseCorroboration": false,
+      "strictSuccess": false
+    }
+  ],
+  "independentReview": false,
+  "promotionEligible": false,
+  "limitation": "Single-author synthetic development cases; shared generator and non-independent labels. Both views receive identical backend comparisons. Compact removes raw records. No comparison to Stage 7 accuracy, operator ROI claim, financial authority or production promotion."
+}

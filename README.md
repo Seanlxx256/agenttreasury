@@ -4,6 +4,8 @@ For durable reconciliation cases, operations metrics, deployment and recovery dr
 
 > For a hiring-focused two-minute summary, see [project highlights](docs/project-highlights.md). For how the agent's value over the rules is designed and measured, see [the agent increment findings](docs/agent-increment-findings.md).
 
+[Stage 8 development experiments](docs/stage-8-compact-evidence.md) add bounded raw-output diagnostics and paired full/compact evidence inputs on new synthetic cases. These experiments preserve Stage 7 and do not promote a model into the payment execution path.
+
 Stage 0 approval and evidence boundaries, regression invariants, and migration
 `032`/`033` upgrade instructions are in [the acceptance checklist](docs/stage-0-acceptance.md).
 
