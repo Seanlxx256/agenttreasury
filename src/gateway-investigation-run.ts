@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { Pool } from 'pg';
 import type { Hash } from 'viem';
 import { PaymentError } from './payments.js';
+import { runGuidedChecks } from './gateway-guided-investigation.js';
 import { prepareGatewayTriage } from './gateway-triage.js';
 import { observeGatewayPayment } from './gateway-reconciliation.js';
 import { gatewayClient, gatewayNetworkConfig, type GatewayNetworkName } from './gateway-x402.js';
@@ -148,10 +149,23 @@ export async function executeInvestigationChecks(snapshot:Snapshot, plan:Investi
 }
 
 export async function runGatewayInvestigation(pool:Pool,requestId:string,options:{
-  model?:string;modelRequest?:typeof fetch;refreshExternal?:boolean;gatewayRequest?:typeof fetch;chainRead?:ChainRead;
+  model?:string;modelRequest?:typeof fetch;refreshExternal?:boolean;gatewayRequest?:typeof fetch;chainRead?:ChainRead; guided?:boolean;
 }={}) {
   const start=Date.now();
   const snapshot=await collectInvestigationSnapshot(pool,requestId);
+  if (options.guided) {
+    const guided = await runGuidedChecks(snapshot.facts, async (step) => (await executeInvestigationChecks(snapshot, [step], options))[0]!, {
+      model: options.model, request: options.modelRequest,
+      isFresh: async () => (await collectInvestigationSnapshot(pool, requestId)).fingerprint === snapshot.fingerprint,
+    });
+    const current = await collectInvestigationSnapshot(pool, requestId);
+    return { version: 1, advisoryOnly: true, snapshot, planner: { status: 'guided', investigations: guided.checks.map(({ kind, citations }) => ({ kind, citations })) },
+      checks: guided.checks, guided, staleAtCompletion: snapshot.fingerprint !== current.fingerprint,
+      freshnessCheckedAt: current.capturedAt, durationMs: Date.now() - start,
+      summary: { requested: guided.required.length, completed: guided.checks.filter((c) => c.status === 'ok').length,
+        blocked: guided.checks.filter((c) => c.status === 'blocked').length, unavailable: guided.checks.filter((c) => c.status === 'unavailable').length },
+      limitation: guided.scope };
+  }
   const planner=await suggestInvestigationsWithModel(snapshot.facts,options.model,options.modelRequest);
   const checks=await executeInvestigationChecks(snapshot,planner.investigations,options);
   const current=await collectInvestigationSnapshot(pool,requestId);

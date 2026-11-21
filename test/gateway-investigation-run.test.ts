@@ -84,6 +84,34 @@ test('investigation executes bounded reads with provenance, freshness and no bus
     assert.ok(!JSON.stringify(snapshot.facts).includes('<script>'));
     assert.ok(snapshot.records.observations.some((r)=>r.evidence.status==='conflict'));
   });
+  await t.test('guided production runner gathers required checks with unique evidence IDs and no business mutations', async () => {
+    const before = await state();
+    const report = await runGatewayInvestigation(pool, purchase.id, { guided: true, model: 'fixture-model', modelRequest: async () =>
+      Response.json({ message: { content: '{"next":"compare-transfer-terms"}' } }) });
+    assert.equal(report.planner.status, 'guided'); assert.equal(report.guided!.stopReason, 'checklist-collected');
+    assert.deepEqual(report.guided!.remaining, []); assert.equal(report.checks.length, 2);
+    assert.equal(new Set(report.checks.map((c) => c.evidenceId)).size, 2);
+    assert.ok(report.checks.every((c) => c.citations.length > 0));
+    assert.deepEqual(await state(), before); assert.ok(!JSON.stringify(report).includes('DO_NOT_EXPORT'));
+  });
+  await t.test('guided HTTP mode is authenticated, saved, and stops when planning races a changed snapshot', async () => {
+    const f = await make();
+    const report = await runGatewayInvestigation(pool, f.id, { guided: true, model: 'fixture-model', modelRequest: async () => {
+      await pool.query('UPDATE gateway_demo_purchases SET reconcile_review_at=now() WHERE request_id=$1', [f.id]);
+      return Response.json({ message: { content: '{"next":"read-local-journal"}' } });
+    } });
+    assert.equal(report.guided!.stopReason, 'snapshot-changed'); assert.equal(report.checks.length, 0); assert.equal(report.staleAtCompletion, true);
+    const previous = process.env.GATEWAY_INVESTIGATION_MODE;
+    process.env.GATEWAY_INVESTIGATION_MODE = 'guided';
+    try {
+      const url = `/finance/gateway-purchases/${purchase.id}/investigation`;
+      assert.equal((await app.inject({ method: 'POST', url, payload: {} })).statusCode, 401);
+      const response = await app.inject({ method: 'POST', url, payload: {}, headers: { authorization: `Bearer ${operations}` } });
+      assert.equal(response.statusCode, 200); assert.equal(response.json().guided.stopReason, 'checklist-collected');
+      const saved = await app.inject({ url, headers: { authorization: `Bearer ${operations}` } });
+      assert.equal(saved.json().guided.mode, 'guided'); assert.ok(saved.json().runId);
+    } finally { if (previous === undefined) delete process.env.GATEWAY_INVESTIGATION_MODE; else process.env.GATEWAY_INVESTIGATION_MODE = previous; }
+  });
   await t.test('external reads default to blocked; model cannot choose URLs, other requests or a fourth tool',async()=>{
     const snapshot=await collectInvestigationSnapshot(pool,purchase.id);let calls=0;
     const denied=async()=>{calls++;throw new Error('Should not be reached');};
@@ -135,13 +163,14 @@ test('investigation executes bounded reads with provenance, freshness and no bus
     assert.ok(rejected.checks.every((check)=>check.status==='ok'));
   });
   await t.test('operator API appends only an advisory report; saved reports retain original evidence and expose staleness',async()=>{
+    const runCountBefore = (await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs')).rows[0].n;
     const url=`/finance/gateway-purchases/${purchase.id}/investigation`;const headers={authorization:`Bearer ${operations}`};
     assert.equal((await app.inject({method:'POST',url,payload:{}})).statusCode,401);
     assert.equal((await app.inject({method:'POST',url,payload:{},headers:{authorization:`Bearer ${task.token}`}})).statusCode,401);
     assert.equal((await app.inject({method:'POST',url,payload:{requestId:randomUUID()},headers})).statusCode,400);
     const before=await state();const response=await app.inject({method:'POST',url,headers,payload:{refreshExternal:false}});
     assert.equal(response.statusCode,200,response.body);assert.deepEqual(await state(),before);
-    assert.equal((await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs')).rows[0].n,1);
+    assert.equal((await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs')).rows[0].n,runCountBefore + 1);
     const saved=response.json();assert.ok(saved.runId);assert.equal(saved.staleAtCompletion,false);
     await pool.query('UPDATE gateway_demo_purchases SET reconcile_review_at=now() WHERE request_id=$1',[purchase.id]);
     const fetched=(await app.inject({url,headers})).json();

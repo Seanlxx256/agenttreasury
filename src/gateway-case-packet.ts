@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import type { Pool } from 'pg';
 import { reviewPacketContext } from './gateway-case-packet-context.js';
 import { PaymentError } from './payments.js';
+import { prepareClaimAssistance, type PacketInterpretation } from './gateway-claim-assessment.js';
+import { extractClaimMaterials } from './gateway-claim-materials.js';
 
 export type PacketSource = { id: string; kind: 'local-record' | 'provider-report' | 'party-claim' | 'audit-event';
   locator: string; data: Record<string, unknown> };
@@ -147,7 +149,7 @@ export async function interpretPacketClaims(sources: PacketSource[], model?: str
 }
 
 export function assembleCasePacket(snapshot: Awaited<ReturnType<typeof collectPacketSources>>, statements: PacketStatements,
-  interpretation: Awaited<ReturnType<typeof interpretPacketClaims>>, review?: {
+  interpretation: PacketInterpretation, review?: {
     topics: PacketIssue['topic'][]; supplements: PacketSource[]; interpretationSources?: PacketSource[];
   }) {
   const sources = [...snapshot.sources, ...statementSources(statements), ...(review?.supplements ?? [])];
@@ -185,6 +187,9 @@ export function assembleCasePacket(snapshot: Awaited<ReturnType<typeof collectPa
     partyStatements: sources.filter((row) => row.kind === 'party-claim'), sources,
     interpretationSources: sources.filter((row) => row.kind === 'party-claim'),
     candidateReview, selectedTopics, topicSelectionSource: review ? 'operator' : 'context-screened-candidates',
+    claimAssistance: prepareClaimAssistance(interpretation.assessment, sources),
+    suppliedMaterials: { origin: 'deterministic-extraction', verification: 'unverified', candidates: extractClaimMaterials(sources),
+      limitation: 'Quoted values are lexical candidates, not verified documents or proof of linkage. Missing extraction does not mean missing evidence. Existing follow-up questions are retained for operator review.' },
     recordedFacts: facts, ruleIssues: { verification: 'unverified', issues: rules }, modelInterpretation: interpretation,
     evidenceGaps: gaps, merchantInquiryDraft: {
       status: 'draft-not-sent', requestId: snapshot.requestId, reviewRequired: !review && candidateReview.needsOperatorReview,

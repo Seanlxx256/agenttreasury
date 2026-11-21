@@ -1,0 +1,196 @@
+{
+  "protocol": "claim-material-development-replay-v1",
+  "createdAt": "2026-11-21T10:25:06.843Z",
+  "node": "v25.2.1",
+  "inputSha256": "fb66a126ee4027c643b79736bcf4c71e7a2e379dfaca94a192c7c2c0341daa88",
+  "files": {
+    "dist/src/budget.js": "af1bde1d2a64dcb7d021436cd8024065704f3a47a1b1b40e8b3096be524ce7aa",
+    "dist/src/case-packet-annotations.js": "656b88089240ae399207f6246a5add60319bb3b3928277bbff51d59776cef71c",
+    "dist/src/case-packet-evaluation-cases.js": "05c14df3784a8e27362822fe310dcf9d76583a3d00c62267414afdbebfbda888",
+    "dist/src/db.js": "29b1f502c1bfe37e68279008b9e1f5e4b4db7a8b7881861000dd9f3a3e3799a1",
+    "dist/src/evaluate-case-packets.js": "ec83670624aa7c6623e6b620607be8fb55770a92fb51c87417f58ae8f54dcfbb",
+    "dist/src/gateway-case-packet-context.js": "5ddf2ea9d302ed1f7386c3634f0fa433d166c0d1567ff38f0e04a49fb7c79003",
+    "dist/src/gateway-case-packet.js": "68b73592c6922d25da555cbecaeb02abc7952e366cebdd95dcc7cff3904cc26f",
+    "dist/src/gateway-claim-assessment.js": "0cf71d846440ad02f5d4fa543c026af2733febd8e790152145d59fe6d9a8dbb2",
+    "dist/src/gateway-claim-materials.js": "8235eb6de2a2450bcd2d86bd81e4f81d39c16dc296d99f8fad6e663a4be4f6bb",
+    "dist/src/payments.js": "47bffd71eadaee51912b8c6ab50e975c581f0a3319cb96f2cced5e7ffefedac3",
+    "package-lock.json": "eb6cfc1d9cbb1664ef67a856aa1e0e93756e26958c867711f52657bed4851976",
+    "src/budget.ts": "264b0c6fd316f68a96143cd0c5077eb2014ce2dca455af18d18f167b9c1b8380",
+    "src/case-packet-annotations.ts": "d916f009b1496c66e317692d96ababa327edb8ae9cf098dd1c14bb8852170ab6",
+    "src/case-packet-evaluation-cases.ts": "4082d1d9df1c21c287139ca849f81057cccce3e9c1a8568e2807a880460f8587",
+    "src/db.ts": "aa2775606344907d082b4418b2bedd8131f52a17f11a40d28f8cddafa74608d3",
+    "src/evaluate-case-packets.ts": "f28ded408042ea57878c947d284b33e1d0ed0fb70094618f46ec61898a0fbe27",
+    "src/gateway-case-packet-context.ts": "ac83cd53bc13d494dd32cd771e3e12b77ceb4af1b6ea12366de077d581670b25",
+    "src/gateway-case-packet.ts": "32b665732f01af9e160e2b221a3cb9343e72fc9f49f1aef7c8e2c6195c2e1d4e",
+    "src/gateway-claim-assessment.ts": "7464dd85f730c24d7ca44d5b6b092a842538f6863ad756b01cb91c41f0d146f4",
+    "src/gateway-claim-materials.ts": "6b1acfce8b6a9da4c2185c500fe4b616e6a1df9d0a41ecc50aefb48cb63cca35",
+    "src/payments.ts": "b171fc85d4397c4afce8d34198894e1953a682b8723b9810dd3de54262f99b22",
+    "scripts/evaluate-material-replay.mjs": "dda36d04f904c430195f8fcbd288071aad7fecdcf6d2870a69425386bb0a124b"
+  },
+  "modelInference": false,
+  "independentReview": false,
+  "promotionEligible": false,
+  "limitation": "Deterministic parser developed after seeing the paired run. Same known development labels, not holdout accuracy, model improvement or human efficiency.",
+  "summary": {
+    "cases": 12,
+    "modelFoundInOriginalRun": 0,
+    "parserFound": 13,
+    "expected": 13,
+    "unsupportedParserCandidates": 0
+  },
+  "rows": [
+    {
+      "id": "claim-01",
+      "candidates": [
+        {
+          "field": "order-reference",
+          "sourceId": "statement-customer",
+          "quote": "Z-701"
+        },
+        {
+          "field": "charge-reference",
+          "sourceId": "statement-customer",
+          "quote": "debit-A71"
+        },
+        {
+          "field": "charge-reference",
+          "sourceId": "statement-customer",
+          "quote": "debit-B71"
+        },
+        {
+          "field": "amount",
+          "sourceId": "statement-customer",
+          "quote": "0.004 USDC"
+        },
+        {
+          "field": "network",
+          "sourceId": "statement-customer",
+          "quote": "Arc"
+        },
+        {
+          "field": "time",
+          "sourceId": "statement-customer",
+          "quote": "09:12 UTC"
+        }
+      ],
+      "expected": 6,
+      "found": 6,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-02",
+      "candidates": [],
+      "expected": 0,
+      "found": 0,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-03",
+      "candidates": [],
+      "expected": 0,
+      "found": 0,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-04",
+      "candidates": [],
+      "expected": 0,
+      "found": 0,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-05",
+      "candidates": [
+        {
+          "field": "error",
+          "sourceId": "statement-customer",
+          "quote": "ERR-204"
+        }
+      ],
+      "expected": 1,
+      "found": 1,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-06",
+      "candidates": [],
+      "expected": 0,
+      "found": 0,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-07",
+      "candidates": [],
+      "expected": 0,
+      "found": 0,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-08",
+      "candidates": [],
+      "expected": 0,
+      "found": 0,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-09",
+      "candidates": [],
+      "expected": 0,
+      "found": 0,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-10",
+      "candidates": [],
+      "expected": 0,
+      "found": 0,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-11",
+      "candidates": [
+        {
+          "field": "expected-result",
+          "sourceId": "statement-customer",
+          "quote": "a CSV with the purchased rows"
+        }
+      ],
+      "expected": 1,
+      "found": 1,
+      "unsupported": 0
+    },
+    {
+      "id": "claim-12",
+      "candidates": [
+        {
+          "field": "order-reference",
+          "sourceId": "statement-merchant",
+          "quote": "Z-712"
+        },
+        {
+          "field": "amount",
+          "sourceId": "statement-merchant",
+          "quote": "0.003 USDC"
+        },
+        {
+          "field": "network",
+          "sourceId": "statement-merchant",
+          "quote": "Arc"
+        },
+        {
+          "field": "refund-hash",
+          "sourceId": "statement-merchant",
+          "quote": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "field": "recipient",
+          "sourceId": "statement-merchant",
+          "quote": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "expected": 5,
+      "found": 5,
+      "unsupported": 0
+    }
+  ]
+}

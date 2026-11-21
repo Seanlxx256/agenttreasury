@@ -663,6 +663,7 @@ function showInvestigation(container, report) {
     ['Completed checks', report.summary.completed], ['Blocked checks', report.summary.blocked], ['Unavailable checks', report.summary.unavailable]]));
   if (report.staleAtCompletion || report.staleNow) container.append(element('p',
     'Local records changed after this snapshot. Collect fresh evidence before making an operational decision.', 'muted'));
+  if (report.guided) container.append(evidenceBlock('Guided collection: steps, stopping reason and remaining checks', report.guided));
   container.append(evidenceBlock('Snapshot facts and source references', { facts: report.snapshot.facts, sources: report.snapshot.sources }),
     evidenceBlock('Selected checks and citations', report.planner.investigations));
   for (const check of report.checks) container.append(evidenceBlock(check.kind + ' · ' + check.status, check));
@@ -752,6 +753,8 @@ function showCasePacket(container, report) {
     container.append(evidenceBlock('Context signals and candidate disagreements', report.candidateReview));
   }
   if (report.reviewEffort) container.append(evidenceBlock('Saved review effort — client timing is unverified', report.reviewEffort));
+  if (report.claimAssistance) container.append(evidenceBlock('Claim states and material checklist — review required', report.claimAssistance));
+  if (report.suppliedMaterials) container.append(evidenceBlock('Already supplied material candidates — unverified', report.suppliedMaterials));
   if (report.operatorReview) container.append(evidenceBlock('Operator topic review — not claim verification', report.operatorReview));
   if (report.changes) container.append(evidenceBlock('Changes from previous packet', report.changes));
   container.append(evidenceBlock('Party statements — unverified', report.partyStatements),

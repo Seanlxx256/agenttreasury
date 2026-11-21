@@ -287,4 +287,28 @@ test('case packets bind real database records without financial mutation and pre
     assert.ok(observations.every((s, i) => i === 0 || BigInt(String(s.data.id)) < BigInt(String(observations[i - 1]!.data.id))));
     assert.equal(snapshot.coverage.auditTruncated, true); assert.equal(snapshot.sources.filter((s) => s.kind === 'audit-event').length, 50);
   });
+  await t.test('structured claim mode persists reviewable states and deterministic materials without financial writes', async (subtest) => {
+    const requestId = await make(); const path = `/finance/gateway-purchases/${requestId}/case-packet`;
+    const oldMode = process.env.GATEWAY_CASE_PACKET_ANALYSIS, oldModel = process.env.GATEWAY_CASE_PACKET_MODEL;
+    process.env.GATEWAY_CASE_PACKET_ANALYSIS = 'structured'; process.env.GATEWAY_CASE_PACKET_MODEL = 'fixture';
+    subtest.mock.method(globalThis, 'fetch', async (_url: unknown, init: RequestInit) => {
+      assert.ok(!String(init.body).includes('PRIVATE_'));
+      return Response.json({ message: { content: JSON.stringify({ claims: [{ topic: 'delivery-unusable', state: 'current',
+        sourceId: 'statement-customer', quote: 'Archive unusable' }], materials: [] }) } });
+    });
+    try {
+      const before = await state();
+      const response = await app.inject({ method: 'POST', url: path, headers,
+        payload: { customerStatement: 'Archive unusable: error Z-911 for order C-811.', merchantStatement: '' } });
+      assert.equal(response.statusCode, 200); const report = response.json();
+      assert.equal(report.modelInterpretation.status, 'ready'); assert.equal(report.claimAssistance.claims[0].state, 'current');
+      assert.ok(report.suppliedMaterials.candidates.some((m: { quote: string }) => m.quote === 'Z-911'));
+      assert.equal(report.financialAuthority, false); assert.deepEqual(await state(), before);
+      const saved = (await app.inject({ url: path, headers })).json();
+      assert.deepEqual(saved.claimAssistance, report.claimAssistance);
+    } finally {
+      if (oldMode === undefined) delete process.env.GATEWAY_CASE_PACKET_ANALYSIS; else process.env.GATEWAY_CASE_PACKET_ANALYSIS = oldMode;
+      if (oldModel === undefined) delete process.env.GATEWAY_CASE_PACKET_MODEL; else process.env.GATEWAY_CASE_PACKET_MODEL = oldModel;
+    }
+  });
 });

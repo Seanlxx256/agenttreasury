@@ -4,6 +4,7 @@ import { assembleCasePacket, collectPacketSources, interpretPacketClaims, statem
 import { appendCasePacket, reviseCasePacket, type PacketReview } from './gateway-case-packet-revision.js';
 import { readCasePacketEffort } from './gateway-case-packet-effort.js';
 import { PaymentError } from './payments.js';
+import { interpretStructuredClaims } from './gateway-claim-assessment.js';
 
 export function registerGatewayCasePackets(app: FastifyInstance, pool: Pool,
   authenticate: (request: FastifyRequest) => 'operations' | 'finance') {
@@ -20,7 +21,8 @@ export function registerGatewayCasePackets(app: FastifyInstance, pool: Pool,
     const existing = await pool.query('SELECT 1 FROM gateway_case_packets WHERE request_id=$1 LIMIT 1', [request.params.id]);
     if (existing.rowCount) throw new PaymentError(409, 'CASE_PACKET_VERSION_CONFLICT');
     const snapshot = await collectPacketSources(pool, request.params.id);
-    const interpretation = await interpretPacketClaims([...snapshot.sources, ...statementSources(request.body)], process.env.GATEWAY_CASE_PACKET_MODEL);
+    const interpret = process.env.GATEWAY_CASE_PACKET_ANALYSIS === 'structured' ? interpretStructuredClaims : interpretPacketClaims;
+    const interpretation = await interpret([...snapshot.sources, ...statementSources(request.body)], process.env.GATEWAY_CASE_PACKET_MODEL);
     const report = assembleCasePacket(snapshot, request.body, interpretation);
     const current = await collectPacketSources(pool, request.params.id);
     const savedReport = { ...report, staleAtCompletion: snapshot.fingerprint !== current.fingerprint, freshnessCheckedAt: current.capturedAt };

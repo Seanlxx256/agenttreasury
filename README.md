@@ -12,6 +12,11 @@ repeated dashboard aggregate queries with a five-second TTL, bounded connection
 timeouts and PostgreSQL fallback. Funds and authorization checks still use the
 database. This extension preserves the historical Stage 16 acceptance report.
 
+[AI capability hardening](docs/ai-capability-hardening.md) adds optional structured
+claim states, source-bound material candidates and guided investigation through the
+real read-only API. The paired 3B development run improves current-topic matching
+from 4/12 to 8/12; this small authored experiment does not establish operational ROI.
+
 For local acceptance without wallet credentials, Docker or a running model:
 
 ```sh

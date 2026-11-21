@@ -15,7 +15,8 @@ export function registerGatewayInvestigation(app:FastifyInstance,pool:Pool,
     const actor=authenticate(request);
     reply.header('cache-control','no-store');
     const model=process.env.GATEWAY_INVESTIGATION_MODEL || undefined;
-    const report=await runGatewayInvestigation(pool,request.params.id,{model,refreshExternal:request.body.refreshExternal===true});
+    const report=await runGatewayInvestigation(pool,request.params.id,{model,refreshExternal:request.body.refreshExternal===true,
+      guided: process.env.GATEWAY_INVESTIGATION_MODE === 'guided'});
     // Only this append writes; collectors use READ ONLY and tools cannot call
     // payment, signing, delivery recovery, case transitions or refund handlers.
     const {rows:[saved]}=await pool.query(`INSERT INTO gateway_investigation_runs(request_id,actor,model,report)

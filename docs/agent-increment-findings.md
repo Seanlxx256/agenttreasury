@@ -15,6 +15,8 @@ review remain the execution boundary.
 | Stage 13 case preparation | Topic matches 4/12 template, 5/12 assisted; material-category matches 5/12 in both | One paraphrase recovery does not establish stable workflow value; [paired run](stage-13-case-packet-evaluation.md) |
 | Stage 14 context holds | 6/12 known development cases held; 4/12 topic sets matched without review requirement | A conservative review boundary, not improved autonomous accuracy; [scope/results](stage-14-case-packet-context.md) |
 | Stage 15 annotation tooling | Input/version/quote validation, imported labels and reviewer disagreement comparison | Enables future review; identities and independence remain unverified |
+| Subsequent structured-claim development | Current topic/source sets: context rules 7/12, previous 3B adapter 4/12, structured 3B adapter 8/12; all states 6/12 | A narrow development gain, not default promotion or generalization; [results and implementation](ai-capability-hardening.md) |
+| Material-parser replay after inspecting that run | Model found 0/13 fields; deterministic parser found 13/13 on the same known examples | Workflow engineering gain, explicitly not model accuracy or independently measured efficiency |
 
 Protocols use different datasets and scoring rules. Do not combine these figures
 into a single accuracy trend, omit failed model attempts, or reuse a development
