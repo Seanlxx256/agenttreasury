@@ -118,6 +118,7 @@ function showGatewayPurchase(purchase, path, session) {
   externalLabel.append(external, ' Refresh Gateway and chain evidence (read only)');
   const investigate = element('button', 'Collect investigation evidence');
   const savedInvestigation = element('button', 'View saved investigation');
+  const checkpoints = element('button', 'View investigation checkpoints');
   for (const [button, fresh] of [[investigate, true], [savedInvestigation, false]]) {
     button.type = 'button';
     button.addEventListener('click', () => showErrors(async () => {
@@ -129,7 +130,46 @@ function showGatewayPurchase(purchase, path, session) {
       } finally { button.disabled = false; }
     }));
   }
-  actions.append(check, review, investigate, savedInvestigation, externalLabel);
+  checkpoints.addEventListener('click', () => showErrors(async () => {
+    checkpoints.disabled = true;
+    try {
+      const result = await financeApi(path + '/investigation/checkpoints');
+      if (session !== generation || !checkpoints.isConnected) return;
+      investigation.replaceChildren(element('h3', 'Investigation checkpoints'), element('p',
+        'Saved checks are reused. An unfinished read may be repeated. Recovery keeps the original model and external-read setting, and stops if the local snapshot changed.'));
+      if (!result.checkpoints.length) investigation.append(element('p', 'No investigation checkpoints found.'));
+      for (const item of result.checkpoints) {
+        const row = element('section');
+        row.append(metadata([['Checkpoint', item.id], ['Status', item.status], ['Saved checks', item.savedChecks],
+          ['Attempts', item.attempts], ['Model', item.model || 'rules'], ['External reads', item.refreshExternal ? 'enabled' : 'disabled']]));
+        const view = element('button', 'View checkpoint evidence');
+        view.addEventListener('click', () => showErrors(async () => {
+          view.disabled = true;
+          try {
+            const saved = await financeApi(path + '/investigation/checkpoints/' + item.id);
+            if (session === generation && view.isConnected) {
+              const detail = element('section'); detail.append(evidenceBlock('Saved progress (not a freshness check)', saved)); row.append(detail);
+            }
+          } finally { view.disabled = false; }
+        }));
+        row.append(view);
+        if (item.status === 'in-progress') {
+          const resume = element('button', 'Resume saved investigation');
+          resume.addEventListener('click', () => showErrors(async () => {
+            resume.disabled = true;
+            try {
+              const report = await financeApi(path + '/investigation/checkpoints/' + item.id + '/resume', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+              if (session === generation && resume.isConnected) showInvestigation(investigation, report);
+            } finally { resume.disabled = false; }
+          }));
+          row.append(resume);
+        }
+        investigation.append(row);
+      }
+    } finally { checkpoints.disabled = false; }
+  }));
+  actions.append(check, review, investigate, savedInvestigation, checkpoints, externalLabel);
   const approvalEvidence = element('section');
   approvalEvidence.append(element('h3', 'Approval evidence'), metadata([
     ['Dispute status', purchase.disputeStatus], ['Dispute reason', purchase.disputeReason],

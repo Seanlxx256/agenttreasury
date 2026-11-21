@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { fork } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -14,6 +16,7 @@ import { replayBalanceSnapshot, type BalanceSnapshot } from '../src/reconcile-ga
 import type { Address, Hash } from 'viem';
 import { migrate } from '../src/migrate.js';
 import { seedGateway } from '../src/seed.js';
+import { createInvestigationCheckpoint, resumeInvestigationCheckpoint } from '../src/gateway-investigation-checkpoints.js';
 
 async function availablePort() {
   const probe=createServer();
@@ -55,6 +58,106 @@ test('investigation executes bounded reads with provenance, freshness and no bus
     for(const table of businessTables) result[table]=(await pool.query(`SELECT to_jsonb(t) AS row FROM ${table} t ORDER BY to_jsonb(t)::text`)).rows;
     return result;
   }
+  await t.test('a killed process leaves a resumable checkpoint, releases its lock, and does not repeat saved checks', async () => {
+    const other = await make(), before = await state();
+    const id = await createInvestigationCheckpoint(pool, other.id, 'operations', { model: 'fixture-model' });
+    const child = fork(fileURLToPath(new URL('./investigation-crash-worker.js', import.meta.url)), [], {
+      env: { PATH: process.env.PATH, TEST_DATABASE_CONFIG: JSON.stringify(config), TEST_REQUEST_ID: other.id, TEST_CHECKPOINT_ID: id },
+      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+    });
+    const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()));
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Crash worker did not save its checkpoint')), 15000);
+        child.once('message', (message) => {
+          clearTimeout(timer);
+          if ((message as { event: string }).event === 'checkpoint-saved') resolve(); else reject(new Error('Unexpected crash worker event'));
+        });
+        child.once('error', (error) => { clearTimeout(timer); reject(error); });
+        child.once('exit', () => { clearTimeout(timer); reject(new Error('Crash worker exited before test kill')); });
+      });
+      const { rows: [partial] } = await pool.query('SELECT * FROM gateway_investigation_checkpoints WHERE id=$1', [id]);
+      assert.equal(partial.progress.checks.length, 1); assert.equal(partial.status, 'in-progress'); assert.equal(partial.run_id, null);
+      await assert.rejects(resumeInvestigationCheckpoint(pool, other.id, id, 'finance'), (error: Error & { code?: string }) => error.code === 'INVESTIGATION_BUSY');
+      child.kill('SIGKILL'); await exited;
+      const count = (await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs WHERE request_id=$1', [other.id])).rows[0].n;
+      const report = await resumeInvestigationCheckpoint(pool, other.id, id, 'finance', {
+        modelRequest: async () => { assert.fail('Only one pending check remains; no model call needed'); },
+      });
+      assert.equal(report.guided.stopReason, 'checklist-collected'); assert.equal(report.checks.length, 2);
+      assert.deepEqual(report.checks[0], partial.progress.checks[0]); assert.deepEqual(report.checks.map((c: { evidenceId: string }) => c.evidenceId), ['tool-1', 'tool-2']);
+      const repeated = await resumeInvestigationCheckpoint(pool, other.id, id, 'operations');
+      assert.equal(repeated.runId, report.runId);
+      assert.equal((await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs WHERE request_id=$1', [other.id])).rows[0].n, count + 1);
+      const { rows: [finished] } = await pool.query('SELECT status,attempts,last_actor FROM gateway_investigation_checkpoints WHERE id=$1', [id]);
+      assert.deepEqual(finished, { status: 'finished', attempts: 2, last_actor: 'finance' });
+      assert.deepEqual(await state(), before); assert.ok(!JSON.stringify(report).includes('DO_NOT_EXPORT'));
+    } finally { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); await exited; }
+  });
+
+  function writeFaultPool(needle: string) {
+    return new Proxy(pool, { get(target, key) {
+      if (key === 'connect') return async () => {
+        const client = await target.connect();
+        return new Proxy(client, { get(connection, property) {
+          if (property === 'query') return async (sql: string, values?: unknown[]) => {
+            if (sql.startsWith(needle)) throw new Error('Injected checkpoint write failure');
+            return connection.query(sql, values);
+          };
+          const value = Reflect.get(connection, property, connection);
+          return typeof value === 'function' ? value.bind(connection) : value;
+        } });
+      };
+      const value = Reflect.get(target, key, target);
+      return typeof value === 'function' ? value.bind(target) : value;
+    } });
+  }
+  await t.test('checkpoint write failure stops execution; a failed final commit leaves no orphan report and safely retries', async () => {
+    for (const [needle, savedChecks] of [
+      ['UPDATE gateway_investigation_checkpoints SET progress=', 0],
+      ["UPDATE gateway_investigation_checkpoints SET status='finished'", 2],
+    ] as const) {
+      const other = await make(), before = await state();
+      const id = await createInvestigationCheckpoint(pool, other.id, 'operations');
+      await assert.rejects(resumeInvestigationCheckpoint(writeFaultPool(needle), other.id, id, 'operations'), /write failure/);
+      const { rows: [partial] } = await pool.query('SELECT progress,status,run_id FROM gateway_investigation_checkpoints WHERE id=$1', [id]);
+      assert.equal(partial.progress.checks.length, savedChecks); assert.equal(partial.status, 'in-progress'); assert.equal(partial.run_id, null);
+      assert.equal((await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs WHERE request_id=$1', [other.id])).rows[0].n, 0);
+      const report = await resumeInvestigationCheckpoint(pool, other.id, id, 'operations');
+      assert.equal(report.checks.length, 2);
+      if (savedChecks) assert.deepEqual(report.checks, partial.progress.checks);
+      assert.equal((await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs WHERE request_id=$1', [other.id])).rows[0].n, 1);
+      assert.deepEqual(await state(), before);
+    }
+  });
+  await t.test('changed evidence stops checkpoint recovery before any model or external read', async () => {
+    const other = await make(), id = await createInvestigationCheckpoint(pool, other.id, 'operations', { model: 'fixture-model', refreshExternal: true });
+    await pool.query('UPDATE gateway_demo_purchases SET reconcile_review_at=now() WHERE request_id=$1', [other.id]);
+    const before = await state();
+    const forbidden = async () => { assert.fail('No call on a changed snapshot'); };
+    const report = await resumeInvestigationCheckpoint(pool, other.id, id, 'operations', { modelRequest: forbidden, gatewayRequest: forbidden, chainRead: forbidden });
+    assert.equal(report.guided.stopReason, 'snapshot-changed'); assert.equal(report.checks.length, 0); assert.equal(report.staleAtCompletion, true);
+    assert.deepEqual(await state(), before);
+  });
+  await t.test('checkpoint API binds IDs to purchases and role auth, pins options, and recovers without guided env mode', async () => {
+    const other = await make(), id = await createInvestigationCheckpoint(pool, other.id, 'operations');
+    const url = `/finance/gateway-purchases/${other.id}/investigation/checkpoints`, headers = { authorization: `Bearer ${operations}` };
+    assert.equal((await app.inject({ url })).statusCode, 401);
+    assert.equal((await app.inject({ url: url + '/' + id, headers: { authorization: `Bearer ${task.token}` } })).statusCode, 401);
+    assert.equal((await app.inject({ method: 'POST', url: url + '/' + id + '/resume', payload: {} })).statusCode, 401);
+    const list = await app.inject({ url, headers }); assert.equal(list.statusCode, 200); assert.equal(list.json().checkpoints[0].id, id);
+    const detail = await app.inject({ url: url + '/' + id, headers }); assert.equal(detail.statusCode, 200);
+    assert.equal(detail.json().refreshExternal, false); assert.equal(detail.json().progress.checks.length, 0);
+    assert.ok(!detail.body.includes('DO_NOT_EXPORT')); assert.ok(!detail.body.includes(task.token));
+    const foreign = `/finance/gateway-purchases/${purchase.id}/investigation/checkpoints/${id}`;
+    assert.equal((await app.inject({ url: foreign, headers })).statusCode, 404);
+    assert.equal((await app.inject({ method: 'POST', url: foreign + '/resume', headers, payload: {} })).statusCode, 404);
+    assert.equal((await app.inject({ method: 'POST', url: url + '/' + id + '/resume', headers, payload: { refreshExternal: true, model: 'override' } })).statusCode, 400);
+    const before = await state();
+    const resumed = await app.inject({ method: 'POST', url: url + '/' + id + '/resume', headers, payload: {} });
+    assert.equal(resumed.statusCode, 200, resumed.body); assert.equal(resumed.json().checkpointId, id);
+    assert.equal(resumed.json().guided.stopReason, 'checklist-collected'); assert.deepEqual(await state(), before);
+  });
   await t.test('collector can run with SELECT-only privileges and omits credentials, signatures and delivery bodies',async()=>{
     const readerPassword=randomBytes(16).toString('hex');
     await pool.query(`CREATE ROLE investigation_reader LOGIN PASSWORD '${readerPassword}'`);
@@ -125,12 +228,22 @@ test('investigation executes bounded reads with provenance, freshness and no bus
     }
     assert.equal(calls,0);
   });
-  // Fail collector connections while keeping the actual report INSERT/SELECT
+  // Fail collector reads while keeping the actual report INSERT/SELECT
   // available. This models a recoverable read failure, not a total DB outage.
   function collectorFaultPool(onConnect: (count: number) => Promise<void>) {
     let count = 0;
     return new Proxy(pool, { get(target, key) {
-      if (key === 'connect') return async () => { await onConnect(++count); return target.connect(); };
+      if (key === 'connect') return async () => {
+        const client = await target.connect();
+        return new Proxy(client, { get(connection, property) {
+          if (property === 'query') return async (sql: string, values?: unknown[]) => {
+            if (sql.startsWith('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')) await onConnect(++count);
+            return connection.query(sql, values);
+          };
+          const value = Reflect.get(connection, property, connection);
+          return typeof value === 'function' ? value.bind(connection) : value;
+        } });
+      };
       const value = Reflect.get(target, key, target);
       return typeof value === 'function' ? value.bind(target) : value;
     } });

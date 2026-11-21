@@ -54,7 +54,10 @@ instructions, arbitrary SQL, URLs, credentials or tool target parameters.
 may conflict, omit relevant evidence or describe an unsettled payment. This is
 guided evidence collection, not a model-certified diagnosis. The rule checklist can
 itself be incomplete. No model advantage for read ordering has been measured. A
-process crash can still lose an unfinished report; this is not a durable agent engine.
+process crash originally lost unfinished reports. The subsequent
+[checkpoint extension](investigation-checkpoints.md) now saves completed checks
+for guided API runs and supports explicit recovery after migration 041. Uncommitted
+reads may repeat; direct nonpersistent runner calls retain their original behavior.
 
 ## Recoverable investigation failures
 
@@ -74,12 +77,13 @@ the report is readable but the current snapshot cannot be collected. The console
 warns about unknown freshness separately from a confirmed record change. A later
 successful freshness check does not erase the saved run's original stopping reason.
 
-There is no new migration, background retry, payment action or broader model
+The recoverable-exception change alone introduced no migration, background retry, payment action or broader model
 authority. Initial snapshot failure still fails the request because no evidence
 base exists. A report-save failure still fails the request; the API does not claim
 that unsaved evidence is durable. Process termination and a sustained database
-outage can still lose an unfinished investigation. This is recoverable exception
-handling, not checkpoint/resume support or a measured improvement in AI accuracy.
+outage could still lose an unfinished investigation at that milestone. The later
+[checkpoint extension](investigation-checkpoints.md) addresses committed-step
+recovery separately; neither change demonstrates improved AI accuracy.
 
 Failure-handling verification on 2026-11-21: build and 17 focused guided/console
 tests passed; the full suite passed 316/316 with zero failures or skips (about

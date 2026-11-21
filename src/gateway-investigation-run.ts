@@ -1,17 +1,17 @@
 import { collectPurchaseBalanceEvidence } from './gateway-investigation-balance.js';
 import { createHash } from 'node:crypto';
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import type { Hash } from 'viem';
 import { PaymentError } from './payments.js';
-import { runGuidedChecks } from './gateway-guided-investigation.js';
+import { runGuidedChecks, type GuidedProgress } from './gateway-guided-investigation.js';
 import { prepareGatewayTriage } from './gateway-triage.js';
 import { observeGatewayPayment } from './gateway-reconciliation.js';
 import { gatewayClient, gatewayNetworkConfig, type GatewayNetworkName } from './gateway-x402.js';
 import { suggestInvestigationsWithModel, validateInvestigationPlan,
   type InvestigationFact, type InvestigationKind, type InvestigationSuggestion } from './gateway-investigation.js';
 
-export async function collectInvestigationSnapshot(pool: Pool, requestId: string) {
-  const client=await pool.connect();
+export async function collectInvestigationSnapshot(pool: Pool, requestId: string, borrowedClient?: PoolClient) {
+  const client=borrowedClient ?? await pool.connect();
   try {
     await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     const { rows:[purchase] }=await client.query(`SELECT p.request_id AS id,p.task_id AS "taskId",p.nonce,p.payer,p.recipient,
@@ -63,14 +63,18 @@ export async function collectInvestigationSnapshot(pool: Pool, requestId: string
     return {requestId,capturedAt:new Date().toISOString(),fingerprint:createHash('sha256').update(JSON.stringify(records)).digest('hex'),
       records,facts,sources,ruleAction:prepared.rules};
   } catch(error) { await client.query('ROLLBACK');throw error; }
-  finally {client.release();}
+  finally {if (!borrowedClient) client.release();}
 }
 
 type Snapshot=Awaited<ReturnType<typeof collectInvestigationSnapshot>>;
 
 export async function checkInvestigationFreshness(pool: Pool, requestId: string, fingerprint: string) {
+  return checkFreshness(() => collectInvestigationSnapshot(pool, requestId), fingerprint);
+}
+
+async function checkFreshness(collect: () => Promise<Snapshot>, fingerprint: string) {
   try {
-    const current = await collectInvestigationSnapshot(pool, requestId);
+    const current = await collect();
     const stale = current.fingerprint !== fingerprint;
     return { stale, status: stale ? 'changed' as const : 'unchanged' as const, checkedAt: current.capturedAt };
   } catch {
@@ -159,17 +163,20 @@ export async function executeInvestigationChecks(snapshot:Snapshot, plan:Investi
   return results;
 }
 
-export async function runGatewayInvestigation(pool:Pool,requestId:string,options:{
+export type InvestigationRunOptions = {
   model?:string;modelRequest?:typeof fetch;refreshExternal?:boolean;gatewayRequest?:typeof fetch;chainRead?:ChainRead; guided?:boolean;
-}={}) {
-  const start=Date.now();
-  const snapshot=await collectInvestigationSnapshot(pool,requestId);
-  if (options.guided) {
+};
+
+export async function runGuidedInvestigation(snapshot: Snapshot, collect: () => Promise<Snapshot>, options: InvestigationRunOptions & {
+  resume?: GuidedProgress; checkpoint?: (progress: GuidedProgress) => Promise<void>;
+} = {}) {
+    const start = Date.now();
     const guided = await runGuidedChecks(snapshot.facts, async (step) => (await executeInvestigationChecks(snapshot, [step], options))[0]!, {
       model: options.model, request: options.modelRequest,
-      isFresh: async () => (await collectInvestigationSnapshot(pool, requestId)).fingerprint === snapshot.fingerprint,
+      isFresh: async () => (await collect()).fingerprint === snapshot.fingerprint,
+      resume: options.resume, checkpoint: options.checkpoint,
     });
-    const freshness = await checkInvestigationFreshness(pool, requestId, snapshot.fingerprint);
+    const freshness = await checkFreshness(collect, snapshot.fingerprint);
     if (['checklist-collected', 'no-applicable-checks'].includes(guided.stopReason) && freshness.status !== 'unchanged') {
       guided.stopReason = freshness.status === 'changed' ? 'snapshot-changed' : 'freshness-unavailable';
     }
@@ -179,11 +186,16 @@ export async function runGatewayInvestigation(pool:Pool,requestId:string,options
       summary: { requested: guided.required.length, completed: guided.checks.filter((c) => c.status === 'ok').length,
         blocked: guided.checks.filter((c) => c.status === 'blocked').length, unavailable: guided.checks.filter((c) => c.status === 'unavailable').length },
       limitation: guided.scope };
-  }
+}
+
+export async function runGatewayInvestigation(pool:Pool,requestId:string,options:InvestigationRunOptions={}) {
+  const start=Date.now();
+  const snapshot=await collectInvestigationSnapshot(pool,requestId);
+  if (options.guided) return runGuidedInvestigation(snapshot, () => collectInvestigationSnapshot(pool, requestId), options);
   const planner=await suggestInvestigationsWithModel(snapshot.facts,options.model,options.modelRequest);
   const checks=await executeInvestigationChecks(snapshot,planner.investigations,options);
   const current=await collectInvestigationSnapshot(pool,requestId);
-  return {version:1,advisoryOnly:true,snapshot,planner,checks,staleAtCompletion:snapshot.fingerprint!==current.fingerprint,
+  return {version:1,advisoryOnly:true,snapshot,planner,checks,guided:undefined,completionFreshness:undefined,staleAtCompletion:snapshot.fingerprint!==current.fingerprint,
     freshnessCheckedAt:current.capturedAt,durationMs:Date.now()-start,
     summary:{requested:checks.length,completed:checks.filter((r)=>r.status==='ok').length,
       blocked:checks.filter((r)=>r.status==='blocked').length,unavailable:checks.filter((r)=>r.status==='unavailable').length},

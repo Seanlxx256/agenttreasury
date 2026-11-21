@@ -18,7 +18,9 @@ real read-only API. The paired 3B development run improves current-topic matchin
 from 4/12 to 8/12; this small authored experiment does not establish operational ROI.
 Guided investigation also retains partial evidence after recoverable read errors
 and distinguishes unknown snapshot freshness from unchanged records in the API
-and console. Process-crash checkpoint/resume remains unimplemented.
+and console. [Investigation checkpoints](docs/investigation-checkpoints.md) add
+explicit crash recovery for guided API runs after migration 041, reusing saved
+checks and serializing concurrent recovery of the same checkpoint.
 
 The [next claim-review corpus](docs/claim-review-preparation.md) has 48 new inputs,
 a blank reviewer handoff and offline validation/comparison/label-freeze tooling.

@@ -54,6 +54,18 @@ async function consoleHarness(role: string, reconciliationCase?: Record<string, 
     Node: Element, setTimeout, clearTimeout, purchase,
     fetch: async (path: string, init?: { method?: string; body?: string }) => {
       if (init?.method === 'POST') posts.push({ path, payload: JSON.parse(init.body ?? '{}') });
+      if (path.endsWith('/investigation/checkpoints')) return Response.json({ checkpoints: [
+        { id: 'checkpoint-1', status: 'in-progress', savedChecks: 1, attempts: 1, model: null, refreshExternal: false },
+        { id: 'checkpoint-2', status: 'finished', savedChecks: 2, attempts: 1, model: null, refreshExternal: false },
+      ] });
+      if (path.endsWith('/investigation/checkpoints/checkpoint-1/resume')) return Response.json({
+        runId: 'run-1', planner: { status: 'guided', investigations: [] }, summary: { completed: 2, blocked: 0, unavailable: 0 },
+        snapshot: { capturedAt: '2026-11-21T00:00:00Z', facts: [], sources: {}, records: {} }, checks: [],
+        guided: { stopReason: 'checklist-collected', remaining: [] }, staleAtCompletion: false,
+      });
+      if (path.endsWith('/investigation/checkpoints/checkpoint-1')) return Response.json({
+        progress: { checks: [{ reason: '<script>untrusted()</script>' }] }, financialAuthority: false,
+      });
       if (path.endsWith('/case-packet/effort')) return Response.json({ groups: [], conclusion: 'No causal time savings established.' });
       if (path.endsWith('/case-packet/history')) return Response.json({ packets: [{ packetId: '1', actor: 'operations' }], nextBefore: null });
       if (path.endsWith('/case-packet') || path.endsWith('/case-packet/revisions') || path.endsWith('/case-packet/history/1')) return Response.json({
@@ -114,6 +126,21 @@ test('investigation console distinguishes unknown freshness from confirmed chang
   }
   runInContext(`showInvestigation(document.getElementById('gateway-detail'), ${JSON.stringify({ ...base, staleAtCompletion: false, staleNow: false })})`, context);
   assert.doesNotMatch(root.textContent, /freshness could not be verified/);
+});
+
+test('checkpoint console shows saved evidence safely and resumes only the selected unfinished checkpoint without option overrides', async () => {
+  const { root, posts } = await consoleHarness('operations');
+  const button = (text: string) => root.all().find((node) => node.tag === 'button' && node.textContent === text)!;
+  await button('View investigation checkpoints').fire('click');
+  assert.equal(posts.length, 0); assert.match(root.textContent, /An unfinished read may be repeated/);
+  assert.equal(root.all().filter((node) => node.tag === 'button' && node.textContent === 'Resume saved investigation').length, 1);
+  await button('View checkpoint evidence').fire('click');
+  assert.match(root.textContent, /<script>untrusted\(\)<\/script>/); assert.equal(posts.length, 0);
+  // Toggling the new-investigation checkbox cannot upgrade saved permissions.
+  root.all().find((node) => node.type === 'checkbox' && node.parent?.textContent.includes('Refresh Gateway'))!.checked = true;
+  await button('Resume saved investigation').fire('click');
+  assert.deepEqual(posts, [{ path: '/finance/gateway-purchases/case-1/investigation/checkpoints/checkpoint-1/resume', payload: {} }]);
+  assert.match(root.textContent, /checklist-collected/); assert.match(root.textContent, /does not authorize payment/);
 });
 
 test('case packet console submits party claims separately, renders text safely and shows stale advisory evidence', async () => {

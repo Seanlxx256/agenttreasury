@@ -1,6 +1,34 @@
 import { investigationKinds, suggestInvestigationsRules, validateInvestigationPlan, type InvestigationFact,
   type InvestigationSuggestion, type InvestigationKind } from './gateway-investigation.js';
 import type { InvestigationToolResult } from './gateway-investigation-run.js';
+import { isDeepStrictEqual } from 'node:util';
+
+export type GuidedProgress = {
+  version: 1; required: InvestigationKind[]; checks: InvestigationToolResult[];
+  turns: Array<{ offered: InvestigationKind[]; chosen: InvestigationKind; selection: string; modelStatus: string }>;
+};
+export const guidedChecklist = (facts: InvestigationFact[]) => suggestInvestigationsRules(facts)
+  .filter((step) => validateInvestigationPlan({ investigations: [step] }, facts));
+
+function restoreProgress(facts: InvestigationFact[], progress?: GuidedProgress): GuidedProgress {
+  const plan = guidedChecklist(facts), required = plan.map((step) => step.kind);
+  if (!progress) return { version: 1, required, checks: [], turns: [] };
+  if (progress.version !== 1 || !isDeepStrictEqual(progress.required, required)
+    || !Array.isArray(progress.checks) || !Array.isArray(progress.turns)
+    || progress.checks.length !== progress.turns.length || progress.checks.length > required.length)
+    throw new Error('Incompatible investigation checkpoint');
+  const remaining = [...required];
+  for (const [index, check] of progress.checks.entries()) {
+    const turn = progress.turns[index]!, step = plan.find((p) => p.kind === check.kind);
+    if (!step || !remaining.includes(check.kind) || turn.chosen !== check.kind
+      || !isDeepStrictEqual(turn.offered, remaining) || !isDeepStrictEqual(check.citations, step.citations)
+      || check.evidenceId !== `tool-${index + 1}` || !['ok', 'blocked', 'unavailable'].includes(check.status)
+      || (check.status !== 'ok' && index !== progress.checks.length - 1))
+      throw new Error('Incompatible investigation checkpoint');
+    remaining.splice(remaining.indexOf(check.kind), 1);
+  }
+  return structuredClone(progress);
+}
 
 function findings(check: InvestigationToolResult) {
   const data = check.data && typeof check.data === 'object' ? check.data as Record<string, unknown> : {};
@@ -17,12 +45,13 @@ function findings(check: InvestigationToolResult) {
 // The model orders a backend-defined checklist. It cannot omit checks, create
 // targets, certify a diagnosis or authorize a payment. This is guided collection.
 export async function runGuidedChecks(facts: InvestigationFact[], execute: (step: InvestigationSuggestion) => Promise<InvestigationToolResult>,
-  options: { model?: string; request?: typeof fetch; isFresh: () => Promise<boolean> }) {
-  const pending = suggestInvestigationsRules(facts).filter((step) => validateInvestigationPlan({ investigations: [step] }, facts));
-  const required = pending.map((step) => step.kind);
-  const checks: InvestigationToolResult[] = [];
-  const turns: Array<{ offered: InvestigationKind[]; chosen: InvestigationKind; selection: string; modelStatus: string }> = [];
-  let stopReason = pending.length ? 'checklist-collected' : 'no-applicable-checks';
+  options: { model?: string; request?: typeof fetch; isFresh: () => Promise<boolean>;
+    resume?: GuidedProgress; checkpoint?: (progress: GuidedProgress) => Promise<void> }) {
+  const { required, checks, turns } = restoreProgress(facts, options.resume);
+  const pending = guidedChecklist(facts).filter((step) => !checks.some((check) => check.kind === step.kind));
+  let stopReason = required.length ? 'checklist-collected' : 'no-applicable-checks';
+  const failed = checks.some((check) => check.status !== 'ok');
+  if (failed) stopReason = 'required-evidence-unavailable';
   const fresh = async () => {
     try {
       if (await options.isFresh()) return true;
@@ -34,7 +63,7 @@ export async function runGuidedChecks(facts: InvestigationFact[], execute: (step
     }
     return false;
   };
-  while (pending.length) {
+  while (pending.length && !failed) {
     if (!await fresh()) break;
     let index = 0; let modelStatus = 'disabled';
     if (options.model && pending.length > 1) {
@@ -79,6 +108,9 @@ export async function runGuidedChecks(facts: InvestigationFact[], execute: (step
       result.status = 'unavailable'; result.reason = 'Gateway observation unavailable; no payment conclusion inferred.';
     }
     checks.push({ ...result, evidenceId: `tool-${checks.length + 1}` });
+    // Persistence failures must escape, not become a tool failure or successful
+    // completion. Never start another read before the previous result is durable.
+    await options.checkpoint?.(structuredClone({ version: 1, required, checks, turns }));
     // Missing access/evidence must remain visible. No retry loop or paid fallback.
     if (result.status !== 'ok') { stopReason = 'required-evidence-unavailable'; break; }
   }
