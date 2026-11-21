@@ -14,6 +14,13 @@ x-runtime: &runtime
       condition: service_completed_successfully
 
 services:
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: [redis-server, --save, "", --appendonly, "no", --maxmemory, 64mb, --maxmemory-policy, allkeys-lru]
+    # Internal disposable cache: no host port, keys, journals or persistence.
+    read_only: true
+    security_opt: [no-new-privileges:true]
   postgres:
     image: postgres:18-bookworm
     restart: unless-stopped
@@ -43,6 +50,13 @@ services:
       HOST: 0.0.0.0
       FINANCE_APPROVAL_TOKEN: ${FINANCE_APPROVAL_TOKEN:?Set a finance token}
       GATEWAY_OPERATIONS_TOKEN: ${GATEWAY_OPERATIONS_TOKEN:?Set a distinct operations token}
+      REDIS_URL: redis://redis:6379
+      REDIS_CACHE_NAMESPACE: operations-testnet
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
     ports: ["127.0.0.1:3000:3000"]
     healthcheck:
       test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

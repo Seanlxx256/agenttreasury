@@ -2,15 +2,18 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 import { gatewayOperationsMetrics, transitionGatewayCase } from './gateway-cases.js';
 import { PaymentError } from './payments.js';
+import type { OperationsCache } from './operations-cache.js';
 
 const uuid = { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' };
 const params = { type: 'object', required: ['id'], properties: { id: uuid } };
 
 export function registerGatewayOperations(app: FastifyInstance, pool: Pool,
-  authenticate: (request: FastifyRequest) => 'finance' | 'operations') {
-  app.get('/finance/operations/metrics', async (request) => {
+  authenticate: (request: FastifyRequest) => 'finance' | 'operations', cache?: OperationsCache) {
+  app.get('/finance/operations/metrics', async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
     authenticate(request);
-    return gatewayOperationsMetrics(pool);
+    if (cache) return cache.read(() => gatewayOperationsMetrics(pool));
+    return { ...await gatewayOperationsMetrics(pool), cache: { source: 'disabled', ageMs: 0, ttlMs: 0 } };
   });
   app.get<{ Querystring: { status?: string; before?: string } }>('/finance/reconciliation-cases', {
     schema: { querystring: { type: 'object', additionalProperties: false, properties: {

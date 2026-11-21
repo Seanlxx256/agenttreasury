@@ -4,11 +4,12 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { assertFrozenSources, withFrozenDependencies } from './frozen-dependencies.js';
 import { extractEvidenceContextRules } from '../src/gateway-evidence-context-rules.js';
 import { extractEvidenceRules } from '../src/gateway-evidence-extraction.js';
 import { gatewayEvidenceCases } from '../src/gateway-evidence-cases.js';
 import { gatewayEvidenceTestCases } from '../src/gateway-evidence-test-cases.js';
-import { assertFrozenHashes, evaluateExceptionCases, loadFrozenExceptionBenchmark } from '../src/evaluate-gateway-exceptions.js';
+import { assertFrozenHashes, evaluateExceptionCases, loadFrozenExceptionBenchmark, frozenFileHashes, benchmarkRoot } from '../src/evaluate-gateway-exceptions.js';
 import { exceptionCandidate, scoreException, summarizeExceptions, validateExceptionCases, type ExceptionCase } from '../src/gateway-exception-scoring.js';
 
 const sample:ExceptionCase={id:'unit-1',text:'Signature invalid. RPC timeout.',stratum:'unit',expected:['invalid-signature','rpc-unavailable'],
@@ -51,7 +52,13 @@ test('unknown is abstention; failures receive no correct-negative credit; incomp
 });
 
 test('frozen corpus is disjoint, balanced and bound to exact sources and compiled runtime',async()=>{
-  const {cases,manifest}=await loadFrozenExceptionBenchmark();
+  const frozen = JSON.parse(await readFile(new URL('manifest.json', benchmarkRoot), 'utf8'));
+  await assertFrozenSources(await frozenFileHashes(), frozen.files);
+  await assert.rejects(loadFrozenExceptionBenchmark(), /Frozen benchmark drift/);
+  const {cases,manifest}=await withFrozenDependencies(async (root) => {
+    const historical = await import(new URL('dist/src/evaluate-gateway-exceptions.js', root).href) as typeof import('../src/evaluate-gateway-exceptions.js');
+    return historical.loadFrozenExceptionBenchmark();
+  });
   assert.equal(cases.length,36);assert.equal(cases.filter((row)=>row.expected.length===0).length,18);
   assert.equal(cases.reduce((n,row)=>n+row.expected.length,0),20);
   const previous=new Set([...gatewayEvidenceCases,...gatewayEvidenceTestCases].map((row)=>row.text.toLowerCase().trim()));
@@ -87,7 +94,7 @@ test('failed model calls are not replaced by rule successes or eligible for prom
 });
 
 test('independent review export contains inputs and empty annotations, not gold labels or model results',async()=>{
-  const {stdout}=await promisify(execFile)(process.execPath,[fileURLToPath(new URL('../../scripts/export-exception-review.mjs',import.meta.url))]);
+  const {stdout}=await withFrozenDependencies((root) => promisify(execFile)(process.execPath,[fileURLToPath(new URL('scripts/export-exception-review.mjs',root))]));
   const result=JSON.parse(stdout);assert.equal(result.reviewStatus,'unreviewed');assert.equal(result.reviewer,null);
   assert.equal(result.cases.length,36);assert.match(result.manifestHash,/^[0-9a-f]{64}$/);
   for (const row of result.cases) {

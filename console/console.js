@@ -595,6 +595,10 @@ async function refreshOperations() {
   const [metrics] = await Promise.all([financeApi('/operations/metrics'), loadCases()]);
   if (session !== generation) return;
   byId('operations-metrics').replaceChildren(metadata([
+    ['Snapshot observed at', metrics.observedAt],
+    ['Read source', metrics.cache?.source ?? 'database'],
+    ['Snapshot age at response (ms)', metrics.cache?.ageMs ?? 0],
+    ['Cache window (ms)', metrics.cache?.ttlMs ?? 0],
     ['Open cases', metrics.cases.open], ['Investigating', metrics.cases.investigating],
     ['Oldest unresolved (seconds)', metrics.cases.oldestUnresolvedSeconds],
     ['Recovery due', metrics.recovery.due], ['Paused for review', metrics.recovery.pausedForReview],

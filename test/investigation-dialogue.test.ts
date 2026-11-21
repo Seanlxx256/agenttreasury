@@ -6,6 +6,7 @@ import { callDialogueModel, decideDialogueRules, dialogueDecisionError, dialogue
   type DialogueDecision, type DialoguePolicy, type DialogueReply, type DialogueView } from '../src/investigation-dialogue.js';
 import { evaluateDialoguePlan, planDialogueEvaluation, scoreDialogue, summarizeDialogues } from '../src/evaluate-investigation-dialogue.js';
 import { devSourceHashes } from '../src/evaluate-batch-investigation-dev.js';
+import { assertFrozenSources } from './frozen-dependencies.js';
 
 const cases = dialogueCases();
 const reply = (candidate: unknown): DialogueReply => ({ status: 'ready', candidate, rawOutput: JSON.stringify(candidate), reason: null,
@@ -140,5 +141,5 @@ test('model identity is captured before inference and the previous Stage 8 imple
   await assert.rejects(planDialogueEvaluation('qwen2.5:7b'), /protocol uses/);
   await assert.rejects(planDialogueEvaluation('qwen2.5:3b', async () => Response.json({ models: [] })), /Missing model digest/);
   const previous = JSON.parse(await readFile(new URL('../../docs/evidence/stage-8-batch-development.json.plan.json', import.meta.url), 'utf8'));
-  assert.deepEqual(await devSourceHashes(), previous.files);
+  await assertFrozenSources(await devSourceHashes(), previous.files);
 });

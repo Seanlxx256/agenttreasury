@@ -7,6 +7,11 @@ The portfolio implementation is complete through Stage 16. Start with the
 local/testnet engineering deliverables; production readiness and model productivity
 are not established.
 
+An optional [Redis operations cache](docs/redis-operations-cache.md) now reduces
+repeated dashboard aggregate queries with a five-second TTL, bounded connection
+timeouts and PostgreSQL fallback. Funds and authorization checks still use the
+database. This extension preserves the historical Stage 16 acceptance report.
+
 For local acceptance without wallet credentials, Docker or a running model:
 
 ```sh

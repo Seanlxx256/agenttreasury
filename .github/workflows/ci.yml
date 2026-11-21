@@ -6,6 +6,10 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports: ['6379:6379']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,6 +20,9 @@ jobs:
       # Includes legacy upgrades, concurrency and the cold-backup restore drill.
       # All providers are fixtures; no secrets, RPC or funds are required.
       - run: npm test
+      - run: npm run test:redis
+        env:
+          REDIS_TEST_URL: redis://127.0.0.1:6379
       - run: docker build --tag agenttreasury:ci .
       - name: Validate compose and boot the isolated API
         env:
@@ -26,4 +33,7 @@ jobs:
           docker compose -f compose.operations.yaml config --quiet
           docker compose -f compose.operations.yaml up --build --detach --wait api
           curl --fail http://127.0.0.1:3000/health/ready
+          node scripts/check-redis-api.mjs warm
+          docker compose -f compose.operations.yaml stop redis
+          node scripts/check-redis-api.mjs outage
           docker compose -f compose.operations.yaml down --volumes

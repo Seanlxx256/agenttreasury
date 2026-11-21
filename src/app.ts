@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 import type { FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 import { registerFinanceConsole } from './finance-console.js';
+import type { OperationsCache } from './operations-cache.js';
 import { deliverPayment } from './delivery.js';
 import type { MerchantConfig } from './merchant.js';
 import { decideRefund, requestRefund } from './refund-requests.js';
@@ -22,7 +23,7 @@ export { tokenDigest } from './payments.js';
 
 export function buildApp(
   pool: Pool, logger = false, delivery?: { merchant: MerchantConfig; fetcher?: typeof fetch },
-  financeToken?: string, localDemo = false, operationsToken?: string,
+  financeToken?: string, localDemo = false, operationsToken?: string, operationsCache?: OperationsCache,
 ) {
   if (financeToken && financeToken === operationsToken) {
     throw new Error('Finance and Gateway operations tokens must be distinct');
@@ -145,7 +146,8 @@ export function buildApp(
     if (authenticateConsole(request) !== 'finance') throw new PaymentError(403, 'FINANCE_ROLE_REQUIRED');
   }
 
-  registerFinanceConsole(app, pool, authenticateConsole, authenticateFinance, localDemo);
+  registerFinanceConsole(app, pool, authenticateConsole, authenticateFinance, localDemo, operationsCache);
+  app.addHook('onClose', async () => { operationsCache?.close(); });
 
   app.post<{ Params: { id: string }; Body: { decision: 'APPROVED' | 'DENIED' } }>(
     '/finance/payment-intents/:id/refund-decision', {

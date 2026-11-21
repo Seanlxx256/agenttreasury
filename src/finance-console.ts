@@ -1,6 +1,7 @@
 import { registerGatewayInvestigation } from './gateway-investigation-api.js';
 import { registerGatewayCasePackets } from './gateway-case-packet-api.js';
 import { registerGatewayOperations } from './gateway-operations.js';
+import type { OperationsCache } from './operations-cache.js';
 import { readFile } from 'node:fs/promises';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
@@ -40,9 +41,9 @@ const merchantParams = { type: 'object', required: ['id'],
 
 export function registerFinanceConsole(
   app: FastifyInstance, pool: Pool, authenticateConsole: (request: FastifyRequest) => 'finance' | 'operations',
-  authenticate: (request: FastifyRequest) => void, localDemo: boolean,
+  authenticate: (request: FastifyRequest) => void, localDemo: boolean, operationsCache?: OperationsCache,
 ) {
-  registerGatewayOperations(app, pool, authenticateConsole);
+  registerGatewayOperations(app, pool, authenticateConsole, operationsCache);
   registerGatewayInvestigation(app, pool, authenticateConsole);
   registerGatewayCasePackets(app, pool, authenticateConsole);
   async function gatewayPurchase(id: string) {

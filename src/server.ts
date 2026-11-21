@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { merchantConfig } from './merchant.js';
 import { buildApp } from './app.js';
+import { operationsCacheFromEnv } from './operations-cache.js';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
 const pool = new Pool({
@@ -10,7 +11,7 @@ const pool = new Pool({
   idle_in_transaction_session_timeout: 5000,
 });
 const app = buildApp(pool, true, process.env.MERCHANT_ENDPOINT ? { merchant: merchantConfig() } : undefined,
-  process.env.FINANCE_APPROVAL_TOKEN, false, process.env.GATEWAY_OPERATIONS_TOKEN);
+  process.env.FINANCE_APPROVAL_TOKEN, false, process.env.GATEWAY_OPERATIONS_TOKEN, operationsCacheFromEnv());
 
 pool.on('error', (error) => app.log.error({ err: error }, 'Idle database connection failed'));
 app.addHook('onClose', async () => pool.end());

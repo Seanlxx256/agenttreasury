@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
+import { assertFrozenSources, withFrozenDependencies } from './frozen-dependencies.js';
 import { batchEvalOptions, batchEvalPrompt, citationCatalog, decideBatchRules, pointerValue, rawBatchCheck,
   runBatchModel, validBatchDecision, type BatchEvalInput, type BatchDecision } from '../src/batch-investigation-eval.js';
 import { batchProtocolFiles, protocolRoot, evaluateBatchInvestigation, reviewRoot, scoreBatchDecision, summarizeBatchScores, verifyBatchProtocol } from '../src/evaluate-batch-investigation.js';
@@ -11,13 +12,17 @@ const response=(value:unknown)=>Response.json({message:{content:JSON.stringify(v
 
 test('frozen data, compiled dependency closure, runtime and rules reproduce the exploratory baseline',async()=>{
   const manifest=JSON.parse(await readFile(new URL('manifest.json',protocolRoot),'utf8'));
-  assert.deepEqual(await batchProtocolFiles(),manifest.files);
+  await assertFrozenSources(await batchProtocolFiles(),manifest.files);
   assert.ok(manifest.files['src/gateway-batch-evidence.ts']);assert.ok(manifest.files['dist/src/gateway-batch-linkage.js']);
   // Ordinary CI may use Node 22. Test pure rules/scoring there, while ensuring
   // actual frozen runs refuse a runtime different from the recorded one.
   if(manifest.node===process.version) {
-    await verifyBatchProtocol();
-    const result=await evaluateBatchInvestigation();
+    await assert.rejects(verifyBatchProtocol(), /Frozen evaluation files changed/);
+    const result=await withFrozenDependencies(async (root) => {
+      const historical = await import(new URL('dist/src/evaluate-batch-investigation.js', root).href);
+      await historical.verifyBatchProtocol();
+      return historical.evaluateBatchInvestigation();
+    });
     assert.equal(result.rules.summary.correct,12);assert.equal(result.rules.summary.strictSuccesses,12);
     assert.equal(result.promotionEligible,false);assert.equal(result.independentReview,false);assert.equal(result.results.length,0);
   } else {
@@ -85,9 +90,12 @@ test('model errors and rejected claims never acquire rule-fallback credit',async
 
 test('a changed model digest stops the run before inference',async()=>{
   const manifest=JSON.parse(await readFile(new URL('manifest.json',protocolRoot),'utf8'));let calls=0;
-  await assert.rejects(evaluateBatchInvestigation([manifest.models[0].name],async(url)=>{
+  await withFrozenDependencies(async (root) => {
+  const historical = await import(new URL('dist/src/evaluate-batch-investigation.js', root).href) as typeof import('../src/evaluate-batch-investigation.js');
+  await assert.rejects(historical.evaluateBatchInvestigation([manifest.models[0].name],async(url)=>{
     calls++;assert.equal(url,'http://127.0.0.1:11434/api/tags');
     return Response.json({models:[{name:manifest.models[0].name,digest:'different'}]});
   }),manifest.node===process.version?/digest differs/:/Node runtime differs/);
   assert.equal(calls,manifest.node===process.version?1:0);
+  });
 });
