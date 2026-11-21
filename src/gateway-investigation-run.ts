@@ -67,6 +67,17 @@ export async function collectInvestigationSnapshot(pool: Pool, requestId: string
 }
 
 type Snapshot=Awaited<ReturnType<typeof collectInvestigationSnapshot>>;
+
+export async function checkInvestigationFreshness(pool: Pool, requestId: string, fingerprint: string) {
+  try {
+    const current = await collectInvestigationSnapshot(pool, requestId);
+    const stale = current.fingerprint !== fingerprint;
+    return { stale, status: stale ? 'changed' as const : 'unchanged' as const, checkedAt: current.capturedAt };
+  } catch {
+    // Keep an already collected report readable. Unknown must not become false.
+    return { stale: null, status: 'unavailable' as const, checkedAt: null };
+  }
+}
 export type InvestigationToolResult={
   kind:InvestigationKind; citations:string[]; evidenceId:string; observedAt:string;
   status:'ok'|'blocked'|'unavailable'; source:string; data?:unknown; reason?:string;
@@ -158,10 +169,13 @@ export async function runGatewayInvestigation(pool:Pool,requestId:string,options
       model: options.model, request: options.modelRequest,
       isFresh: async () => (await collectInvestigationSnapshot(pool, requestId)).fingerprint === snapshot.fingerprint,
     });
-    const current = await collectInvestigationSnapshot(pool, requestId);
+    const freshness = await checkInvestigationFreshness(pool, requestId, snapshot.fingerprint);
+    if (['checklist-collected', 'no-applicable-checks'].includes(guided.stopReason) && freshness.status !== 'unchanged') {
+      guided.stopReason = freshness.status === 'changed' ? 'snapshot-changed' : 'freshness-unavailable';
+    }
     return { version: 1, advisoryOnly: true, snapshot, planner: { status: 'guided', investigations: guided.checks.map(({ kind, citations }) => ({ kind, citations })) },
-      checks: guided.checks, guided, staleAtCompletion: snapshot.fingerprint !== current.fingerprint,
-      freshnessCheckedAt: current.capturedAt, durationMs: Date.now() - start,
+      checks: guided.checks, guided, staleAtCompletion: freshness.stale, completionFreshness: freshness.status,
+      freshnessCheckedAt: freshness.checkedAt, durationMs: Date.now() - start,
       summary: { requested: guided.required.length, completed: guided.checks.filter((c) => c.status === 'ok').length,
         blocked: guided.checks.filter((c) => c.status === 'blocked').length, unavailable: guided.checks.filter((c) => c.status === 'unavailable').length },
       limitation: guided.scope };

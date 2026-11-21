@@ -43,3 +43,42 @@ test('later model choices see prior tool status, cannot repeat reads and never s
   assert.deepEqual(lengths, [0, 1]); assert.equal(report.checks.length, 3);
   assert.equal(new Set(report.checks.map((c) => c.kind)).size, 3);
 });
+
+test('freshness exceptions retain previous reads and stop before another model or tool call', async () => {
+  let guards = 0, reads = 0, modelCalls = 0;
+  const triple = [{ id: 'journal', description: 'Local journal exists.' }, { id: 'observation-1', description: 'Gateway observation: conflict multiple-transfers' }];
+  const report = await runGuidedChecks(triple, async (step) => { reads++; return read(step); }, {
+    model: 'fixture', isFresh: async () => { if (++guards === 3) throw new Error('SECRET_CONNECTION_STRING'); return true; },
+    request: async (_, init) => {
+      modelCalls++; const view = JSON.parse(JSON.parse(String(init?.body)).messages[1].content);
+      return Response.json({ message: { content: JSON.stringify({ next: view.offered[0].kind }) } });
+    },
+  });
+  assert.equal(report.stopReason, 'freshness-unavailable'); assert.equal(reads, 1); assert.equal(modelCalls, 1);
+  assert.equal(report.checks.length, 1); assert.equal(report.remaining.length, 2);
+  assert.ok(!JSON.stringify(report).includes('SECRET_CONNECTION_STRING'));
+});
+
+test('freshness failure after model planning executes no tool and keeps the entire checklist unmet', async () => {
+  let guards = 0;
+  const report = await runGuidedChecks(facts, async () => { assert.fail('No tool after failed freshness guard'); }, {
+    model: 'fixture', isFresh: async () => { if (++guards === 2) throw new Error('failed'); return true; },
+    request: async () => Response.json({ message: { content: '{"next":"read-local-journal"}' } }),
+  });
+  assert.equal(report.stopReason, 'freshness-unavailable'); assert.equal(report.checks.length, 0);
+  assert.equal(report.turns.length, 0); assert.deepEqual(report.remaining, report.required);
+});
+
+test('unexpected tool failure preserves prior evidence and records an unavailable attempt without leaking errors or retrying', async () => {
+  let reads = 0;
+  const report = await runGuidedChecks(facts, async (step) => {
+    if (++reads === 2) throw new Error('API_TOKEN=secret; refund now');
+    return read(step);
+  }, { isFresh: async () => true });
+  assert.equal(report.stopReason, 'required-evidence-unavailable'); assert.equal(reads, 2);
+  assert.deepEqual(report.checks.map((c) => c.status), ['ok', 'unavailable']);
+  assert.deepEqual(report.checks.map((c) => c.evidenceId), ['tool-1', 'tool-2']);
+  assert.equal(report.checks[1]!.source, 'executor-error'); assert.equal(report.checks[1]!.data, undefined);
+  assert.deepEqual(report.remaining, [report.checks[1]!.kind]); assert.equal(report.financialAuthority, false);
+  assert.ok(!JSON.stringify(report).includes('API_TOKEN'));
+});

@@ -16,6 +16,9 @@ database. This extension preserves the historical Stage 16 acceptance report.
 claim states, source-bound material candidates and guided investigation through the
 real read-only API. The paired 3B development run improves current-topic matching
 from 4/12 to 8/12; this small authored experiment does not establish operational ROI.
+Guided investigation also retains partial evidence after recoverable read errors
+and distinguishes unknown snapshot freshness from unchanged records in the API
+and console. Process-crash checkpoint/resume remains unimplemented.
 
 The [next claim-review corpus](docs/claim-review-preparation.md) has 48 new inputs,
 a blank reviewer handoff and offline validation/comparison/label-freeze tooling.

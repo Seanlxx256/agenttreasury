@@ -102,6 +102,20 @@ test('investigation console renders untrusted evidence as text and flags stale s
   assert.match(root.textContent,/does not authorize payment/);assert.match(root.textContent,/No bound hash/);
 });
 
+test('investigation console distinguishes unknown freshness from confirmed changed or unchanged snapshots', async () => {
+  const { context, root } = await consoleHarness('operations');
+  const base = { runId: '1', planner: { status: 'guided', investigations: [] }, summary: { completed: 1, blocked: 0, unavailable: 0 },
+    snapshot: { capturedAt: '2026-11-21T00:00:00Z', facts: [], sources: {}, records: {} }, checks: [],
+    guided: { stopReason: 'freshness-unavailable', remaining: ['compare-transfer-terms'] } };
+  for (const flags of [{ staleAtCompletion: null, staleNow: false }, { staleAtCompletion: false, staleNow: null }]) {
+    runInContext(`showInvestigation(document.getElementById('gateway-detail'), ${JSON.stringify({ ...base, ...flags })})`, context);
+    assert.match(root.textContent, /freshness could not be verified/); assert.doesNotMatch(root.textContent, /Local records changed/);
+    assert.match(root.textContent, /freshness-unavailable/); assert.match(root.textContent, /compare-transfer-terms/);
+  }
+  runInContext(`showInvestigation(document.getElementById('gateway-detail'), ${JSON.stringify({ ...base, staleAtCompletion: false, staleNow: false })})`, context);
+  assert.doesNotMatch(root.textContent, /freshness could not be verified/);
+});
+
 test('case packet console submits party claims separately, renders text safely and shows stale advisory evidence', async () => {
   const { root, posts } = await consoleHarness('operations');
   const customer = root.all().find((node) => node.tag === 'textarea' && node.parent?.textContent === 'Customer statement')!;

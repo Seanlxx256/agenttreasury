@@ -663,6 +663,8 @@ function showInvestigation(container, report) {
     ['Completed checks', report.summary.completed], ['Blocked checks', report.summary.blocked], ['Unavailable checks', report.summary.unavailable]]));
   if (report.staleAtCompletion || report.staleNow) container.append(element('p',
     'Local records changed after this snapshot. Collect fresh evidence before making an operational decision.', 'muted'));
+  if (report.staleAtCompletion === null || report.staleNow === null) container.append(element('p',
+    'Snapshot freshness could not be verified at completion or retrieval. Saved evidence remains available; collect fresh evidence before making an operational decision.', 'muted'));
   if (report.guided) container.append(evidenceBlock('Guided collection: steps, stopping reason and remaining checks', report.guided));
   container.append(evidenceBlock('Snapshot facts and source references', { facts: report.snapshot.facts, sources: report.snapshot.sources }),
     evidenceBlock('Selected checks and citations', report.planner.investigations));

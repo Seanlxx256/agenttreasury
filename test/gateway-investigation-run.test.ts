@@ -125,6 +125,70 @@ test('investigation executes bounded reads with provenance, freshness and no bus
     }
     assert.equal(calls,0);
   });
+  // Fail collector connections while keeping the actual report INSERT/SELECT
+  // available. This models a recoverable read failure, not a total DB outage.
+  function collectorFaultPool(onConnect: (count: number) => Promise<void>) {
+    let count = 0;
+    return new Proxy(pool, { get(target, key) {
+      if (key === 'connect') return async () => { await onConnect(++count); return target.connect(); };
+      const value = Reflect.get(target, key, target);
+      return typeof value === 'function' ? value.bind(target) : value;
+    } });
+  }
+  for (const scenario of [
+    { name: 'mid-investigation freshness failure', failAt: [4, 5], completed: 1, remaining: 1 },
+    { name: 'final freshness failure', failAt: [6], completed: 2, remaining: 0 },
+  ]) await t.test(`${scenario.name} saves partial evidence with unknown freshness and no business mutations`, async () => {
+    const faultPool = collectorFaultPool(async (n) => { if (scenario.failAt.includes(n)) throw new Error('SECRET_DATABASE_URI'); });
+    const faultApp = buildApp(faultPool, false, undefined, finance, false, operations);
+    const previousMode = process.env.GATEWAY_INVESTIGATION_MODE, previousModel = process.env.GATEWAY_INVESTIGATION_MODEL;
+    process.env.GATEWAY_INVESTIGATION_MODE = 'guided'; delete process.env.GATEWAY_INVESTIGATION_MODEL;
+    try {
+      const before = await state(), url = `/finance/gateway-purchases/${purchase.id}/investigation`;
+      const response = await faultApp.inject({ method: 'POST', url, payload: {}, headers: { authorization: `Bearer ${operations}` } });
+      assert.equal(response.statusCode, 200, response.body);
+      const report = response.json();
+      assert.equal(report.guided.stopReason, 'freshness-unavailable'); assert.equal(report.summary.completed, scenario.completed);
+      assert.equal(report.guided.remaining.length, scenario.remaining); assert.equal(report.checks.length, scenario.completed);
+      assert.equal(report.staleAtCompletion, null); assert.equal(report.completionFreshness, 'unavailable');
+      assert.equal(report.freshnessCheckedAt, null); assert.ok(!response.body.includes('SECRET_DATABASE_URI'));
+      const { rows: [saved] } = await pool.query('SELECT report FROM gateway_investigation_runs WHERE id=$1', [report.runId]);
+      assert.deepEqual(saved.report.checks, report.checks); assert.equal(saved.report.guided.stopReason, 'freshness-unavailable');
+      assert.deepEqual(await state(), before);
+    } finally {
+      await faultApp.close();
+      if (previousMode === undefined) delete process.env.GATEWAY_INVESTIGATION_MODE; else process.env.GATEWAY_INVESTIGATION_MODE = previousMode;
+      if (previousModel === undefined) delete process.env.GATEWAY_INVESTIGATION_MODEL; else process.env.GATEWAY_INVESTIGATION_MODEL = previousModel;
+    }
+  });
+  await t.test('saved report stays readable when current freshness cannot be checked; initial snapshot failure creates no report', async () => {
+    const faultPool = collectorFaultPool(async () => { throw new Error('SECRET_DATABASE_URI'); });
+    const faultApp = buildApp(faultPool, false, undefined, finance, false, operations);
+    try {
+      const count = (await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs')).rows[0].n;
+      const before = await state(), url = `/finance/gateway-purchases/${purchase.id}/investigation`;
+      assert.equal((await faultApp.inject({ url })).statusCode, 401);
+      const response = await faultApp.inject({ url, headers: { authorization: `Bearer ${operations}` } });
+      assert.equal(response.statusCode, 200, response.body);
+      assert.equal(response.json().staleNow, null); assert.equal(response.json().currentFreshness, 'unavailable');
+      assert.equal(response.json().freshnessCheckedAt, null); assert.ok(response.json().checks.length > 0);
+      assert.ok(!response.body.includes('SECRET_DATABASE_URI'));
+      const failed = await faultApp.inject({ method: 'POST', url, payload: {}, headers: { authorization: `Bearer ${operations}` } });
+      assert.equal(failed.statusCode, 500); assert.equal(failed.json().code, 'INTERNAL_ERROR');
+      assert.equal((await pool.query('SELECT count(*)::int n FROM gateway_investigation_runs')).rows[0].n, count);
+      assert.deepEqual(await state(), before);
+    } finally { await faultApp.close(); }
+  });
+  await t.test('a snapshot change at the final guard prevents a checklist-collected stopping reason', async () => {
+    const other = await make();
+    const faultPool = collectorFaultPool(async (n) => {
+      if (n === 6) await pool.query('UPDATE gateway_demo_purchases SET reconcile_review_at=now() WHERE request_id=$1', [other.id]);
+    });
+    const report = await runGatewayInvestigation(faultPool, other.id, { guided: true });
+    assert.equal(report.checks.length, 2); assert.equal(report.guided!.remaining.length, 0);
+    assert.equal(report.guided!.stopReason, 'snapshot-changed'); assert.equal(report.staleAtCompletion, true);
+    assert.equal(report.completionFreshness, 'changed');
+  });
   await t.test('opted-in reads pin network, nonce and hash and never call mutating payment reconciliation',async()=>{
     const snapshot=await collectInvestigationSnapshot(pool,purchase.id);const before=await state();
     const calls:string[]=[];

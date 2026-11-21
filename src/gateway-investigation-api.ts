@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
-import { collectInvestigationSnapshot, runGatewayInvestigation } from './gateway-investigation-run.js';
+import { checkInvestigationFreshness, runGatewayInvestigation } from './gateway-investigation-run.js';
 import { PaymentError } from './payments.js';
 
 export function registerGatewayInvestigation(app:FastifyInstance,pool:Pool,
@@ -29,8 +29,8 @@ export function registerGatewayInvestigation(app:FastifyInstance,pool:Pool,
     const {rows:[saved]}=await pool.query(`SELECT id::text AS "runId",created_at AS "createdAt",report
       FROM gateway_investigation_runs WHERE request_id=$1 ORDER BY id DESC LIMIT 1`,[request.params.id]);
     if (!saved) throw new PaymentError(404,'INVESTIGATION_NOT_FOUND');
-    const current=await collectInvestigationSnapshot(pool,request.params.id);
+    const freshness=await checkInvestigationFreshness(pool,request.params.id,saved.report.snapshot.fingerprint);
     return {runId:saved.runId,createdAt:saved.createdAt,...saved.report,
-      staleNow:current.fingerprint!==saved.report.snapshot.fingerprint,freshnessCheckedAt:current.capturedAt};
+      staleNow:freshness.stale,currentFreshness:freshness.status,freshnessCheckedAt:freshness.checkedAt};
   });
 }

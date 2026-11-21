@@ -43,6 +43,9 @@ instructions, arbitrary SQL, URLs, credentials or tool target parameters.
 - Reject invented/repeated choices and use rule ordering on model failure.
 - Stop on changed snapshots or unavailable/blocked required evidence, retaining
   the unmet checklist and each executed read's unique evidence ID.
+- Stop on a thrown freshness-check error without making another model/tool call.
+  Retain earlier reads; an unexpectedly thrown tool error becomes an explicit
+  unavailable attempt, without exposing its raw error message or retrying it.
 - Stop when the checklist is collected, without a redundant model finish call.
 - Save turns, selection origin, stop reason and remaining checks in the ordinary
   advisory report. The console displays this trace.
@@ -52,6 +55,39 @@ may conflict, omit relevant evidence or describe an unsettled payment. This is
 guided evidence collection, not a model-certified diagnosis. The rule checklist can
 itself be incomplete. No model advantage for read ordering has been measured. A
 process crash can still lose an unfinished report; this is not a durable agent engine.
+
+## Recoverable investigation failures
+
+Guided investigation now returns its collected evidence after a recoverable read
+or freshness-check exception instead of losing the whole report. A failed read
+remains in the unmet checklist, even though its unavailable attempt is recorded.
+The final freshness guard can also stop a fully collected checklist with
+`snapshot-changed` or `freshness-unavailable`; an empty remaining list is not proof
+that the snapshot is current.
+
+When the final snapshot cannot be checked, the report records
+`staleAtCompletion: null`, `completionFreshness: unavailable`, and
+`freshnessCheckedAt: null`. Null means unknown, never unchanged. The existing API
+can append this report if the database write succeeds. Retrieving an existing
+report similarly returns `staleNow: null` and `currentFreshness: unavailable` if
+the report is readable but the current snapshot cannot be collected. The console
+warns about unknown freshness separately from a confirmed record change. A later
+successful freshness check does not erase the saved run's original stopping reason.
+
+There is no new migration, background retry, payment action or broader model
+authority. Initial snapshot failure still fails the request because no evidence
+base exists. A report-save failure still fails the request; the API does not claim
+that unsaved evidence is durable. Process termination and a sustained database
+outage can still lose an unfinished investigation. This is recoverable exception
+handling, not checkpoint/resume support or a measured improvement in AI accuracy.
+
+Failure-handling verification on 2026-11-21: build and 17 focused guided/console
+tests passed; the full suite passed 316/316 with zero failures or skips (about
+33.5 seconds excluding build). Eight added tests cover guarded stopping, redacted
+tool exceptions, unknown-freshness rendering, PostgreSQL-backed partial report
+persistence/retrieval and final-guard races. Business-table snapshots remain
+unchanged during the failure scenarios. The 48-case review corpus remains
+unreviewed and unevaluated; no model-quality result is inferred from these tests.
 
 ## Actual paired model experiment
 
