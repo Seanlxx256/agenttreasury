@@ -614,7 +614,10 @@ byId('logout').addEventListener('click', () => {
   detail.replaceChildren();
   gatewayLookup.reset();
   caseSelection++;
-  for (const id of ['operations-metrics', 'reconciliation-cases', 'reconciliation-case-detail']) byId(id).replaceChildren();
+  investigationQueueGeneration++; investigationDetailSelection++; investigationPage = null;
+  for (const id of ['operations-metrics', 'reconciliation-cases', 'reconciliation-case-detail',
+    'investigation-queue-metrics', 'investigation-queue', 'investigation-queue-detail']) byId(id).replaceChildren();
+  byId('investigations-more').hidden = true;
   byId('cases-more').hidden = true;
   gatewayDetail.replaceChildren();
   gatewayQueue.replaceChildren();
@@ -629,10 +632,13 @@ byId('logout').addEventListener('click', () => {
 let caseSelection = 0;
 let casePage = null;
 let caseListGeneration = 0;
+let investigationPage = null;
+let investigationQueueGeneration = 0;
+let investigationDetailSelection = 0;
 
 async function refreshOperations() {
   const session = generation;
-  const [metrics] = await Promise.all([financeApi('/operations/metrics'), loadCases()]);
+  const [metrics] = await Promise.all([financeApi('/operations/metrics'), loadCases(), loadInvestigationQueue()]);
   if (session !== generation) return;
   byId('operations-metrics').replaceChildren(metadata([
     ['Snapshot observed at', metrics.observedAt],
@@ -645,6 +651,56 @@ async function refreshOperations() {
     ['Failed scans', metrics.scans.failed], ['Expired scan leases', metrics.scans.expiredLeases],
   ]), evidenceBlock('Scanner lag and observation age', metrics.wallets), evidenceBlock('Worker health', metrics.workers), evidenceBlock('Latest recovery evidence', metrics.latestRecoveryEvidence));
 }
+async function loadInvestigationQueue(more = false) {
+  const session = generation, load = ++investigationQueueGeneration;
+  const moreButton = byId('investigations-more'); moreButton.disabled = true;
+  try {
+    const page = await financeApi('/operations/investigations' + (more && investigationPage ? '?after=' + investigationPage : ''));
+    if (session !== generation || load !== investigationQueueGeneration) return;
+    investigationPage = page.next; moreButton.hidden = !page.next;
+    byId('investigation-queue-metrics').replaceChildren(metadata([
+      ['Observed at', timestamp(page.observedAt)], ['Read source', page.source],
+      ['Unfinished investigations', page.summary.unfinishedCount], ['Oldest created', timestamp(page.summary.oldestCreatedAt)],
+      ['Oldest age (seconds)', page.summary.oldestAgeSeconds], ['Longest since saved check (seconds)', page.summary.longestSinceSaveSeconds],
+      ['No saved checks', page.summary.withoutSavedChecks], ['Saved checks with unknown save time', page.summary.savedTimeUnknown],
+    ]), element('p', 'Worker state is unknown. Unfinished does not mean stopped; a live execution prevents concurrent recovery.'));
+    const root = byId('investigation-queue');
+    if (!more) root.replaceChildren();
+    if (!more && !page.checkpoints.length) root.append(element('li', 'No unfinished investigations.'));
+    for (const item of page.checkpoints) {
+      const row = element('li');
+      row.append(metadata([['Purchase', item.requestId], ['Checkpoint', item.id], ['Saved checks', item.savedChecks],
+        ['Attempts', item.attempts], ['Created', timestamp(item.createdAt)], ['Age (seconds)', item.ageSeconds],
+        ['Last check saved', item.lastSavedAt ? timestamp(item.lastSavedAt) : item.savedChecks ? 'Not recorded' : 'No saved check'],
+        ['Since last save (seconds)', item.sinceLastSaveSeconds], ['Model', item.model || 'rules'],
+        ['External reads', item.refreshExternal ? 'enabled' : 'disabled']]));
+      for (const [label, resume] of [['View investigation evidence', false], ['Resume investigation', true]]) {
+        const button = element('button', label);
+        button.addEventListener('click', () => showErrors(async () => {
+          const choice = ++investigationDetailSelection;
+          button.disabled = true;
+          try {
+            const path = '/gateway-purchases/' + item.requestId + '/investigation/checkpoints/' + item.id;
+            const result = await financeApi(path + (resume ? '/resume' : ''), resume ? {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' } : {});
+            if (session !== generation) return;
+            if (choice === investigationDetailSelection) {
+              const detail = byId('investigation-queue-detail');
+              if (resume) showInvestigation(detail, result);
+              else detail.replaceChildren(evidenceBlock('Saved investigation evidence (not a current freshness check)', result));
+            }
+            // Refresh the uncached summary/list even if another detail was opened.
+            if (resume) await loadInvestigationQueue();
+          } finally { button.disabled = false; }
+        }));
+        row.append(button);
+      }
+      root.append(row);
+    }
+  } finally { if (session === generation && load === investigationQueueGeneration) moreButton.disabled = false; }
+}
+byId('investigations-refresh').addEventListener('click', () => showErrors(() => loadInvestigationQueue()));
+byId('investigations-more').addEventListener('click', () => showErrors(() => loadInvestigationQueue(true)));
 async function loadCases(more = false) {
   const session = generation;
   const load = ++caseListGeneration;

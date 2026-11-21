@@ -21,6 +21,9 @@ and distinguishes unknown snapshot freshness from unchanged records in the API
 and console. [Investigation checkpoints](docs/investigation-checkpoints.md) add
 explicit crash recovery for guided API runs after migration 041, reusing saved
 checks and serializing concurrent recovery of the same checkpoint.
+The [recovery dashboard](docs/investigation-recovery-dashboard.md) adds a live,
+paginated cross-purchase queue with unfinished counts and saved-check ages after
+migration 042. Operators can inspect and resume a checkpoint from this queue.
 
 The [next claim-review corpus](docs/claim-review-preparation.md) has 48 new inputs,
 a blank reviewer handoff and offline validation/comparison/label-freeze tooling.

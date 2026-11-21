@@ -49,7 +49,7 @@ export async function resumeInvestigationCheckpoint(pool: Pool, requestId: strin
     const result = await runGuidedInvestigation(saved.snapshot, () => collectInvestigationSnapshot(pool, requestId, client), {
       ...dependencies, model: saved.model ?? undefined, refreshExternal: saved.refresh_external, resume: saved.progress,
       checkpoint: async (progress) => {
-        await client.query('UPDATE gateway_investigation_checkpoints SET progress=$2,updated_at=now() WHERE id=$1', [id,JSON.stringify(progress)]);
+        await client.query('UPDATE gateway_investigation_checkpoints SET progress=$2,last_checkpoint_at=statement_timestamp(),updated_at=now() WHERE id=$1', [id,JSON.stringify(progress)]);
       },
     });
     const report = { ...result, checkpointId: id };

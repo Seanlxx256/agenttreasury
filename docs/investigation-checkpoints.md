@@ -123,7 +123,7 @@ extension. Console JavaScript syntax and `git diff --check` passed. All database
 and crash tests used temporary fixtures; no live model, provider, wallet, payment
 or existing user database was used.
 
-Next: expose unfinished investigation counts and age in the operations dashboard
-so recoverable checkpoints can be found without opening each purchase. Recovery
-remains an explicit operator action. Independent claim evaluation still awaits
-the real reviewer handoff; checkpoint reliability does not replace that evidence.
+The subsequent [recovery dashboard](investigation-recovery-dashboard.md) exposes
+unfinished investigation counts and age across purchases after migration 042.
+Recovery remains an explicit operator action. Independent claim evaluation still
+awaits the real reviewer handoff; checkpoint reliability does not replace that evidence.

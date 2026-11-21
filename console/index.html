@@ -39,6 +39,13 @@
         <div id="gateway-detail" aria-live="polite"></div>
         <h3>Operations health</h3>
         <div id="operations-metrics"></div>
+        <h3>Unfinished investigations</h3>
+        <p>Unfinished does not mean the worker has stopped. Resume checks the execution lock and the original snapshot. Recovery is manual.</p>
+        <button id="investigations-refresh">Refresh investigations</button>
+        <div id="investigation-queue-metrics"></div>
+        <ul id="investigation-queue" class="review-queue"></ul>
+        <button id="investigations-more" hidden>Load more investigations</button>
+        <div id="investigation-queue-detail" aria-live="polite"></div>
         <h3>Balance reconciliation cases</h3>
         <label for="case-filter">Case status</label>
         <select id="case-filter"><option value="all">All</option><option value="open">Open</option>

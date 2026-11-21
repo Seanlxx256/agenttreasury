@@ -12,6 +12,7 @@ class Element {
   type = '';
   disabled = false;
   checked = false;
+  hidden = false;
   value = '';
   isConnected = true;
   constructor(public tag: string) {}
@@ -29,12 +30,15 @@ class Element {
     this.parent.children.splice(this.parent.children.indexOf(this) + 1, 0, ...children);
   }
   setAttribute() {}
+  reset() {}
+  focus() {}
   addEventListener(event: string, handler: () => unknown) { this.listeners.set(event, handler); }
   async fire(event: string) { if (event !== 'click' || !this.disabled) await this.listeners.get(event)?.(); }
   all(): Element[] { return [this, ...this.children.flatMap((child) => child instanceof Element ? child.all() : [])]; }
 }
 
-async function consoleHarness(role: string, reconciliationCase?: Record<string, unknown>, packetOverrides: Record<string, unknown> = {}) {
+async function consoleHarness(role: string, reconciliationCase?: Record<string, unknown>, packetOverrides: Record<string, unknown> = {},
+  requestOverride?: (path: string, init?: { method?: string; body?: string }) => Promise<Response | undefined>) {
   const elements = new Map<string, Element>();
   const byId = (id: string) => {
     if (!elements.has(id)) elements.set(id, new Element('div'));
@@ -54,6 +58,9 @@ async function consoleHarness(role: string, reconciliationCase?: Record<string, 
     Node: Element, setTimeout, clearTimeout, purchase,
     fetch: async (path: string, init?: { method?: string; body?: string }) => {
       if (init?.method === 'POST') posts.push({ path, payload: JSON.parse(init.body ?? '{}') });
+      const override = await requestOverride?.(path, init); if (override) return override;
+      if (path.startsWith('/finance/operations/investigations')) return Response.json({ observedAt: '2026-11-21T00:00:00Z',
+        source: 'database', summary: { unfinishedCount: 0 }, checkpoints: [], next: null });
       if (path.endsWith('/investigation/checkpoints')) return Response.json({ checkpoints: [
         { id: 'checkpoint-1', status: 'in-progress', savedChecks: 1, attempts: 1, model: null, refreshExternal: false },
         { id: 'checkpoint-2', status: 'finished', savedChecks: 2, attempts: 1, model: null, refreshExternal: false },
@@ -82,7 +89,8 @@ async function consoleHarness(role: string, reconciliationCase?: Record<string, 
   });
   runInContext(await readFile(new URL('../../console/console.js', import.meta.url), 'utf8'), context);
   runInContext(`role = ${JSON.stringify(role)}; showGatewayPurchase(purchase, '/gateway-purchases/case-1', generation)`, context);
-  return { context, root: byId('gateway-detail'), caseRoot:byId('reconciliation-case-detail'), posts, advanceTime: (ms: number) => { clockMs += ms; } };
+  return { context, root: byId('gateway-detail'), caseRoot:byId('reconciliation-case-detail'), posts, byId,
+    advanceTime: (ms: number) => { clockMs += ms; } };
 }
 
 test('case console requires an outcome and binds resolution to displayed evidence/version', async () => {
@@ -141,6 +149,78 @@ test('checkpoint console shows saved evidence safely and resumes only the select
   await button('Resume saved investigation').fire('click');
   assert.deepEqual(posts, [{ path: '/finance/gateway-purchases/case-1/investigation/checkpoints/checkpoint-1/resume', payload: {} }]);
   assert.match(root.textContent, /checklist-collected/); assert.match(root.textContent, /does not authorize payment/);
+});
+
+const queueItem = (id: string) => ({ id, requestId: 'request-' + id, status: 'in-progress', savedChecks: 1, attempts: 2,
+  createdAt: '2026-11-21T00:00:00Z', ageSeconds: 600, lastSavedAt: null, sinceLastSaveSeconds: null, model: null, refreshExternal: false });
+const queuePage = (items: object[], count = items.length, next: string | null = null) => ({
+  observedAt: '2026-11-21T00:10:00Z', source: 'database', summary: { unfinishedCount: count, savedTimeUnknown: count }, checkpoints: items, next,
+});
+const queueReport = { runId: 'run-q', planner: { status: 'guided', investigations: [] }, summary: { completed: 2, blocked: 0, unavailable: 0 },
+  snapshot: { capturedAt: '2026-11-21T00:00:00Z', facts: [], sources: {}, records: {} }, checks: [],
+  guided: { stopReason: 'checklist-collected', remaining: [] }, staleAtCompletion: false };
+
+test('operations queue paginates across purchases, safely shows evidence and refreshes counts after explicit recovery', async () => {
+  let finished = false;
+  const gets: string[] = [];
+  const harness = await consoleHarness('operations', undefined, {}, async (path, init) => {
+    if (path.startsWith('/finance/operations/investigations')) {
+      gets.push(path);
+      return Response.json(path.includes('?after=') ? queuePage([queueItem('second')], 2)
+        : queuePage([queueItem('first')], finished ? 1 : 2, finished ? null : 'first'));
+    }
+    if (path.endsWith('/checkpoints/second/resume')) { finished = true; return Response.json(queueReport); }
+    if (path.endsWith('/checkpoints/second')) return Response.json({ progress: { note: '<script>untrusted()</script>' } });
+    return undefined;
+  });
+  const { context, byId, posts } = harness;
+  await runInContext('loadInvestigationQueue()', context);
+  assert.equal(posts.length, 0); assert.equal(byId('investigations-more').hidden, false);
+  assert.match(byId('investigation-queue-metrics').textContent, /Unfinished does not mean stopped/);
+  assert.match(byId('investigation-queue').textContent, /Not recorded/);
+  await byId('investigations-more').fire('click'); assert.equal(byId('investigations-more').hidden, true);
+  const buttons = (name: string) => byId('investigation-queue').all().filter((node) => node.tag === 'button' && node.textContent === name);
+  assert.equal(buttons('View investigation evidence').length, 2);
+  await buttons('View investigation evidence')[1]!.fire('click');
+  assert.match(byId('investigation-queue-detail').textContent, /<script>untrusted\(\)<\/script>/); assert.equal(posts.length, 0);
+  await buttons('Resume investigation')[1]!.fire('click');
+  assert.deepEqual(posts, [{ path: '/finance/gateway-purchases/request-second/investigation/checkpoints/second/resume', payload: {} }]);
+  assert.deepEqual(gets, ['/finance/operations/investigations', '/finance/operations/investigations?after=first', '/finance/operations/investigations']);
+  assert.match(byId('investigation-queue-metrics').textContent, /Unfinished investigations1/);
+  assert.doesNotMatch(byId('investigation-queue').textContent, /request-second/);
+  assert.match(byId('investigation-queue-detail').textContent, /checklist-collected/);
+});
+
+test('a busy recovery stays in the operations queue and is not automatically retried', async () => {
+  let reads = 0;
+  const { context, byId, posts } = await consoleHarness('operations', undefined, {}, async (path, init) => {
+    if (path.startsWith('/finance/operations/investigations')) { reads++; return Response.json(queuePage([queueItem('busy')])); }
+    if (init?.method === 'POST' && path.endsWith('/resume')) return Response.json({ code: 'INVESTIGATION_BUSY' }, { status: 409 });
+    return undefined;
+  });
+  await runInContext('loadInvestigationQueue()', context);
+  const resume = byId('investigation-queue').all().find((node) => node.textContent === 'Resume investigation')!;
+  await resume.fire('click');
+  assert.equal(posts.length, 1); assert.equal(reads, 1); assert.equal(resume.disabled, false);
+  assert.match(byId('notice').textContent, /investigation busy/); assert.match(byId('investigation-queue').textContent, /request-busy/);
+  assert.equal(byId('investigation-queue-detail').textContent, '');
+});
+
+test('older queue responses and responses arriving after logout cannot repopulate operator data', async () => {
+  const responses: Array<(response: Response) => void> = [];
+  const { context, byId } = await consoleHarness('operations', undefined, {}, async (path) => {
+    if (path.startsWith('/finance/operations/investigations')) return new Promise<Response>((resolve) => { responses.push(resolve); });
+    return undefined;
+  });
+  const old = runInContext('loadInvestigationQueue()', context), current = runInContext('loadInvestigationQueue()', context);
+  responses[1]!(Response.json(queuePage([queueItem('current')]))); await current;
+  responses[0]!(Response.json(queuePage([queueItem('old')]))); await old;
+  assert.match(byId('investigation-queue').textContent, /request-current/); assert.doesNotMatch(byId('investigation-queue').textContent, /request-old/);
+  const pending = runInContext('loadInvestigationQueue()', context);
+  await byId('logout').fire('click');
+  responses[2]!(Response.json(queuePage([queueItem('after-logout')]))); await pending;
+  assert.equal(byId('investigation-queue').textContent, ''); assert.equal(byId('investigation-queue-metrics').textContent, '');
+  assert.equal(byId('investigation-queue-detail').textContent, ''); assert.equal(byId('investigations-more').hidden, true);
 });
 
 test('case packet console submits party claims separately, renders text safely and shows stale advisory evidence', async () => {

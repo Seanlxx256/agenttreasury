@@ -5,6 +5,9 @@ It stores the dashboard aggregate snapshot for at most five seconds. PostgreSQL
 remains the source of truth. Cache entries cannot authorize a payment, release a
 reservation, validate a grant, change a journal or approve a refund. Case details,
 case transitions, payment evidence and all financial writes bypass this cache.
+The [investigation recovery queue](investigation-recovery-dashboard.md) also reads
+PostgreSQL directly so manual recovery is immediately reflected on refresh; its
+summary is separate from the cached general operations metrics.
 
 ## Run locally
 
