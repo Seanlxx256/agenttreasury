@@ -17,6 +17,10 @@ claim states, source-bound material candidates and guided investigation through 
 real read-only API. The paired 3B development run improves current-topic matching
 from 4/12 to 8/12; this small authored experiment does not establish operational ROI.
 
+The [next claim-review corpus](docs/claim-review-preparation.md) has 48 new inputs,
+a blank reviewer handoff and offline validation/comparison/label-freeze tooling.
+It remains unreviewed and unevaluated; no new accuracy result is claimed.
+
 For local acceptance without wallet credentials, Docker or a running model:
 
 ```sh

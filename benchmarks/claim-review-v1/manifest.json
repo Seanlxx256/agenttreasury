@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "claim-review-v1",
+  "status": "prepared-unreviewed",
+  "cases": 48,
+  "createdAt": "2026-11-21T11:13:54.193Z",
+  "files": {
+    "inputs.json": "48e7df5dacfbcfda0f2185e205eef24e12100ab735c065a1148b484f73592097",
+    "author-labels.json": "a7ccd99402f34765a5178d7dcf2672b6c8918f3dcb70d0e33f6aa4268ade908e"
+  },
+  "strata": {
+    "ambiguous": 6,
+    "direct": 6,
+    "hypothetical": 6,
+    "materials": 6,
+    "mixed": 6,
+    "negation": 6,
+    "paraphrase": 6,
+    "resolved": 6
+  },
+  "modelRuns": 0,
+  "independentReview": false,
+  "limitation": "Synthetic author-designed candidate evaluation corpus, constructed after prior failures. No model or parser run against these inputs; not independently labelled or a production-distribution holdout."
+}

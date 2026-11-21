@@ -17,6 +17,7 @@ review remain the execution boundary.
 | Stage 15 annotation tooling | Input/version/quote validation, imported labels and reviewer disagreement comparison | Enables future review; identities and independence remain unverified |
 | Subsequent structured-claim development | Current topic/source sets: context rules 7/12, previous 3B adapter 4/12, structured 3B adapter 8/12; all states 6/12 | A narrow development gain, not default promotion or generalization; [results and implementation](ai-capability-hardening.md) |
 | Material-parser replay after inspecting that run | Model found 0/13 fields; deterministic parser found 13/13 on the same known examples | Workflow engineering gain, explicitly not model accuracy or independently measured efficiency |
+| Next review corpus preparation | 48 new synthetic inputs, blank handoff, validation/comparison and label-freeze gate | Preparation only; no completed external review, inference run or new score; [handoff](claim-review-preparation.md) |
 
 Protocols use different datasets and scoring rules. Do not combine these figures
 into a single accuracy trend, omit failed model attempts, or reuse a development
