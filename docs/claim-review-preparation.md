@@ -12,6 +12,12 @@ statements and empty annotations. It includes no author labels, strata or model
 outputs. Send only that form to a reviewer; the repository itself contains the
 author labels and therefore cannot enforce blindness.
 
+For handoff, send only that JSON file and the [standalone reviewer guide](claim-reviewer-guide.md)
+as files. The guide explains the labels, exact-quote requirements and reviewer
+declarations without case answers, category counts or model results. The reviewer
+needs only a text editor and returns a completed copy; do not send this document
+or a repository link as the reviewer instructions.
+
 The `review:claims` command supports export, validation, comparison and label
 freezing. It binds every completed annotation to the versioned inputs, rejects
 invented sources/quotes, duplicate/missing cases and unexpected fields, and records

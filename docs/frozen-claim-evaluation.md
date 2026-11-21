@@ -12,6 +12,9 @@ the original completed review file exactly as frozen. Only complete reviews
 declaring an external reviewer, no model assistance and no exposure to author
 labels/model outputs pass the freeze gate. Verify those declarations outside the
 tool; the software cannot authenticate a reviewer or enforce blindness.
+The [standalone reviewer guide](claim-reviewer-guide.md) can accompany the blank
+JSON without exposing repository answers. Until a completed review is returned,
+formal evaluation remains pending; automated fixtures do not satisfy this step.
 
 After an actual review and label freeze, run from the repository root:
 

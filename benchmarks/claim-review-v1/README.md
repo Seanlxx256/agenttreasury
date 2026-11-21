@@ -29,6 +29,9 @@ order does not group the author's categories. Labels remain available in this
 repository: **blinding is a distribution protocol, not enforced access control**.
 Give a reviewer only the exported form and the instructions below, not the whole
 repository, this category table, author labels or previous model reports.
+For a standalone handoff, send the exported JSON and the
+[reviewer guide](../../docs/claim-reviewer-guide.md) as files instead of linking
+the reviewer to this repository page.
 
 ## Reviewer instructions
 
