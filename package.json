@@ -60,6 +60,7 @@
     "eval:case-packets": "npm run --silent build && node dist/src/evaluate-case-packets.js",
     "eval:claim-assessment": "npm run --silent build && node dist/src/evaluate-claim-assessment.js",
     "review:claims": "npm run --silent build && node dist/src/claim-review-cli.js",
+    "eval:frozen-claims": "npm run --silent build && node dist/src/frozen-claim-evaluation-cli.js",
     "verify:portfolio": "node scripts/verify-portfolio.mjs",
     "test:redis": "npm run build && node --test dist/test/redis-integration.js"
   },

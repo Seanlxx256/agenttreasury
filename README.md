@@ -20,6 +20,9 @@ from 4/12 to 8/12; this small authored experiment does not establish operational
 The [next claim-review corpus](docs/claim-review-preparation.md) has 48 new inputs,
 a blank reviewer handoff and offline validation/comparison/label-freeze tooling.
 It remains unreviewed and unevaluated; no new accuracy result is claimed.
+The [frozen comparison runner](docs/frozen-claim-evaluation.md) can pin a reviewed
+label set and compare three arms, with failed attempts retained and incremental
+result capture. Its execution path is tested with separate synthetic fixtures.
 
 For local acceptance without wallet credentials, Docker or a running model:
 

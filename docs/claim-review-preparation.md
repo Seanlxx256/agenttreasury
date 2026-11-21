@@ -34,6 +34,10 @@ failures or skips (about 32.4 seconds excluding build). Eight new tests cover co
 separation, blank exports, complete/canonical annotations, invalid inputs and
 quotes, disagreement handling, provenance freeze gates and offline CLI behavior.
 
+The subsequent [frozen comparison runner](frozen-claim-evaluation.md) now supports
+plan creation and guarded three-arm execution. Its synthetic execution tests do
+not evaluate these 48 inputs or supply a real review.
+
 Next: obtain an actual review using the [handoff protocol](../benchmarks/claim-review-v1/README.md),
 validate it, inspect any disagreements, then pin the evaluation execution plan.
 Independent review cannot be replaced by a scripted imitation of a reviewer.

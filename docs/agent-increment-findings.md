@@ -18,6 +18,7 @@ review remain the execution boundary.
 | Subsequent structured-claim development | Current topic/source sets: context rules 7/12, previous 3B adapter 4/12, structured 3B adapter 8/12; all states 6/12 | A narrow development gain, not default promotion or generalization; [results and implementation](ai-capability-hardening.md) |
 | Material-parser replay after inspecting that run | Model found 0/13 fields; deterministic parser found 13/13 on the same known examples | Workflow engineering gain, explicitly not model accuracy or independently measured efficiency |
 | Next review corpus preparation | 48 new synthetic inputs, blank handoff, validation/comparison and label-freeze gate | Preparation only; no completed external review, inference run or new score; [handoff](claim-review-preparation.md) |
+| Frozen comparison executor | Runtime/code/label pinning, three-arm scoring and incremental result capture | Tested with separate synthetic fixtures; no new model-performance result; [protocol](frozen-claim-evaluation.md) |
 
 Protocols use different datasets and scoring rules. Do not combine these figures
 into a single accuracy trend, omit failed model attempts, or reuse a development

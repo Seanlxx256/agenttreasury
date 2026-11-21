@@ -98,5 +98,6 @@ positives and complete inference latency. Report sample counts and uncertainty.
 
 No model result, threshold pass, reduction in manual review or human-time saving
 is claimed by preparation, successful validation or a label freeze. A real operator
-study remains separate. This milestone does not introduce a network/inference
-runner for the new corpus; the old 12-case development runner remains unchanged.
+study remains separate. The subsequent [frozen comparison runner](../../docs/frozen-claim-evaluation.md)
+implements plan creation and guarded execution, but has not been run on this
+corpus. The old 12-case development runner remains unchanged.
