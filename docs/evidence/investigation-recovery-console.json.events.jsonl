@@ -1,0 +1,7 @@
+{"event":"started","at":"2026-11-21T12:22:13.094Z","mode":"console-assisted"}
+{"event":"fixture-created","at":"2026-11-21T12:22:14.009Z","schemaVersion":42}
+{"event":"first-check-saved","at":"2026-11-21T12:22:15.005Z","checkpointId":"00de7e33-6946-425a-bd79-c6faa556c0de","savedChecks":1,"concurrentRecoveryStatus":409}
+{"event":"api-killed","at":"2026-11-21T12:22:15.111Z","signal":"SIGKILL"}
+{"event":"restarted-api-discovered-checkpoint","at":"2026-11-21T12:22:15.662Z","checkpointId":"00de7e33-6946-425a-bd79-c6faa556c0de","unfinishedCount":1}
+{"event":"recovery-verified","at":"2026-11-21T12:24:49.800Z","runId":"1","completedChecks":2,"unfinishedCount":0,"financialTablesUnchanged":true}
+{"event":"finished","at":"2026-11-21T12:25:04.337Z","status":"passed","cleanup":{"apiProcessesStopped":true,"databaseStopped":true,"temporaryDirectoryRemoved":true}}

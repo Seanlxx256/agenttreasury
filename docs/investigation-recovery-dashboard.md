@@ -99,5 +99,7 @@ wallet, model evaluation or existing user database was involved.
 There is no scheduled recovery, notification delivery, alert threshold or new
 payment action. The 48 review cases remain unreviewed and unevaluated. Runtime
 performance at production backlog sizes is not established by these functional
-tests. The next operational step is a local end-to-end drill: interrupt a guided
-investigation, discover it here, inspect its evidence and resume it.
+tests. The subsequent [isolated recovery drill](investigation-recovery-drill.md)
+now exercises a real API process interruption, restart, queue discovery and
+recovery, including a console-assisted run. That step's complete regression
+suite passed 332/332; the earlier figures above describe the dashboard stage.

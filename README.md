@@ -24,6 +24,10 @@ checks and serializing concurrent recovery of the same checkpoint.
 The [recovery dashboard](docs/investigation-recovery-dashboard.md) adds a live,
 paginated cross-purchase queue with unfinished counts and saved-check ages after
 migration 042. Operators can inspect and resume a checkpoint from this queue.
+The [isolated recovery drill](docs/investigation-recovery-drill.md) kills a real
+API process after a saved check, restarts it, and verifies recovery, one final
+report and unchanged financial records. It supports automatic HTTP execution
+and console-assisted recovery without a wallet or an existing database.
 
 The [next claim-review corpus](docs/claim-review-preparation.md) has 48 new inputs,
 a blank reviewer handoff and offline validation/comparison/label-freeze tooling.

@@ -32,6 +32,7 @@
     "gateway:local": "npm run --silent build && node --env-file-if-exists=.env scripts/gateway-local.mjs",
     "gateway:wallet": "npm run --silent build && node --env-file-if-exists=.env scripts/gateway-wallet.mjs",
     "demo:offline": "npm run --silent build && node scripts/gateway-offline.mjs",
+    "drill:investigation": "npm run --silent build && node scripts/investigation-recovery-drill.mjs",
     "refund": "node dist/src/refund.js",
     "merchant": "node dist/src/merchant-server.js",
     "research": "node dist/src/research.js",
